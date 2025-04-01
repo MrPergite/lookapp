@@ -11,8 +11,8 @@
 2. Start the app
 
    ```bash
-    for dev npx expo start
-    for prod npx expo start:prod
+    for dev -  npx expo start
+    for prod -  npx expo start:prod
    ```
 
 In the output, you'll find options to open the app in a
