@@ -7,15 +7,34 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "env": {
+        "API_BASE_URL": "http://exkyapi.test.lookai.me",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
+        "EXPO_PUBLIC_API_BASE_URL": "http://exkyapi.test.lookai.me",
+        "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
+      }
     },
     "preview": {
+      "developmentClient": true,
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "API_BASE_URL": "https://api.lookai.me",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.lookai.me",
+        "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "API_BASE_URL": "https://api.lookai.me",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.lookai.me",
+        "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
+      }
     }
   },
   "submit": {

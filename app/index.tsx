@@ -3,6 +3,7 @@ import { Redirect, useRouter } from "expo-router";
 import { useAuth } from "@clerk/clerk-expo";
 import { Slot, SplashScreen, Stack } from "expo-router";
 import { useFonts } from "expo-font";
+import { StatusBar } from "react-native";
 
 
 export function AuthRoutesLayout() {
@@ -26,12 +27,12 @@ export default function IndexPage() {
 
     useEffect(() => {
         console.log({ isSignedIn })
-        if (loaded) {
+        if (loaded && router) {
             SplashScreen.hideAsync(); // Hide splash screen once fonts are loaded
-            router.replace("/signin"); // Navigate to signin if not authenticated
+            router.replace("(tabs)"); // Navigate to signin if not authenticated
             // router.replace("(onboarding)")
         }
-    }, [loaded]);
+    }, [loaded, router]);
 
     return null;
 }

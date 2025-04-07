@@ -8,6 +8,7 @@ import { Redirect, router, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import React from "react";
 import "react-native-reanimated";
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
@@ -20,49 +21,64 @@ import theme from "@/styles/theme";
 import * as Haptics from "expo-haptics";
 import ChatScreen from "../(home)/chat-products";
 import Toast from "react-native-toast-message";
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { TabHeader } from "@/components/tab-header";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 //Poppins-Medium
-export default function RootLayout() {
-    const { signOut } = useAuth()
 
-    const Tab = createBottomTabNavigator();
+// Define the param types for our tabs
+type TabParamList = {
+    Home: { headerProps?: object };
+    'Virtual TryOn': { headerProps?: object };
+};
+
+export default function RootLayout() {
+    const { signOut, isSignedIn } = useAuth()
+    const colorScheme = useColorScheme();
+
+    const Tab = createBottomTabNavigator<TabParamList>();
 
     const ProfileScreen = () => (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text>Profile</Text>
+            <Text>🎉 coming soon</Text>
         </View>
     );
 
     const handleLogOut = async () => {
-        try {
-            await signOut();
-            router.replace("/(authn)/signin")
-            Toast.show({
-                type: "success",
-                text1: "See you soon :)"
-            })
-        }
-        catch (e) {
+        if (isSignedIn) {
+            try {
+                await signOut();
+                Toast.show({
+                    type: "success",
+                    text1: "See you soon :)"
+                })
+            }
+            catch (e) {
 
+            }
+        }
+        else {
+            router.replace("/(authn)/signin")
         }
     }
 
+    const logOutText = isSignedIn ? "LOG OUT" : "SIGN IN"
 
     return (
         <>
             <Tab.Navigator
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ color, size }) => {
-                        let iconName = route.name === "Home" ? "home" : "person";
+                        let iconName: 'home' | 'person' = route.name === "Home" ? "home" : "person";
                         return <Ionicons name={iconName} size={size} color={color} />;
                     },
-                    tabBarActiveTintColor: theme.colors.primary.pink,
+                    tabBarActiveTintColor: theme.colors.primary.purple,
                     tabBarInactiveTintColor: "gray",
                     headerShown: false,
                     tabBarStyle: {
-                        backgroundColor: theme.colors.primary.white,
+                        backgroundColor: colorScheme === "dark" ? theme.colors.secondary.black : theme.colors.primary.white,
                     },
                 })}
                 screenListeners={{
@@ -71,21 +87,39 @@ export default function RootLayout() {
                     },
                 }}
             >
-                <Tab.Screen options={{
-                    headerShown: true,
-                    headerTitle: "",
-                    header: () => (
-                        <SafeAreaView>
-                            <View style={styles.chatHeader}>
-                                <ThemedText type='subtitle' style={styles.headerLeft}>Chat With LookAI</ThemedText>
-                                <ThemedText type='default' onPress={handleLogOut} style={styles.headerLeft}>LOG OUT</ThemedText>
-                            </View>
-                        </SafeAreaView>
-                    ),
-                }} name="Home" component={ChatScreen} />
-                <Tab.Screen name="Virtual TryOn" component={ProfileScreen} />
+                <Tab.Screen
+                    options={({ route, navigation }) => {
+                        // Default header props
+                        const defaultHeaderProps = {
+                            headerShown: true,
+                            headerTitle: "",
+                            header: () => <TabHeader isLogin={isSignedIn} title="LookAI" label={logOutText} onLogout={handleLogOut} />,
+                        };
+
+                        // If the component exposes headerProps, merge them with defaults
+                        const { params } = route;
+                        if (params && params.headerProps) {
+                            return { ...defaultHeaderProps, ...params.headerProps };
+                        }
+
+                        return defaultHeaderProps;
+                    }}
+                    name="Home"
+                    component={ChatScreen}
+                />
+                <Tab.Screen
+                    name="Virtual TryOn"
+                    component={ProfileScreen}
+                    options={({ route }) => {
+                        const { params } = route;
+                        if (params && params.headerProps) {
+                            return params.headerProps;
+                        }
+                        return {};
+                    }}
+                />
             </Tab.Navigator>
-            <StatusBar style="auto" />
+            {/* <StatusBar style="light" /> */}
         </>
     );
 }

@@ -2,6 +2,8 @@ import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '@clerk/clerk-expo';
 import { routes } from './routes';
+import Constants from "expo-constants";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types for API configuration
 interface Endpoint {
@@ -28,7 +30,7 @@ interface EndpointCallOptions {
 // API Configuration
 const apiConfig: ApiConfigType = {
     // Base configuration
-    baseUrl: 'https://api.example.com',
+    baseUrl: Constants.expoConfig?.extra?.origin || "http://localhost:8081",
 
     // Endpoints configuration
     endpoints: {
@@ -40,11 +42,41 @@ const apiConfig: ApiConfigType = {
     }
 };
 
+console.log({ apiConfig })
+
+const getHeaders = async () => {
+    const headerData = await AsyncStorage.getItem('user-header');
+
+    if (!headerData) {
+        const res = await fetch('https://ipapi.co/json/'); // Or ipinfo.io, ipregistry, etc.
+        const geo = await res.json();
+        await AsyncStorage.setItem('user-header', JSON.stringify(geo));
+        return {
+            'X-Country': geo.country,
+            'X-Region': geo.city,
+            'X-Forwarded-For': geo.ip,
+        };
+    }
+    const geo = JSON.parse(headerData);
+    console.log('geo', geo);
+
+
+    const headers = {
+        'X-Country': geo.country,
+        'X-Region': geo.city,
+        'X-Forwarded-For': geo.ip,
+    };
+
+    return headers;
+}
+
+
 // Create axios instances for public and protected endpoints
 const publicAxios = axios.create({
     baseURL: apiConfig.baseUrl,
     headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+
     }
 });
 
@@ -73,8 +105,11 @@ export function useApi(): ApiHook {
                 try {
                     // Get token from Clerk
                     const token = await getToken();
+                    const headers = await getHeaders();
+                    console.log({ token })
                     if (token && config.headers) {
                         config.headers.Authorization = `Bearer ${token}`;
+                        config.headers = { ...config.headers, ...headers };
                     }
                 } catch (error) {
                     console.error('Error getting auth token:', error);
@@ -86,6 +121,17 @@ export function useApi(): ApiHook {
             return Promise.reject(error);
         }
     );
+
+    publicAxios.interceptors.request.use(
+        async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
+            const headers = await getHeaders();
+            console.log({ headers })
+            config.headers = { ...config.headers, ...headers };
+            return config;
+        }
+    );
+
+    console.log({ headers:publicAxios.defaults.headers })
 
     // Function to call public endpoints
     const callPublicEndpoint = async <T = any>(

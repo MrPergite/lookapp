@@ -55,7 +55,7 @@ const SearchOptions = () => {
       <ThemedText type="subtitle" style={styles.headerText}>
         Must Try
       </ThemedText>
-      <ScrollView horizontal contentContainerStyle={styles.optionsGrid}>
+      <View style={styles.optionsGrid}>
         {options.map((option) => (
           <TouchableOpacity
             key={option.id}
@@ -98,7 +98,7 @@ const SearchOptions = () => {
             </View>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 };

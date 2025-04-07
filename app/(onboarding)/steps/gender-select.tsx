@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { useOnBoarding } from '../context'
+import { User, UserRound } from 'lucide-react-native'
 
 const GenderSelect = () => {
     const { payload, dispatch } = useOnBoarding()
@@ -36,11 +37,11 @@ const GenderSelect = () => {
             <Pressable onPress={() => {
                 withHaptick(handleSelect)("male")
             }} style={[styles.cardContainer, { backgroundColor: mStyles.bg }]}>
-                <Ionicons color={mStyles.icon} size={52} name='man-outline' />
+                <User color={mStyles.icon} size={40}/>
                 <ThemedText type='default' style={[{ color: mStyles.text }]} >Male</ThemedText>
             </Pressable>
             <Pressable onPress={() => withHaptick(handleSelect)("female")} style={[styles.cardContainer, { backgroundColor: fStyles.bg }]}>
-                <Ionicons color={fStyles.icon} size={52} name='woman-outline' />
+                <UserRound color={fStyles.icon} size={40} />
                 <ThemedText type='default' style={[{ color: fStyles.text }]} >Female</ThemedText>
             </Pressable>
         </View>
@@ -51,7 +52,8 @@ const styles = StyleSheet.create({
     flexContainer: {
         display: "flex",
         flexDirection: "row",
-        gap: theme.spacing.lg
+        gap: theme.spacing.lg,
+        padding: theme.spacing.xl
     },
     cardContainer: {
         backgroundColor: theme.colors.primary.purple,
@@ -64,6 +66,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 5,
         elevation: 4,
+        width: 100,
+        height: 110
     }
 });
 

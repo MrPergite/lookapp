@@ -10,8 +10,12 @@ const appConfig = {
     scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
+    runtimeVersion: "0.0.1",
+    owner: "egustav2027",
     ios: {
       supportsTablet: true,
+      // bundleIdentifier: "com.lookai.lookapp"
+      "bundleIdentifier": "com.egustav2027.lookapp"
     },
     android: {
       adaptiveIcon: {
@@ -35,6 +39,12 @@ const appConfig = {
           backgroundColor: "#ffffff",
         },
       ],
+      [
+        "expo-router",
+        {
+          "origin": "https://egustav2027-lookapp.expo.app"
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true,
@@ -44,15 +54,15 @@ const appConfig = {
         origin: false,
       },
       eas: {
-        projectId: "d8c6710a-0af7-400d-9236-c14c236daae1",
+        projectId: "4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
       },
+      enableCors: true,
+      origin: "https://egustav2027-lookapp.expo.app",
       ...envConfig,
     },
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    
     updates: {
-      url: "https://u.expo.dev/d8c6710a-0af7-400d-9236-c14c236daae1",
+      url: "https://u.expo.dev/4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
     },
   },
 };

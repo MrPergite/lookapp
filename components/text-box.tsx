@@ -1,9 +1,14 @@
 import theme from "@/styles/theme";
-import { useState } from "react";
-import { View, TextInput, Text, StyleSheet } from "react-native";
+import React, { useState, forwardRef, ForwardRefRenderFunction } from "react";
+import { View, TextInput, Text, StyleSheet, TextInputProps } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
-export default function TextBox({ label, error, ...props }) {
+interface TextBoxProps extends TextInputProps {
+  label?: string;
+  error?: string | null;
+}
+
+const TextBox: ForwardRefRenderFunction<TextInput, TextBoxProps> = ({ label, error, style, ...props }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -12,22 +17,25 @@ export default function TextBox({ label, error, ...props }) {
 
       <TextInput
         {...props}
+        ref={ref}
         style={[
           styles.input,
           isFocused && styles.inputFocused,
           error && styles.inputError,
+          style
         ]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     width: "100%",
     marginBottom: 15,
+    paddingHorizontal: 0,
   },
   label: {
     fontSize: 16,
@@ -44,6 +52,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.secondary.black,
     fontFamily: "default-medium",
+    width: "100%",
+    alignSelf: "stretch",
   },
   inputFocused: {
     borderColor: theme.colors.primary.periwinkle,
@@ -59,3 +69,9 @@ const styles = StyleSheet.create({
     fontFamily: "default-semibold",
   },
 });
+
+// Add display name for better debugging
+const ForwardedTextBox = forwardRef(TextBox);
+ForwardedTextBox.displayName = 'TextBox';
+
+export default ForwardedTextBox;

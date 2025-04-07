@@ -5,6 +5,9 @@ type ColorPalette = {
     lavender: string;
     periwinkle: string;
     white: string;
+    paleWhite: string;
+    green: string;
+    bgGreen: string;
   };
   secondary: {
     veryLightGray: string;
@@ -17,9 +20,10 @@ type ColorPalette = {
     underlineGray: string;
     black: string;
   };
-  // background: string;
-  // text: string;
-  // border: string;
+  background: string;
+  card: string;
+  text: string;
+  border: string;
   error: string;
   // success: string;
   // warning: string;
