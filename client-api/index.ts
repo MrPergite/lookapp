@@ -44,32 +44,6 @@ const apiConfig: ApiConfigType = {
 
 console.log({ apiConfig })
 
-const getHeaders = async () => {
-    const headerData = await AsyncStorage.getItem('user-header');
-
-    if (!headerData) {
-        const res = await fetch('https://ipapi.co/json/'); // Or ipinfo.io, ipregistry, etc.
-        const geo = await res.json();
-        await AsyncStorage.setItem('user-header', JSON.stringify(geo));
-        return {
-            'X-Country': geo.country,
-            'X-Region': geo.city,
-            'X-Forwarded-For': geo.ip,
-        };
-    }
-    const geo = JSON.parse(headerData);
-    console.log('geo', geo);
-
-
-    const headers = {
-        'X-Country': geo.country,
-        'X-Region': geo.city,
-        'X-Forwarded-For': geo.ip,
-    };
-
-    return headers;
-}
-
 
 // Create axios instances for public and protected endpoints
 const publicAxios = axios.create({
@@ -105,12 +79,18 @@ export function useApi(): ApiHook {
                 try {
                     // Get token from Clerk
                     const token = await getToken();
-                    const headers = await getHeaders();
-                    console.log({ token })
+
                     if (token && config.headers) {
                         config.headers.Authorization = `Bearer ${token}`;
-                        config.headers = { ...config.headers, ...headers };
                     }
+                    const fullUrl = `${config.baseURL || ''}${config.url}`;
+                    console.log('👉 Full Axios Request:', JSON.stringify({
+                        method: config.method,
+                        url: fullUrl,
+                        params: config.params,
+                        data: config.data,
+                        headers: config.headers,
+                    }, null, 2));
                 } catch (error) {
                     console.error('Error getting auth token:', error);
                 }
@@ -122,16 +102,6 @@ export function useApi(): ApiHook {
         }
     );
 
-    publicAxios.interceptors.request.use(
-        async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
-            const headers = await getHeaders();
-            console.log({ headers })
-            config.headers = { ...config.headers, ...headers };
-            return config;
-        }
-    );
-
-    console.log({ headers:publicAxios.defaults.headers })
 
     // Function to call public endpoints
     const callPublicEndpoint = async <T = any>(
@@ -176,6 +146,7 @@ export function useApi(): ApiHook {
             throw new Error('User not authenticated');
         }
 
+
         try {
             const response: AxiosResponse<T> = await protectedAxios({
                 method,
@@ -183,6 +154,8 @@ export function useApi(): ApiHook {
                 data: method !== 'GET' ? data : null,
                 params: method === 'GET' ? params : null
             });
+
+            console.log("AXIOS INTERCEPTOR RESPONSE : ", JSON.stringify(response, null, 2))
 
             return response.data;
         } catch (error: any) {
@@ -193,6 +166,7 @@ export function useApi(): ApiHook {
                     console.error('Authentication error: Token may be expired');
                 }
             }
+            console.log("AXIOS INTERCEPTOR ERROR : ", JSON.stringify(error, null, 2))
             console.error(`Error calling ${endpointKey}:`, error);
             throw error;
         }

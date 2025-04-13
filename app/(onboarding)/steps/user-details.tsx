@@ -8,13 +8,14 @@ import {
     Platform,
     KeyboardAvoidingView,
     ScrollView,
-    TextInput
+    TextInput,
+    Pressable
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import TextBox from '@/components/text-box';
 import theme from '@/styles/theme';
 import { useOnBoarding } from '../context';
-import { userCountry, useUserCountry } from '../queries';
+import { useUserCountry } from '../queries';
 
 function UserDetails() {
     const { payload, dispatch } = useOnBoarding() as any;
@@ -144,7 +145,7 @@ function UserDetails() {
 
         return (
             <>
-                <TouchableOpacity
+                <Pressable
                     style={styles.pickerWrapper}
                     onPress={() => setVisible(true)}
                 >
@@ -154,7 +155,7 @@ function UserDetails() {
                             : placeholder
                         }
                     </Text>
-                </TouchableOpacity>
+                </Pressable>
                 <Modal
                     animationType="slide"
                     transparent={true}
@@ -218,13 +219,18 @@ function UserDetails() {
                     <View style={styles.shoeSizeContainer}>
                         <View style={[styles.inputContainer, { flex: 2, marginRight: 10 }]}>
                             <TextBox
+                                labelStyle={styles.label}
                                 style={[{
                                     borderColor: theme.colors.secondary.mediumLightGray,
                                     borderWidth: 1,
                                     borderRadius: 10,
-                                    padding: theme.spacing.md
-                                }]}
+                                    padding: theme.spacing.md,
+                                    color: '#374151',
+                                    fontFamily: 'default-semibold',
+                                    fontWeight: '500'
+                                }, styles.input]}
                                 label="Shoe Size"
+                                placeholderTextColor="#374151"
                                 value={shoeSize}
                                 onChangeText={handleShoeSizeChange}
                                 keyboardType="numeric"
@@ -232,7 +238,6 @@ function UserDetails() {
                                 ref={shoeSizeInputRef}
                                 returnKeyType="done"
                                 onSubmitEditing={handleShoeSizeSubmit}
-                                blurOnSubmit={true}
                                 placeholder='Enter Shoe Size'
                             />
                         </View>
@@ -278,24 +283,48 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: theme.spacing.lg,
-        width: '100%'
+        width: '100%',
     },
     inputContainer: {
         marginBottom: theme.spacing.lg,
+    },
+    input: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#e5e7eb', // Tailwind's input border (gray-200)
+        backgroundColor: 'white',
+        width: '100%',
+        padding: 13,
+       
     },
     shoeSizeContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
     },
     pickerWrapper: {
-        borderWidth: 1,
-        borderColor: theme.colors.secondary.mediumLightGray,
-        borderRadius: 10,
-        backgroundColor: theme.colors.primary.white,
         marginTop: 5,
-        padding: 15,
-        height: 50,
-        justifyContent: 'center'
+        padding: 13,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderRadius: 6,
+        borderColor: '#e5e7eb',
+        backgroundColor: 'white',
+        width: '100%',
+            ...Platform.select({
+      android: {
+        elevation: 0,
+      },
+      ios: {
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+      },
+    }),
     },
     picker: {
         height: 50,
@@ -306,11 +335,12 @@ const styles = StyleSheet.create({
         color: theme.colors.secondary.black,
     },
     label: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        color: theme.colors.secondary.veryDarkGray,
-        fontFamily: 'default-medium',
+        fontSize: 14,
+        // marginBottom: 5,
+        color: '#374151',
+        fontFamily: 'default-semibold',
+        fontWeight: '500',
+
     },
     modalContainer: {
         flex: 1,
@@ -340,7 +370,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     modalPicker: {
-        width: '100%',
+        width: '100%'
     }
 });
 

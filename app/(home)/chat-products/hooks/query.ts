@@ -87,6 +87,7 @@ export const useProtectedMutation = <TData, TVariables>(
                     });
                 }
             } catch (error) {
+                console.log("Error in useProtectedMutation:", error);
                 // If authentication fails, try public endpoint
                 throw error;
             }
@@ -98,7 +99,7 @@ export const useProtectedMutation = <TData, TVariables>(
                     queryClient.invalidateQueries({ queryKey: [key] });
                 });
             }
-            
+
             // Call onSuccess callback if provided
             if (options.onSuccess) {
                 options.onSuccess(data, variables);
@@ -110,4 +111,37 @@ export const useProtectedMutation = <TData, TVariables>(
             }
         }
     });
+};
+
+export const useProdCardQueryMutation = (onSuccess: (data: any, variables: any) => void, onError: (error: Error, variables: any) => void) => {
+    const { callProtectedEndpoint, callPublicEndpoint, isAuthenticated } = useApi();
+
+    const mutation = useMutation<any, Error, any>({
+        mutationFn: async (variables) => {
+            if (isAuthenticated) {
+                return await callProtectedEndpoint('prodCardQuery', {
+                    method: 'POST',
+                    data: variables
+                });
+            }
+            else {
+                return await callPublicEndpoint('prodCardQueryPublic', {
+                    method: 'POST',
+                    data: variables
+                });
+            }
+        },
+        onSuccess: (data, variables) => {
+            if (onSuccess) {
+                onSuccess(data, variables);
+            }
+        },
+        onError: (error, variables) => {
+            if (onError) {
+                onError(error, variables);
+            }
+        }
+    });
+
+    return mutation;
 };

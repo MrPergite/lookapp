@@ -35,6 +35,9 @@ export interface ProductColorVariation {
   default_size?: string;
   sizes?: ProductSize[];
   thumbnail?: string;
+  brand?: string;
+  name?: string;
+  description?: string;
 }
 
 /**

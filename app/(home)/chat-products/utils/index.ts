@@ -8,6 +8,8 @@ export const getSaveToShoppingListPayload = ({ products, productId, fetchedProdu
         return;
     }
 
+    console.log("Product:", product);
+
     // Format payload according to required structure
     const payload = {
         data: {
@@ -16,11 +18,12 @@ export const getSaveToShoppingListPayload = ({ products, productId, fetchedProdu
         },
         metadata: {
             title: product.name,
-            is_topwear: product.product_info.isTopWear, // You may need to determine this dynamically
+            // You may need to determine this dynamically
             product_link: product.url || "",
             img_url: product.image,
             product_price: product.price,
-            brand: product.brand
+            ...(product?.product_info?.isTopWear && { is_topwear: true }),
+            ...(product?.brand && { brand: product.brand })
         },
         info: {
             fetchedProductInfo

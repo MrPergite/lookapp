@@ -9,7 +9,6 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
-  useColorScheme,
   TextInput,
   KeyboardAvoidingView
 } from 'react-native';
@@ -64,7 +63,6 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
 }) => {
   const [savedProducts, setSavedProducts] = useState<Record<string, boolean>>({});
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const colorScheme = useColorScheme();
   const appTheme = useAppTheme();
 
   // Group the chat history and products into conversation pairs

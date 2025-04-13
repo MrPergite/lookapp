@@ -23,6 +23,8 @@ import ChatScreen from "../(home)/chat-products";
 import Toast from "react-native-toast-message";
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { TabHeader } from "@/components/tab-header";
+import { Camera, MessageCircle, UserCircle } from "lucide-react-native";
+import Profile from "../profile/_layout";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -30,21 +32,16 @@ SplashScreen.preventAutoHideAsync();
 
 // Define the param types for our tabs
 type TabParamList = {
-    Home: { headerProps?: object };
+    Chat: { headerProps?: object };
     'Virtual TryOn': { headerProps?: object };
+    Profile: { headerProps?: object };
 };
 
 export default function RootLayout() {
     const { signOut, isSignedIn } = useAuth()
-    const colorScheme = useColorScheme();
 
     const Tab = createBottomTabNavigator<TabParamList>();
 
-    const ProfileScreen = () => (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text>🎉 coming soon</Text>
-        </View>
-    );
 
     const handleLogOut = async () => {
         if (isSignedIn) {
@@ -71,27 +68,34 @@ export default function RootLayout() {
             <Tab.Navigator
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ color, size }) => {
-                        let iconName: 'home' | 'person' = route.name === "Home" ? "home" : "person";
-                        return <Ionicons name={iconName} size={size} color={color} />;
+                        const icon = route.name === "Chat" ? <MessageCircle size={size} color={color} /> : <UserCircle size={size} color={color} />;
+                        return icon;
                     },
                     tabBarActiveTintColor: theme.colors.primary.purple,
                     tabBarInactiveTintColor: "gray",
                     headerShown: false,
                     tabBarStyle: {
-                        backgroundColor: colorScheme === "dark" ? theme.colors.secondary.black : theme.colors.primary.white,
+                        backgroundColor: theme.colors.primary.white,
                     },
                 })}
-                screenListeners={{
-                    tabPress: () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                // screenListeners={{
+                //     tabPress: (ev) => {
+                //         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                //         console.log("tabPress", ev.target);
+                //     },
+                // }}
+                listeners={({ navigation }) => ({
+                    tabPress: e => {
+                      const key = Math.random().toString();
+                      navigation.navigate('Home', { key }); // forces remount
                     },
-                }}
+                  })}
             >
                 <Tab.Screen
                     options={({ route, navigation }) => {
                         // Default header props
                         const defaultHeaderProps = {
-                            headerShown: true,
+                            headerShown: false,
                             headerTitle: "",
                             header: () => <TabHeader isLogin={isSignedIn} title="LookAI" label={logOutText} onLogout={handleLogOut} />,
                         };
@@ -104,10 +108,10 @@ export default function RootLayout() {
 
                         return defaultHeaderProps;
                     }}
-                    name="Home"
+                    name="Chat"
                     component={ChatScreen}
                 />
-                <Tab.Screen
+                {/* <Tab.Screen
                     name="Virtual TryOn"
                     component={ProfileScreen}
                     options={({ route }) => {
@@ -117,33 +121,29 @@ export default function RootLayout() {
                         }
                         return {};
                     }}
+                /> */}
+                <Tab.Screen
+                    name="Profile"
+                    component={Profile}
+                    options={({ route, navigation }) => {
+                        // Default header props
+                        const defaultHeaderProps = {
+                            headerShown: false,
+                            headerTitle: "",
+                            header: () => <TabHeader isLogin={isSignedIn} title="LookAI" label={logOutText} onLogout={handleLogOut} />,
+                        };
+
+                        // If the component exposes headerProps, merge them with defaults
+                        const { params } = route;
+                        if (params && params.headerProps) {
+                            return { ...defaultHeaderProps, ...params.headerProps };
+                        }
+
+                        return defaultHeaderProps;
+                    }}
                 />
             </Tab.Navigator>
             {/* <StatusBar style="light" /> */}
         </>
     );
 }
-const styles = StyleSheet.create({
-    header: {
-        fontFamily: "default-medium",
-    },
-    chatHeader: {
-        padding: theme.spacing.sm,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "transparent",
-        borderColor: theme.colors.secondary.mediumGray,
-        borderBottomWidth: 0.5
-    },
-    logOutButton: {
-        fontFamily: "default-medium",
-        color: theme.colors.secondary.black
-    },
-    headerLeft: {
-        fontFamily: "default-semibold",
-        color: theme.colors.secondary.black,
-        letterSpacing: 1,
-        padding: theme.spacing.sm,
-    }
-});

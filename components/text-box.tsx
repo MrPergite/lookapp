@@ -1,11 +1,12 @@
 import theme from "@/styles/theme";
 import React, { useState, forwardRef, ForwardRefRenderFunction } from "react";
-import { View, TextInput, Text, StyleSheet, TextInputProps } from "react-native";
+import { View, TextInput, Text, StyleSheet, TextInputProps, TextStyle } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 interface TextBoxProps extends TextInputProps {
   label?: string;
   error?: string | null;
+  labelStyle?: TextStyle;
 }
 
 const TextBox: ForwardRefRenderFunction<TextInput, TextBoxProps> = ({ label, error, style, ...props }, ref) => {
@@ -13,7 +14,7 @@ const TextBox: ForwardRefRenderFunction<TextInput, TextBoxProps> = ({ label, err
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { ...(props.labelStyle || {}) }]}>{label}</Text>}
 
       <TextInput
         {...props}

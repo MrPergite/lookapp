@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   Dimensions
 } from "react-native";
@@ -11,9 +10,20 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withRepeat,
-  withSequence
+  withSequence,
+  withDelay,
+  Easing,
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutUp,
+  withSpring,
+  runOnJS,
 } from "react-native-reanimated";
+import { Check } from 'lucide-react-native';
 import theme from "../styles/theme";
+import { Image } from 'expo-image';
+import { AnimatePresence } from "moti";
 
 // Define types
 interface StepProps {
@@ -29,7 +39,7 @@ interface SearchProgressStepsProps {
   isLoading: boolean;
   onComplete?: () => void;
   steps?: Array<{ title: string }>;
-  inputMode?: 'text' | 'image' | 'image+text';
+  inputMode?: 'text' | 'img+txt' | 'imgurl+txt';
   isImageOnlySearch?: boolean;
   isSignedIn?: boolean;
 }
@@ -40,112 +50,203 @@ const imageOnlySearchSteps = [
   { title: "Searching fashion database" },
 ];
 
-export const ImageLoader = () => {
+// Updated ImageLoader with controlled dimensions and loading state
+export const ImageLoader = ({ size = 32 }: { size?: number }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, {
+        duration: 2000,
+        easing: Easing.linear,
+      }),
+      -1, // -1 for infinite
+      false // don't reverse
+    );
+  }, []);
+
+
+
   return (
     <View style={styles.loadingContainer}>
       <Image
         source={{
           uri: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/eco-ai_2%20(1)-EEv5T7S8POoials0yFyAQ7XWwkOSm6.gif",
         }}
-        style={styles.loadingImage}
+        style={{ width: size, height: size }}
+        contentFit="contain"
       />
     </View>
   );
 };
 
-// Step component
+// Step component with more dynamic animations
 const Step = React.memo(
   ({ step, isActive, isCompleted, progress }: StepProps) => {
     // Animation values
     const scaleAnim = useSharedValue(1);
-    const opacityAnim = useSharedValue(0.5);
-    const checkmarkOpacity = useSharedValue(0);
-    const yAnim = useSharedValue(0);
+    const yAnim = useSharedValue(20);
+    const opacityAnim = useSharedValue(0);
+    const checkPathAnim = useSharedValue(0);
+    const progressContainerWidth = useSharedValue(0);
+    const progressWidthAnim = useSharedValue(0);
 
-    // Set up animations based on step state
+    // Initial enter animation
+    useEffect(() => {
+      yAnim.value = withTiming(0, {
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+      });
+      opacityAnim.value = withTiming(1, {
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+      });
+    }, []);
+
+    // State-based animations
     useEffect(() => {
       if (isActive) {
+        // Pulsing animation for active step
         scaleAnim.value = withRepeat(
           withSequence(
             withTiming(1, { duration: 500 }),
             withTiming(1.05, { duration: 500 }),
             withTiming(1, { duration: 500 })
           ),
-          -1
+          -1,
+          true
         );
+        // Progress bar animations
+        progressContainerWidth.value = withTiming(1, {
+          duration: 2500,
+          easing: Easing.linear
+        });
+        progressWidthAnim.value = withTiming(progress, {
+          duration: 100,
+          easing: Easing.linear
+        });
       } else if (!isCompleted) {
+        // Reset progress animations
+        progressContainerWidth.value = 0;
+        progressWidthAnim.value = 0;
+
+        // Floating animation for pending steps
         yAnim.value = withRepeat(
           withSequence(
-            withTiming(-2, { duration: 1000 }),
-            withTiming(2, { duration: 1000 }),
-            withTiming(-2, { duration: 1000 })
+            withTiming(-2, {
+              duration: 1500,
+              easing: Easing.inOut(Easing.ease)
+            }),
+            withTiming(2, {
+              duration: 1500,
+              easing: Easing.inOut(Easing.ease)
+            })
           ),
-          -1
+          -1,
+          true
         );
+
+        // Opacity and scale animation for pending steps
         opacityAnim.value = withRepeat(
           withSequence(
-            withTiming(0.3, { duration: 700 }),
-            withTiming(0.6, { duration: 700 }),
-            withTiming(0.3, { duration: 700 })
+            withTiming(0.3, { duration: 1000 }),
+            withTiming(0.6, { duration: 1000 })
           ),
-          -1
+          -1,
+          true
         );
-      } else {
-        // Completed animation
-        scaleAnim.value = withTiming(1, { duration: 300 });
-        if (isCompleted) {
-          checkmarkOpacity.value = withTiming(1, { duration: 500 });
-        }
+        scaleAnim.value = withRepeat(
+          withSequence(
+            withTiming(0.95, { duration: 1000 }),
+            withTiming(1, { duration: 1000 })
+          ),
+          -1,
+          true
+        );
+      } else if (isCompleted) {
+        // Completed step animation
+        scaleAnim.value = withTiming(1, {
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+        });
+        yAnim.value = withTiming(0, {
+          duration: 300,
+          easing: Easing.out(Easing.ease),
+        });
+        opacityAnim.value = withTiming(1, { duration: 300 });
+        checkPathAnim.value = withTiming(1, {
+          duration: 500,
+          easing: Easing.out(Easing.ease),
+        });
+        // Reset progress animations
+        progressContainerWidth.value = 0;
+        progressWidthAnim.value = 0;
       }
-    }, [isActive, isCompleted, scaleAnim, opacityAnim, checkmarkOpacity, yAnim]);
+    }, [isActive, isCompleted, progress]);
 
-    // Animated styles
-    const circleAnimStyle = useAnimatedStyle(() => {
-      return {
-        transform: [
-          { scale: scaleAnim.value },
-          { translateY: yAnim.value },
-        ],
-        opacity: isCompleted || isActive ? 1 : opacityAnim.value,
-      };
-    });
+    const containerAnimStyle = useAnimatedStyle(() => ({
+      transform: [
+        { scale: scaleAnim.value },
+        { translateY: yAnim.value },
+      ],
+      opacity: opacityAnim.value,
+    }));
 
-    const progressAnimStyle = useAnimatedStyle(() => {
-      return {
-        width: `${progress * 100}%`,
-      };
-    });
+    const progressContainerStyle = useAnimatedStyle(() => ({
+      width: `${progressContainerWidth.value * 100}%`
+    }));
 
-    const checkmarkAnimStyle = useAnimatedStyle(() => {
-      return {
-        opacity: checkmarkOpacity.value,
-      };
-    });
+    const progressBarStyle = useAnimatedStyle(() => ({
+      width: `${progressWidthAnim.value * 100}%`
+    }));
+
+    const checkmarkAnimStyle = useAnimatedStyle(() => ({
+      opacity: checkPathAnim.value,
+      transform: [{ scale: checkPathAnim.value }],
+    }));
 
     return (
-      <View style={styles.stepContainer}>
-        <Animated.View style={[styles.iconContainer, circleAnimStyle]}>
+      <Animated.View
+        style={[styles.stepContainer, containerAnimStyle]}
+        entering={FadeIn.duration(500).withInitialValues({
+          opacity: 0,
+          transform: [{ translateY: 20 }]
+        })}
+        exiting={FadeOut.duration(500).withInitialValues({
+          opacity: 1,
+          transform: [{ translateY: 0 }]
+        })}
+      >
+        <Animated.View style={[styles.iconContainer]}>
           {isCompleted ? (
             <View style={styles.completedCircle}>
-              <Animated.Text style={[styles.checkmark, checkmarkAnimStyle]}>✓</Animated.Text>
+              <Animated.View style={checkmarkAnimStyle}>
+                <Check size={20} color={theme.colors.primary.green} strokeWidth={3} />
+              </Animated.View>
             </View>
           ) : isActive ? (
             <ImageLoader />
           ) : (
-            <View style={styles.pendingCircle} />
+            <Animated.View style={[styles.pendingCircle]} />
           )}
         </Animated.View>
 
-        <Text style={styles.stepTitle}>{step.title}</Text>
+        <Text style={[styles.stepTitle, isActive && styles.activeStepTitle]}>
+          {step.title}
+        </Text>
 
         {isActive && (
-          <View style={styles.progressContainer}>
+          <Animated.View
+            style={[styles.progressContainer, progressContainerStyle]}
+            entering={FadeIn.duration(300)}
+          >
             <Animated.View
-              style={[styles.progressBar, progressAnimStyle]}
+              style={[styles.progressBar, progressBarStyle]}
             />
-          </View>
+          </Animated.View>
         )}
-      </View>
+      </Animated.View>
     );
   }
 );
@@ -163,6 +264,7 @@ const SearchProgressSteps = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
+  const isMobile = Dimensions.get('window').width < 500;
 
   // Determine which steps to show
   const defaultSearchSteps = [
@@ -230,55 +332,80 @@ const SearchProgressSteps = ({
   // Don't render when loading is complete
   if (!isLoading && isComplete) return null;
 
-
-  // For mobile, only show the current step
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={styles.container}
+      exiting={FadeOut.duration(500)}
+    >
       <View style={styles.card}>
-        <Step
-          key={searchSteps[currentStep].title}
-          step={searchSteps[currentStep]}
-          isActive={true}
-          isCompleted={false}
-          progress={progress}
-        />
+        {isMobile ? (
+          // For mobile, only show the current step
+          <AnimatePresence>
+            <Step
+              key={searchSteps[currentStep].title}
+              step={searchSteps[currentStep]}
+              isActive={true}
+              isCompleted={false}
+              progress={progress}
+            />
+          </AnimatePresence>
+        ) : (
+          // For larger screens, show all steps
+          <View style={styles.stepsRow}>
+            {searchSteps.map((step, index) => (
+              <Step
+                key={step.title}
+                step={step}
+                isActive={index === currentStep}
+                isCompleted={index < currentStep}
+                progress={index === currentStep ? progress : 0}
+              />
+            ))}
+          </View>
+        )}
       </View>
-    </View>
+    </Animated.View>
   );
-
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
+    marginTop: 0,
     marginHorizontal: 16
   },
   card: {
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 1)",
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    height: 110
+    minHeight: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   stepsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    width: '100%',
   },
   stepContainer: {
     alignItems: "center",
     flex: 1,
-    paddingHorizontal: 4,
-    marginVertical: 4,
+    paddingHorizontal: 8,
+    marginVertical: 8,
+    height: 54,
+    marginBottom: 12,
+    marginTop: -2,
   },
   iconContainer: {
-    marginBottom: 8,
+    marginBottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 32,
   },
   completedCircle: {
     width: 32,
@@ -288,20 +415,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkmark: {
-    fontSize: 18,
-    color: "#4caf50",
-    fontWeight: "bold",
-  },
   loadingContainer: {
+
+  },
+  loadingImage: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    overflow: "hidden",
   },
-  loadingImage: {
-    width: "100%",
-    height: "100%",
+  imagePlaceholder: {
+    position: 'absolute',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
   },
   pendingCircle: {
     width: 32,
@@ -309,21 +436,28 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: "#d0d0d0",
+    backgroundColor: 'transparent',
   },
   stepTitle: {
     fontSize: 14,
     fontWeight: "500",
     color: "#555555",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 8,
+    width: '100%',
+    flexWrap: 'wrap',
+    paddingHorizontal: 4,
+  },
+  activeStepTitle: {
+    color: "#333333",
+    fontWeight: "600",
   },
   progressContainer: {
-    width: "100%",
     height: 4,
     backgroundColor: "#E0E0E0",
     borderRadius: 2,
     overflow: "hidden",
-    marginTop: 4,
+    marginTop: 0,
   },
   progressBar: {
     height: "100%",

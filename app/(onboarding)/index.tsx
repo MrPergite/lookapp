@@ -17,8 +17,15 @@ import { useApi } from '@/client-api';
 import { useQuery } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
-
+import { ArrowLeft, ChevronLeft } from 'lucide-react-native';
+import axios from 'axios';
+import { routes } from '@/client-api/routes';
+import { useAuth } from '@clerk/clerk-expo';
+import Constants from 'expo-constants';
+import { GradientHeading } from '@/components/auth';
+import { MotiScrollView, MotiView } from 'moti'
+import FinalOnboardingLoad from '../../components/FinalOnboardingLoad';
+import Spinner from '@/components/Spinner';
 const Steps = [
     {
         title: {
@@ -63,28 +70,37 @@ const Onboarding = () => {
     const { payload, dispatch } = useOnBoarding();
     const { isAuthenticated, callProtectedEndpoint } = useApi();
     const navigation = useNavigation();
+    const { getToken } = useAuth();
+    const [saveOnboardingData, setSaveOnboardingData] = useState(false);
 
     // Step control
     const [currentStep, setCurrentStep] = useState(0);
 
     // Animated values
     const translateX = new Animated.Value(0);
-
+    // const [isLoading, setIsLoading] = useState(true);
     // Use React Query to fetch onboarding data
     const { data, isLoading, error } = useQuery({
         queryKey: ['onboardingData'],
         queryFn: async () => {
             try {
+                const token = await getToken();
                 if (!isAuthenticated) {
                     console.log('User not authenticated, skipping onboarding fetch');
                     return null;
                 }
-                
-                const response = await callProtectedEndpoint<{success: boolean, data: {onboardingInfo: OnboardingData}}>(
-                    'getOnboardingInfo'
+                console.log({ token })
+
+                const response = await axios<{ success: boolean, data: { onboardingInfo: OnboardingData } }>(
+                    `${Constants.expoConfig?.extra?.origin}${routes.protected.getOnboardingInfo}`,
+                    {
+                        method: 'GET', headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
                 );
-                
-                return response.data.onboardingInfo;
+
+                return response.data;
             } catch (err) {
                 console.error('Failed to fetch onboarding data:', err);
                 Toast.show({
@@ -101,9 +117,9 @@ const Onboarding = () => {
     // Set fetched data to context when available
     useEffect(() => {
         console.log({ data })
-        if (data) {
+        if (data?.data) {
             // Update each field in the context
-            Object.entries(data).forEach(([key, value]) => {
+            Object.entries(data.data).forEach(([key, value]) => {
                 if (value !== null) {
                     dispatch({
                         type: 'SET_PAYLOAD',
@@ -142,7 +158,7 @@ const Onboarding = () => {
             });
         } else {
             // Save onboarding data on completion
-            saveOnboardingData();
+            handleSaveOnboarding();
         }
     };
 
@@ -164,42 +180,48 @@ const Onboarding = () => {
     };
 
     // Function to save onboarding data
-    const saveOnboardingData = async () => {
+    const handleSaveOnboarding = async () => {
         if (!isAuthenticated) {
             console.log('User not authenticated, skipping save');
             return;
         }
+        setSaveOnboardingData(true);
+        // const token = await getToken();
+        // try {
+        //     const response = await axios.post(
+        //         `${Constants.expoConfig?.extra?.origin}${routes.protected.saveOnboardingInfo}`,
+        //         {
+        //             method: 'POST',
+        //             data: { onboardingInfo: payload },
+        //             headers: {
+        //                 'Authorization': `Bearer ${token}`
+        //             }
+        //         }
+        //     );
 
-        try {
-            const response = await callProtectedEndpoint(
-                'saveOnboardingInfo',
-                {
-                    method: 'POST',
-                    data: { onboardingInfo: payload }
-                }
-            );
-            
-            // Navigate to home after saving
-            router.navigate('/');
-            
-            Toast.show({
-                type: 'success',
-                text1: 'Success',
-                text2: 'Your profile has been saved!'
-            });
-        } catch (err) {
-            console.error('Failed to save onboarding data:', err);
-            Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Failed to save your profile'
-            });
-        }
+        //     // Navigate to home after saving
+        //     router.navigate('/(tabs)');
+
+        //     Toast.show({
+        //         type: 'success',
+        //         text1: 'Success',
+        //         text2: 'Your profile has been saved!'
+        //     });
+        // } catch (err) {
+        //     console.error('Failed to save onboarding data:', err);
+        //     Toast.show({
+        //         type: 'error',
+        //         text1: 'Error',
+        //         text2: 'Failed to save your profile'
+        //     });
+        // }
     };
 
     const renderStep = () => {
         const StepComponent = Steps[currentStep].component;
-        return <StepComponent />;
+        return (
+            <StepComponent goToNextStep={handleNext} />
+        );
     };
 
     // Determine if we're on the SelectAvatar step
@@ -208,67 +230,107 @@ const Onboarding = () => {
     // Calculate progress percentage
     const progressPercentage = ((currentStep + 1) / Steps.length) * 100;
 
+    if (isLoading) {
+        return (
+            <View style={styles.container}>
+                <Spinner />
+            </View>
+        )
+    }
+
     return (
         <LinearGradient
-            colors={['#F3EEFF', '#F3EEFF']}
+            colors={['#f3e8ff', '#ffffff']}
             style={styles.container}
-            start={[0, 0]} 
-            end={[1, 0]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
         >
             <SafeAreaView style={styles.safeArea}>
-                {/* Header with back button and progress bar */}
-                <View style={styles.header}>
-                    <TouchableOpacity 
-                        style={styles.backButton}
-                        onPress={handleBack}
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View style={styles.progressBarContainer}>
-                        <View style={[styles.progressBar, { width: `${progressPercentage}%` }]} />
-                    </View>
-                </View>
-                
-                {isLoading && (
-                    <ThemedText style={styles.loadingText}>Loading your profile...</ThemedText>
-                )}
-                <ThemedText type='title' style={styles.title} >{Steps[currentStep].title.text}</ThemedText>
-                <ThemedText type='default' style={[{ padding: theme.spacing.md, paddingTop: 0,textAlign: "center" }]} >{Steps[currentStep].title.subText}</ThemedText>
-                
-                {/* Rest of the content */}
-                <Animated.ScrollView contentContainerStyle={[styles.stepContainer, { transform: [{ translateX }] }]}>
-                    {renderStep()}
-                    <LinearGradient
-                        colors={isCurrentStepComplete 
-                            ? [theme.colors.primary.pink, theme.colors.primary.purple] 
-                            : [theme.colors.secondary.lightGray, theme.colors.secondary.darkGray]}
-                        style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
-                    >
-                        <Pressable 
-                            style={[
-                                authnStyles.ctaActionContainer, 
-                                styles.button,
-                                !isCurrentStepComplete && styles.disabledButton
-                            ]}
-                            onPress={() => {
-                                if (isCurrentStepComplete) {
-                                    withHaptick(handleNext)()
-                                }
-                            }}
-                            disabled={!isCurrentStepComplete}
+
+                {saveOnboardingData ? <FinalOnboardingLoad onComplete={() => router.replace("/(tabs)" as any)} onboardingData={payload} /> :
+                    <>
+                        <MotiView
+                            key={currentStep}
+                            from={{ opacity: 0, translateY: 20 }}
+                            animate={{ opacity: 1, translateY: 0 }}
+                            transition={{ duration: 500 }}
                         >
-                            <ThemedText 
-                                style={[
-                                    authnStyles.ctaActionText,
-                                    !isCurrentStepComplete && styles.disabledButtonText
-                                ]} 
+                            {/* Header with back button and progress bar */}
+                            <View style={styles.header}>
+                                <TouchableOpacity
+                                    style={styles.backButton}
+                                    onPress={handleBack}
+                                >
+                                    <ArrowLeft size={24} color="white" />
+                                </TouchableOpacity>
+                                <View style={[styles.progressBarContainer, { width: `${progressPercentage - 20}%` }]}>
+                                    <LinearGradient
+                                        colors={['#ec4899', '#8b5cf6']} // from-pink-500 to-purple-500
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                    >
+                                        <View style={[{ width: `${progressPercentage}%` }]} >
+                                            <View style={[styles.progressBar]} />
+                                        </View>
+                                    </LinearGradient>
+                                </View>
+                            </View>
+
+                            {isLoading && (
+                                <ThemedText style={styles.loadingText}>Loading your profile...</ThemedText>
+                            )}
+                            <GradientHeading text={Steps[currentStep].title.text} additionalStyles={styles.title} />
+                            <ThemedText type='default' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
+
+                            {/* Rest of the content */}
+                            <MotiScrollView
+                                key={currentStep}
+                                contentContainerStyle={[styles.stepContainer]}
+                                // style={{ height: '100%', width: '100%', justifyContent: 'flex-start', alignItems: 'center' }}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3 }}
                             >
-                                {currentStep === Steps.length - 1 ? "Done" : "Next"}
-                            </ThemedText>
-                        </Pressable>
-                    </LinearGradient>
-                </Animated.ScrollView>
+                                {renderStep()}
+
+                            </MotiScrollView>
+
+                        </MotiView>
+                        <LinearGradient
+                            colors={['#ec4899', '#8b5cf6']} // from-pink-500 to-purple-500
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
+                        >
+                            <Pressable
+                                style={[
+                                    authnStyles.ctaActionContainer,
+                                    styles.button,
+                                    !isCurrentStepComplete && styles.disabledButton
+                                ]}
+                                onPress={() => {
+                                    if (isCurrentStepComplete) {
+                                        withHaptick(handleNext)()
+                                    }
+                                }}
+                                disabled={!isCurrentStepComplete}
+                            >
+                                <ThemedText
+                                    style={[
+                                        authnStyles.ctaActionText,
+                                        !isCurrentStepComplete && styles.disabledButtonText
+                                    ]}
+                                >
+                                    {"Next"}
+                                </ThemedText>
+                            </Pressable>
+                        </LinearGradient>
+                    </>
+
+                }
             </SafeAreaView>
+
         </LinearGradient>
     );
 };
@@ -300,21 +362,19 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     progressBarContainer: {
-        flex: 1,
-        height: 6,
-        backgroundColor: '#E0E0E0',
-        borderRadius: 3,
+        borderRadius: 999,
         overflow: 'hidden',
+        height: 8,
     },
     progressBar: {
         height: '100%',
-        backgroundColor: '#9D4EDD',
+        // backgroundColor: '#9D4EDD',
         borderRadius: 3,
     },
     stepContainer: {
         alignItems: 'center',
         padding: 0,
-        height: "100%",
+        // height: "100%",
         gap: theme.spacing.lg * 2,
         width: "100%",
         shadowColor: theme.colors.secondary.darkGray,
@@ -357,7 +417,12 @@ const styles = StyleSheet.create({
         textAlign: "center"
     },
     button: {
-        backgroundColor: "transparent"
+        backgroundColor: "transparent",
+        width: "100%",
+        height: 50,
+        fontSize: 16,
+        fontWeight: "bold",
+        fontFamily: "default-semibold",
     },
     disabledButton: {
         opacity: 0.7,
@@ -366,9 +431,14 @@ const styles = StyleSheet.create({
         color: theme.colors.secondary.darkGray,
     },
     btnContainer: {
-        borderRadius: "8%",
-        bottom: 20,
+        borderRadius: "7%",
+        bottom: 60,
         zIndex: 999, // Ensure button is above other elements
+        width: "90%",
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        transform: [{ translateX: 20 }],
     },
     avatarStepButton: {
         bottom: 50, // Move the button higher up on the avatar step
@@ -377,6 +447,16 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         padding: theme.spacing.sm,
         color: theme.colors.primary.purple
+    },
+    subTitle: {
+        color: 'rgba(75 85 99 / 1)',
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        fontFamily: 'default-regular',
+        lineHeight: 24,
     }
 });
 

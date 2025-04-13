@@ -5,6 +5,7 @@ import theme from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Circle, CircleX, Cross, ShoppingBag, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GradientHeading } from './auth';
 
 interface AuthModalProps {
   isVisible: boolean;
@@ -41,22 +42,29 @@ const AuthModal: React.FC<AuthModalProps> = ({
           </View>
 
 
-          <ThemedText type="title" style={styles.title}>
+          <GradientHeading text="Save Your Discoveries" additionalStyles={styles.title} />
+          {/* <ThemedText type="title" style={styles.title}>
             Save Your Discoveries
-          </ThemedText>
+          </ThemedText> */}
 
           <ThemedText type='subtitle' style={styles.subtitle}>
             Create a free account to start building your shopping list
           </ThemedText>
 
-          <TouchableOpacity
+          <LinearGradient
+            colors={['#9333ea', '#ec4899']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={styles.createAccountButton}
-            onPress={onSignUp}
           >
-            <ThemedText style={styles.createAccountButtonText}>
-              Create Free Account
-            </ThemedText>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onSignUp}
+            >
+              <ThemedText style={styles.createAccountButtonText}>
+                Create Free Account
+              </ThemedText>
+            </TouchableOpacity>
+          </LinearGradient>
 
           <TouchableOpacity
             style={styles.signInButton}
@@ -135,10 +143,11 @@ const styles = StyleSheet.create({
     color: theme.colors.primary.purple,
   },
   subtitle: {
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: theme.spacing.xl
+    marginBottom: theme.spacing.xl,
+    fontFamily: 'default-semibold',
+    color: '#4B5563'
   },
   createAccountButton: {
     width: '100%',
@@ -146,8 +155,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
-    height: 50,
-    backgroundColor: theme.colors.primary.purple,
+    height: 46,
   },
   createAccountButtonText: {
     color: theme.colors.primary.white,
@@ -160,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.xl,
-    height: 50,
+    height: 46,
     borderWidth: 1,
     borderColor: theme.colors.primary.purple,
   },
@@ -170,7 +178,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   benefitsContainer: {
-    width: '100%',
+    width: '80%',
     alignItems: 'flex-start',
     marginTop: theme.spacing.sm,
   },
@@ -187,8 +195,9 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.sm,
   },
   benefitText: {
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
+    fontSize: 14,
+    color: '#4B5563',
+    fontFamily: 'default-semibold',
   }
 });
 

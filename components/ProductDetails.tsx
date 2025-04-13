@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ScrollView,
   Pressable,
   Modal,
-  ActivityIndicator,
   Linking
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -20,7 +19,15 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing
+  Easing,
+  FadeOut,
+  withRepeat,
+  withSequence,
+  withDelay,
+  cancelAnimation,
+  Extrapolation,
+  interpolate,
+  useAnimatedReaction
 } from 'react-native-reanimated';
 import theme from '@/styles/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +38,8 @@ import { AlertTriangle, Bookmark, Check, ChevronLeft, ChevronRight, CircleX, Ext
 import { useGetProductDetails } from '@/app/(home)/chat-products/queries/get-product-details';
 import { useAuth } from '@clerk/clerk-expo';
 import AuthModal from './AuthModal';
+import { AnimatePresence, MotiView } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ProductDetailsProps {
@@ -51,7 +60,7 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   fetchProduct,
   isSaved,
   isPending,
-  
+
 }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -60,6 +69,7 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   const { isLoading, isError, getProductDetailsFromId, closeProductDetails, productDetails: product } = useGetProductDetails();
   const { isSignedIn } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const rotation = useSharedValue(0);
 
   console.log("inside product details modal", product);
 
@@ -73,9 +83,36 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
     }
   }, [isVisible]);
 
+  // Add rotation animation for the loader
+  useEffect(() => {
+    if (isLoading) {
+      rotation.value = 0;
+      rotation.value = withRepeat(
+        withTiming(360, {
+          duration: 1500,
+          easing: Easing.linear
+        }),
+        -1, // -1 for infinite repeats
+        false // false to not reverse the animation
+      );
+    } else {
+      cancelAnimation(rotation);
+    }
+
+    return () => {
+      cancelAnimation(rotation);
+    };
+  }, [isLoading]);
+
   const backgroundStyle = useAnimatedStyle(() => {
     return {
       opacity: opacity.value,
+    };
+  });
+
+  const spinStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
     };
   });
 
@@ -131,12 +168,45 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
     );
   };
 
-  // Loading State Content
+  // Custom Loading Indicator
   const renderLoadingContent = () => (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={theme.colors.primary.purple} />
-      <Text style={styles.loadingText}>Loading product details...</Text>
-    </View>
+    <View style={styles.loaderFullPage}>
+      {/* Show product image at the top with loader overlay */}
+      <View style={styles.loadingImageContainer}>
+        <Image
+          source={{ uri: fetchProduct.image || '' }}
+          style={styles.loadingProductImage}
+          resizeMode="cover"
+        />
+
+        {/* Centered loader on image */}
+        <View style={styles.imageLoaderOverlay}>
+          <Animated.View style={spinStyle}>
+            <LoaderCircle size={100} color="#8C52FF" strokeWidth={1.5} />
+          </Animated.View>
+        </View>
+
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+          style={StyleSheet.absoluteFill} // same as absolute + inset-0
+        >
+          <View style={styles.loadingProductInfoOverlay}>
+            <Text style={styles.loadingBrandText}>{fetchProduct?.brand || 'TRUFFLE COLLECTION'}</Text>
+            <Text style={styles.loadingProductName}>{fetchProduct?.name || 'Truffle Sky Blue Sneakers'}</Text>
+            <Text style={styles.loadingPriceText}>{fetchProduct?.price || '₹1,934.00'}</Text>
+          </View>
+        </LinearGradient>
+
+      </View>
+
+      {/* Center loading spinner in bottom section */}
+      <View style={styles.centerLoaderContainer}>
+        <Animated.View style={[styles.customLoader, spinStyle]}>
+          <LoaderCircle size={70} color="#8C52FF" strokeWidth={1.5} />
+        </Animated.View>
+        <Text style={styles.loadingText}>Loading product details...</Text>
+      </View>
+    </View >
   );
 
   const shoppingListButton = () => (
@@ -194,174 +264,189 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
       />
 
       {/* Modal content */}
-      <Animated.View
-        entering={SlideInRight.duration(300).easing(Easing.ease)}
-        exiting={SlideOutRight.duration(300).easing(Easing.ease)}
-        style={[styles.modalContent, { paddingBottom: insets.bottom || 20 }]}
-      >
-        {/* Close button - always visible */}
-        <TouchableOpacity
-          style={[styles.closeButton, isLoading || isError ? styles.closeButtonAlt : null]}
-          onPress={onClose}
+      <AnimatePresence>
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{
+            duration: 400,
+            type: 'timing',
+          }}
+          style={[styles.modalContent, { paddingBottom: insets.bottom || 20 }]}
         >
-          <BlurView intensity={30} style={styles.closeBlur}>
-            <X size={24} color={isLoading || isError ? "black" : "white"} />
-          </BlurView>
-        </TouchableOpacity>
+          {/* Close button - always visible */}
+          <TouchableOpacity
+            style={[styles.closeButton, isLoading || isError ? styles.closeButtonAlt : null]}
+            onPress={onClose}
+          >
+            <BlurView intensity={30} style={styles.closeBlur}>
+              <X size={24} color={isLoading || isError ? "black" : "white"} />
+            </BlurView>
+          </TouchableOpacity>
 
-        {isLoading ? (
-          renderLoadingContent()
-        ) : isError ? (
-          renderErrorContent()
-        ) : (
-          // Normal product display
-          <>
-            <ScrollView
-              style={styles.modalScrollView}
-              contentContainerStyle={styles.scrollViewContent}
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-              nestedScrollEnabled={true}
-            >
-              {/* Image Carousel Section */}
-              <View style={styles.carouselContainer}>
-                <Image
-                  source={{ uri: product?.img_urls_list?.[currentImageIndex] || '' }}
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
+          {isLoading ? (
+            renderLoadingContent()
+          ) : isError ? (
+            renderErrorContent()
+          ) : (
+            // Normal product display
+            <>
+              <ScrollView
+                style={styles.modalScrollView}
+                contentContainerStyle={styles.scrollViewContent}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+                nestedScrollEnabled={true}
+              >
+                {/* Image Carousel Section */}
+                <View style={styles.carouselContainer}>
+                  <Image
+                    source={{ uri: product?.img_urls_list?.[currentImageIndex] || '' }}
+                    style={styles.productImage}
+                    resizeMode="cover"
+                  />
 
-                {/* Navigation arrows if there are multiple images */}
-                {product?.img_urls_list && product.img_urls_list.length > 1 && (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.navArrow, styles.leftArrow]}
-                      onPress={handlePrevImage}
-                      disabled={currentImageIndex === 0}
-                    >
-                      <BlurView intensity={30} style={styles.arrowBlur}>
-                        <ChevronLeft
-                          size={24}
-                          color="white"
-                          style={{ opacity: currentImageIndex === 0 ? 0.5 : 1 }}
-                        />
-                      </BlurView>
-                    </TouchableOpacity>
+                  {/* Navigation arrows if there are multiple images */}
+                  {product?.img_urls_list && product.img_urls_list.length > 1 && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.navArrow, styles.leftArrow]}
+                        onPress={handlePrevImage}
+                        disabled={currentImageIndex === 0}
+                      >
+                        <BlurView intensity={30} style={styles.arrowBlur}>
+                          <ChevronLeft
+                            size={24}
+                            color="white"
+                            style={{ opacity: currentImageIndex === 0 ? 0.5 : 1 }}
+                          />
+                        </BlurView>
+                      </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.navArrow, styles.rightArrow]}
-                      onPress={handleNextImage}
-                      disabled={currentImageIndex === product.img_urls_list.length - 1}
-                    >
-                      <BlurView intensity={30} style={styles.arrowBlur}>
-                        <ChevronRight
-                          size={24}
-                          color="white"
-                          style={{ opacity: currentImageIndex === product.img_urls_list.length - 1 ? 0.5 : 1 }}
-                        />
-                      </BlurView>
-                    </TouchableOpacity>
-                  </>
-                )}
+                      <TouchableOpacity
+                        style={[styles.navArrow, styles.rightArrow]}
+                        onPress={handleNextImage}
+                        disabled={currentImageIndex === product.img_urls_list.length - 1}
+                      >
+                        <BlurView intensity={30} style={styles.arrowBlur}>
+                          <ChevronRight
+                            size={24}
+                            color="white"
+                            style={{ opacity: currentImageIndex === product.img_urls_list.length - 1 ? 0.5 : 1 }}
+                          />
+                        </BlurView>
+                      </TouchableOpacity>
+                    </>
+                  )}
 
-                {/* Indicator dots */}
-                {renderDots()}
+                  {/* Indicator dots */}
+                  {renderDots()}
 
-                {/* Color selector */}
-                {/* <View style={styles.colorSelector}>
+                  {/* Color selector */}
+                  {/* <View style={styles.colorSelector}>
                   <View style={[styles.colorOption, styles.selectedColor]}>
                     <View style={[styles.colorCircle, { backgroundColor: 'black' }]} />
                   </View>
                 </View> */}
-              </View>
+                </View>
 
-              {/* Product Info Section */}
-              <View style={styles.infoContainer}>
-                {/* Brand */}
-                <Text style={styles.brandText}>{product?.brand || ''}</Text>
+                {/* Product Info Section */}
+                <View style={styles.infoContainer}>
+                  {/* Brand */}
+                  <Text style={styles.brandText}>{product?.brand || ''}</Text>
 
-                {/* Product Name */}
-                <Text style={styles.productName}>{product?.name || ''}</Text>
+                  {/* Product Name */}
+                  <Text style={styles.productName}>{product?.name || ''}</Text>
 
-                {/* Price */}
-                <Text style={styles.priceText}>{product?.price || ''}</Text>
+                  {/* Price */}
+                  <Text style={styles.priceText}>{product?.price || ''}</Text>
 
-                {/* Section Title */}
-                <Text style={styles.sectionTitle}>Details</Text>
+                  {/* Section Title */}
 
-                {/* Product Description */}
-                <Text style={styles.descriptionText}>
-                  {product?.description || 'No product details available.'}
-                </Text>
+                  {/* Product Description */}
+                  <MotiView
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: 400,
+                      type: 'timing',
+                    }}
+                    style={styles.descriptionContainer}
+                  >
+                    <Text style={styles.sectionTitle}>Details</Text>
+                    <Text style={styles.descriptionText}>
+                      {product?.description || 'No product details available.'}
+                    </Text>
+                  </MotiView>
 
-                {/* Add extra padding for button */}
-                <View style={styles.buttonSpacer} />
-              </View>
-              {showLoginModal && (
-              <AuthModal
-                isVisible={showLoginModal}
-                onClose={() => setShowLoginModal(false)}
-                onSignIn={() => {
-                  setShowLoginModal(false);
-                  router.push("/(authn)/signin");
-                }}
-                onSignUp={() => {
-                  setShowLoginModal(false);
-                  router.push("/(authn)/signup");
-                }}
-              />
-            )}
-            </ScrollView>
+                  {/* Add extra padding for button */}
+                  <View style={styles.buttonSpacer} />
+                </View>
+                {showLoginModal && (
+                  <AuthModal
+                    isVisible={showLoginModal}
+                    onClose={() => setShowLoginModal(false)}
+                    onSignIn={() => {
+                      setShowLoginModal(false);
+                      router.push("/(authn)/signin");
+                    }}
+                    onSignUp={() => {
+                      setShowLoginModal(false);
+                      router.push("/(authn)/signup");
+                    }}
+                  />
+                )}
+                {/* Buy Now Button - Fixed at the bottom */}
+                <View style={styles.buyButtonContainer}>
+                  <Pressable
+                    style={styles.buyButton}
+                    onPress={handleBuyNow}
+                  >
+                    <Text style={styles.buyButtonText}>Buy Now</Text>
+                    <ExternalLink size={18} color="white" style={styles.buttonIcon} />
+                  </Pressable>
+                  {
+                    shoppingListButton()
+                  }
+                </View>
+              </ScrollView>
 
-            {/* Buy Now Button - Fixed at the bottom */}
-            <View style={styles.buyButtonContainer}>
-              <Pressable
-                style={styles.buyButton}
-                onPress={handleBuyNow}
-              >
-                <Text style={styles.buyButtonText}>Buy Now</Text>
-                <ExternalLink size={18} color="white" style={styles.buttonIcon} />
-              </Pressable>
-              {
-                shoppingListButton()
-              }
-            </View>
-          </>
-        )}
-      </Animated.View>
+
+            </>
+          )}
+        </MotiView>
+      </AnimatePresence>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   modalContainer: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
-    bottom: 10,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
+    margin: 0,
+    paddingVertical: 20
   },
   backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
+    position: 'relative',
+    width: '90%',
+    height: '90%',
     backgroundColor: theme.colors.primary.white,
-    borderTopLeftRadius: 24,
-    borderBottomLeftRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
+    alignSelf: 'center',
+    top: 60
   },
   carouselContainer: {
     width: '100%',
-    height: SCREEN_HEIGHT * 0.6,
+    height: SCREEN_HEIGHT * 0.35,
     position: 'relative',
   },
   productImage: {
@@ -391,11 +476,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   closeButton: {
     position: 'absolute',
-    top: 40,
-    right: theme.spacing.md,
+    top: 10,
+    right: 10,
     zIndex: 10,
   },
   closeButtonAlt: {
@@ -409,6 +495,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   dotsContainer: {
     position: 'absolute',
@@ -461,40 +548,48 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     padding: theme.spacing.lg,
-    paddingBottom: 100, // Increased padding to ensure description is fully visible
+    paddingBottom: 0,
   },
   brandText: {
-    fontSize: 14,
-    color: theme.colors.secondary.darkGray,
+    fontSize: 13,
     marginBottom: 4,
     fontFamily: 'default-medium',
     textTransform: 'uppercase',
+    letterSpacing: 1,
+    opacity: 0.9,
   },
   productName: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
     color: theme.colors.secondary.black,
     fontFamily: 'default-bold',
   },
   priceText: {
-    fontSize: 22,
+    fontSize: 16,
     color: theme.colors.secondary.black,
     marginBottom: theme.spacing.lg,
     fontFamily: 'default-medium',
   },
   sectionTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: theme.spacing.sm,
-    color: theme.colors.secondary.black,
     fontFamily: 'default-semibold',
+    fontSize: 18,
+    color: '#111827', // text-gray-900
+    marginBottom: 8,
+  },
+  descriptionContainer: {
+    backgroundColor: 'rgba(249, 250, 251, 0.8)', // gray-50 with some opacity
+    borderRadius: 16, // roughly "xl" rounded
+    padding: 16, // p-4 in Tailwind (4 * 4px)
+    overflow: 'hidden',
   },
   descriptionText: {
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
-    lineHeight: 24,
-    fontFamily: 'default-regular',
+    fontFamily: 'default-semibold',
+    lineHeight: 22,
+    fontSize: 14,
+    color: '#4B5563', // text-gray-600
+
   },
   buyButton: {
     backgroundColor: theme.colors.primary.purple,
@@ -506,7 +601,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   buyButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: theme.colors.primary.white,
     fontFamily: 'default-semibold',
@@ -515,31 +610,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   modalScrollView: {
-    flex: 1,
     width: '100%',
   },
   scrollViewContent: {
     flexGrow: 1,
   },
   buttonSpacer: {
-    height: 70, // Extra space at the bottom
+    height: 40
   },
   buyButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.primary.white,
+    // backgroundColor: theme.colors.primary.white,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.secondary.lightGray,
-    elevation: 5, // Add elevation for Android
-    shadowColor: '#000', // Shadow for iOS
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    elevation: 5,
     gap: theme.spacing.md,
   },
   addToShoppingListButton: {
@@ -555,13 +641,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.lg,
   },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
-    fontFamily: 'default-medium',
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
-  // Error state styles
+  customLoader: {
+    width: 70,
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loaderRing: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 8,
+    borderColor: 'rgba(233, 233, 250, 0.9)',
+    position: 'absolute',
+  },
+  loaderProgressRing: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 8,
+    borderTopColor: '#8C52FF',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    position: 'absolute',
+    transform: [{ rotate: '-45deg' }],
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.lg,
+  },
+  star: {
+    fontSize: 24,
+    color: '#FFD700',
+    marginRight: 4,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -624,6 +745,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'default-semibold',
+  },
+  loaderFullPage: {
+    flex: 1,
+    backgroundColor: theme.colors.primary.white,
+  },
+  loadingImageContainer: {
+    width: '100%',
+    height: 400,
+    position: 'relative',
+  },
+  loadingProductImage: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingProductInfoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+  },
+  loadingBrandText: {
+    fontSize: 14,
+    color: theme.colors.primary.white,
+    textTransform: 'uppercase',
+    fontFamily: 'default-medium',
+  },
+  loadingProductName: {
+    fontWeight: 'bold',
+    color: theme.colors.primary.white,
+    fontFamily: 'default-bold',
+    fontSize: 20,
+    marginTop: 4,
+  },
+  loadingPriceText: {
+    fontSize: 16,
+    color: theme.colors.primary.white,
+    marginTop: 8,
+    fontFamily: 'default-medium',
+  },
+  centerLoaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: theme.colors.secondary.darkGray,
+    fontFamily: 'default-medium',
+  },
+  imageLoaderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
 });
 

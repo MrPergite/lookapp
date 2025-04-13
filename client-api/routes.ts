@@ -6,7 +6,8 @@ export const routes = {
         searchProducts: '/api/products/searchPublic',
         searchPartPublic: '/api/products/searchPartPublic',
         postReaction: '/api/reaction/cardReactionPublic',
-        getProductDetails: '/api/product-details/get-product-details'
+        getProductDetails: '/api/product-details/get-product-details',
+        prodCardQueryPublic: '/api/products/prodCardQueryPublic'
     },
 
     // Protected endpoints that require authentication
@@ -20,6 +21,8 @@ export const routes = {
         searchPart: '/api/products/searchPart',
         postReaction: '/api/reaction/cardReaction',
         saveShoppingList: '/api/shoppingList/shoppingListNew',
-        getProductDetails: '/api/product-details/get-product-details'
+        getProductDetails: '/api/product-details/get-product-details',
+        getUserName: '/api/users/getUserName',
+        prodCardQuery: '/api/products/prodCardQuery',
     }
 }

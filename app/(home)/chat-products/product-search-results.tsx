@@ -11,16 +11,24 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { ThumbsUp, ThumbsDown, Bookmark, User, UserIcon, Camera, ArrowUp, Search, Mic, LucideIcon, Check, X, Loader, LoaderCircle } from 'lucide-react-native';
+import { ThumbsUp, ThumbsDown, Bookmark, User, UserIcon, Camera, ArrowUp, Search, Mic, LucideIcon, Check, X, Loader, LoaderCircle, MessageSquare } from 'lucide-react-native';
 import { ThemedText } from '@/components/ThemedText';
 import theme from '@/styles/theme';
-import { chatActions, ChatMessage, useChatProducts } from './context';
+import { chatActions, ChatMessage, ConversationGroup, useChatProducts } from './context';
 import useAppTheme from '@/hooks/useTheme';
 import SearchProgressSteps, { ImageLoader } from '@/components/SearchProgressSteps';
 import { usePostReactionMutation, useProtectedMutation } from './hooks/query';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, withDelay, Easing, withRepeat } from 'react-native-reanimated';
 import TypewriterText from '@/components/TypewriterText';
+import { BlurView } from 'expo-blur';
+import { getImageSource } from './util';
+import { MotiView } from 'moti';
+import { responsiveFontSize } from '@/utils';
+import { styles } from './styles';
 const PRODUCTS_PER_GROUP = 4; // Max products to show per query group
+
+const DEVICE_HEIGHT = Dimensions.get('window').height;
+
 
 interface Product {
   id: string;
@@ -53,56 +61,53 @@ interface ProductSearchResultsProps {
     saveShoppingItem: ({ products, productId, fetchedProductInfo }: { products: Product[], productId: string, fetchedProductInfo: boolean }) => void;
     isPending: boolean;
   }
+  onFollowUpPress: (product: Product) => void;
   latestAiMessage: string;
+  followUpProduct: Product | null;
+  scrollViewRef?: React.RefObject<ScrollView>;
+  conversationGroups: ConversationGroup[];
+  inputType: 'text' | 'img+txt' | 'imgurl+txt';
 }
 
-interface ConversationGroup {
-  userMessage: ChatMessage | null;
-  aiMessage: ChatMessage | null;
-  products: Product[];
-  expanded: boolean;
-}
+
 
 const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
   products = [],
-  title = "",
-  subtitle = "",
-  chatHistory = [],
   latestAiMessage = "",
-  isLoading = false,
   onProductPress,
-  onSeeMorePress,
-  onBack,
   isPartQueryLoading,
   isProductQueryLoading,
-  setShowLoginModal,
-  saveShoppingItemConfig
+  saveShoppingItemConfig,
+  onFollowUpPress,
+  followUpProduct,
+  scrollViewRef,
+  conversationGroups,
+  inputType
 }) => {
-  const scrollViewRef = useRef<ScrollView | null>(null);
+  // const isPartQueryLoading = true;
+  // const isProductQueryLoading = true;
+  // Use the passed scrollViewRef or create a local one if not provided
+  const localScrollViewRef = useRef<ScrollView | null>(null);
+  const effectiveScrollViewRef = scrollViewRef || localScrollViewRef;
+  const targetRef = useRef(null);
   const appTheme = useAppTheme();
   const [reactedProducts, setReactedProducts] = useState<Record<string, boolean>>({});
   const [, { mutate: postReaction }] = usePostReactionMutation(reactedProducts, (reaction: Record<string, boolean>) => {
     setReactedProducts({ ...reaction });
   });
   const { savedProducts, savingProducts, saveSuccess, saveError, saveShoppingItem } = saveShoppingItemConfig || {}
-  const { dispatch } = useChatProducts();
+  const { dispatch, activeConversationGroup } = useChatProducts();
 
   // Add state for managing loading sequence
   const [showTypewriter, setShowTypewriter] = useState(false);
-  const [showProducts, setShowProducts] = useState(false);
-  const [currentProducts, setCurrentProducts] = useState<Product[]>([]);
-  const [currentChatHistory, setCurrentChatHistory] = useState<ChatMessage[]>([]);
+  const [likeFillColor, setLikeFillColor] = useState<Record<string, string>>({});
+  const [dislikeFillColor, setDislikeFillColor] = useState<Record<string, string>>({});
 
-  // Reset states when loading starts
-  useEffect(() => {
-    if (isPartQueryLoading) {
-      setShowProducts(false);
-      setCurrentProducts([]);
-      setCurrentChatHistory(chatHistory);
-    }
+  const currentScrollY = useRef(0);
 
-  }, [isPartQueryLoading, chatHistory]);
-
+  const handleScroll = (event) => {
+    currentScrollY.current = event.nativeEvent.contentOffset.y;
+  };
 
   useEffect(() => {
     if (latestAiMessage) {
@@ -110,98 +115,52 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     }
   }, [latestAiMessage]);
 
+
+
   // Update states based on loading sequence
   useEffect(() => {
-    if (!isPartQueryLoading && isProductQueryLoading) {
-      // setShowTypewriter(true);
-      setShowProducts(false);
-    }
-    else if (!isPartQueryLoading && !isProductQueryLoading) {
+
+    if (!isPartQueryLoading && !isProductQueryLoading) {
       setShowTypewriter(false);
-      setShowProducts(true);
-      setCurrentProducts(products);
     }
   }, [isPartQueryLoading, isProductQueryLoading, products]);
 
-  // Group the chat history and products into conversation pairs
-  const conversationGroups = useMemo(() => {
-    const groups: ConversationGroup[] = [];
 
-    // Skip if we don't have enough messages
-    if (chatHistory.length < 2) {
-      return groups;
-    }
-
-    // Process chat history in pairs of user/AI messages
-    for (let i = 0; i < chatHistory.length; i += 2) {
-      const userMessage = chatHistory[i]?.role === 'user' ? chatHistory[i] : null;
-      const aiMessage = chatHistory[i + 1]?.role === 'assistant' || chatHistory[i + 1]?.role === 'ai'
-        ? chatHistory[i + 1]
-        : null;
-
-
-      if (userMessage) {
-        // Determine product slice for this conversation
-        // In a real app, you'd need a proper way to associate products with conversations
-        // For now, we'll divide the products evenly among the conversation groups
-
-        // Each group starts with collapsed products
-        groups.push({
-          userMessage,
-          aiMessage,
-          products: [], // We'll distribute products later
-          expanded: false
-        });
-      }
-    }
-
-    // Distribute products to each conversation group
-    // For now, simply divide products evenly among the groups
-    const productsPerGroup = 24;
-    groups.forEach((group, index) => {
-      const start = index * productsPerGroup;
-      const end = Math.min(start + productsPerGroup, products.length);
-      group.products = products.slice(start, end);
-    });
-
-    return groups;
-  }, [chatHistory, products, reactedProducts]);
+  const activeGroup = conversationGroups.find(group => group.id === activeConversationGroup);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollViewRef.current) {
+    if (effectiveScrollViewRef.current) {
       setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
+        effectiveScrollViewRef.current?.scrollToEnd({ animated: true });
       }, 300);
     }
-  }, [chatHistory.length, products.length]);
+  }, [activeGroup?.products, isProductQueryLoading]);
 
   const toggleSave = (productId: string) => {
 
 
     // Call the API with the formatted payload
-    saveShoppingItem({ products, productId, fetchedProductInfo: true });
+    saveShoppingItem({ products, productId, fetchedProductInfo: followUpProduct ? false : true });
   };
 
-  const [productsToShowCount, setProductsToShowCount] = useState<Record<number, number>>({});
 
   const toggleGroupExpansion = (groupIndex: number) => {
-    setProductsToShowCount(prev => {
-      const currentCount = prev[groupIndex] || PRODUCTS_PER_GROUP;
-      const newCount = currentCount + PRODUCTS_PER_GROUP;
-      return {
-        ...prev,
-        [groupIndex]: newCount
-      };
-    });
+    if (activeConversationGroup) {
+      dispatch(chatActions.getMoreProducts(activeConversationGroup));
+    }
   };
 
   const handleReaction = (product_info: any, like: boolean) => {
-    console.log("productId", product_info);
+    console.log("productId", likeFillColor[product_info.product_id]);
+    setLikeFillColor({ ...likeFillColor, [product_info.product_id]: like ? "#ffffff" : "transparent" })
+    setDislikeFillColor({ ...dislikeFillColor, [product_info.product_id]: !like ? "#ffffff" : "transparent" })
+
     postReaction({
       like,
       product_info
     })
+
   }
 
   console.log("reactedProducts", reactedProducts);
@@ -229,43 +188,40 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     };
   });
 
+  const customEasing = Easing.bezier(0.23, 1, 0.32, 1);
+
+  const cardAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(1, {
+        duration: 400,
+        easing: customEasing,
+      }),
+    };
+  });
+
   const renderProduct = (item: Product, index: number) => {
     const isSaved = savedProducts[item.id] || false;
-    const productId = item.product_info?.product_id || item.id;
-    const isLiked = reactedProducts[productId] === true;
-    const isDisliked = reactedProducts[productId] === false;
 
     const isSaving = savingProducts[item.id] || false;
     const isSuccess = saveSuccess[item.id] || false;
     const isError = saveError[item.id] || false;
-
-    // Custom button styles for better visual feedback
-    const likeButtonStyle = [
-      styles.actionIconButton,
-      isLiked ? { backgroundColor: theme.colors.primary.purple } : null
-    ];
-
-    const dislikeButtonStyle = [
-      styles.actionIconButton,
-      isDisliked ? { backgroundColor: theme.colors.primary.purple } : null
-    ];
 
     // Render appropriate icon based on save state
     const renderSaveIcon = () => {
       if (isSaving) {
         return (
           <Animated.View style={spinningStyle}>
-            <LoaderCircle size={22} color="#ffffff" strokeWidth={2} />
+            <LoaderCircle size={14} color="#ffffff" strokeWidth={2} />
           </Animated.View>
         );
       } else if (isSuccess) {
-        return <Check size={22} color="#ffffff" strokeWidth={2} />;
+        return <Check size={14} color="#ffffff" strokeWidth={2} />;
       } else if (isError) {
-        return <X size={22} color="#ffffff" strokeWidth={2} />;
+        return <X size={14} color="#ffffff" strokeWidth={2} />;
       } else {
         return (
           <Bookmark
-            size={22}
+            size={14}
             color="#ffffff"
             fill={isSaved ? theme.colors.primary.white : "none"}
             strokeWidth={2}
@@ -283,46 +239,54 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
       isSaving ? styles.loadingButton : null
     ];
 
+
+
     return (
-      <View key={`product-${item.id}-${index}`} style={styles.productItem}>
+      <MotiView
+        layoutId={`product-${item.url}`}
+        transition={{
+          type: 'spring',
+          duration: 0.4,
+          ease: [0.23, 1, 0.32, 1],
+        }}
+        key={`product-${item.id}-${index}`} style={[styles.productItem]}>
         <TouchableOpacity
           style={styles.productTouchable}
           activeOpacity={0.7}
           onPress={() => onProductPress && onProductPress(item)}
         >
-          <View style={styles.imageWrapper}>
+          <Animated.View style={[styles.imageWrapper]}>
             {item.image ? (
-              <Image
-                source={{ uri: item.image }}
-                style={styles.productImage}
-                resizeMode="cover"
-              />
+              <View style={styles.productImageWrapper}>
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.55)']}
+                  locations={[0, 0.45, 1]}
+                  style={styles.imageGradient}
+                >
+                  <View style={styles.productLabel}>
+                    <Text numberOfLines={1} style={styles.brandLabel}>{item.brand}</Text>
+                    <Text numberOfLines={1} style={styles.nameLabel}>{item.name}</Text>
+                    <Text numberOfLines={1} style={styles.priceLabel}>{item.price}</Text>
+                  </View>
+                </LinearGradient>
+              </View>
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Ionicons name="image-outline" size={40} color="#a8a8a8" />
                 <Text style={styles.placeholderText}>No image available</Text>
               </View>
             )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-              locations={[0, 0.6, 1]}
-              style={styles.imageGradient}
-            >
-              <View style={styles.productLabel}>
-                <Text style={[styles.productLabelText, { color: theme.colors.secondary.veryLightGray }]}>{item.brand}</Text>
-                <Text style={styles.productLabelText} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.productPriceLabel}>{item.price}</Text>
-              </View>
-            </LinearGradient>
 
-            <View style={styles.actionOverlay}>
-              <View style={styles.leftActions}>
-                <TouchableOpacity onPress={() => handleReaction(item.product_info, true)} key={`${item.id}-like`} style={likeButtonStyle}>
-                  <ThumbsUp data-testid={`like-${item.id}`} size={18} color="#fff" strokeWidth={2} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleReaction(item.product_info, false)} key={`${item.id}-dislike`} style={dislikeButtonStyle}>
-                  <ThumbsDown data-testid={`dislike-${item.id}`} size={18} color="#fff" strokeWidth={2} />
-                </TouchableOpacity>
+            <View key={`${item.id}-actions`} style={styles.actionOverlay}>
+              <View key={`${item.id}-actions-left`} style={styles.leftActions}>
+                <ThumbsUp fill={likeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, true)}
+                  key={`like-${item.url}`} data-testid={`like-${item.id}`} size={12} color="#fff" strokeWidth={2} />
+                <ThumbsDown fill={dislikeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, false)} key={`dislike-${item.url}`} data-testid={`dislike-${item.id}`} size={12} color="#fff" strokeWidth={2} />
               </View>
               <TouchableOpacity
                 style={bookmarkButtonStyle}
@@ -332,17 +296,61 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
                 {renderSaveIcon()}
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </TouchableOpacity>
-      </View>
+      </MotiView>
     );
   };
+
+  // Add ref to track the height of the latest message
+  const latestMessageHeight = useRef(0);
+
+  // Scroll to position the latest user message at the top with space for the AI response
+  const scrollToLatestUserMessage = () => {
+    // Only attempt to scroll if we have a reference to the ScrollView
+    if (effectiveScrollViewRef.current) {
+      // Use a short delay to ensure the layout is complete
+      InteractionManager.runAfterInteractions(() => {
+        // Calculate position: current scroll position plus latest message height plus some extra padding for AI response
+        const scrollPosition = currentScrollY.current + latestMessageHeight.current + 300; // Extra space for AI response
+        effectiveScrollViewRef.current?.scrollTo({
+          y: scrollPosition,
+          animated: true
+        });
+      });
+    }
+  };
+
+  // Watch for changes to conversation groups and scroll accordingly
+  useEffect(() => {
+    if (activeGroup && activeGroup.userMessage) {
+      // When a new user message is added, scroll to position it
+      scrollToLatestUserMessage();
+    }
+  }, [conversationGroups.length, activeGroup?.userMessage?.text]);
+
+  // Scroll to bottom when loading completes or new products are added
+  useEffect(() => {
+    if (!isProductQueryLoading && !isPartQueryLoading && activeGroup && activeGroup?.products?.length > 0) {
+      // After loading is complete and products are available, scroll to show them
+      setTimeout(() => {
+        effectiveScrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    }
+  }, [isProductQueryLoading, isPartQueryLoading, activeGroup?.products?.length]);
 
   const renderMessageAvatar = (message: ChatMessage, index: number) => {
     if (message.role === 'user') {
       return (
         <View
-          style={styles.messageContainer}>
+          style={styles.messageContainer}
+          onLayout={(event) => {
+            // If this is the latest user message in the active group, save its height
+            if (activeGroup?.userMessage?.text === message.text) {
+              latestMessageHeight.current = event.nativeEvent.layout.height;
+            }
+          }}
+        >
           <View style={[styles.userMessageContainer, { width: message.image ? '100%' : 'auto' }]}>
             <LinearGradient
               colors={["#a855f7", "#c084fc", "#ec4899"]}
@@ -353,7 +361,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
               <Text style={styles.messageText}>{message.text}</Text>
               {message.image && (
                 <Image
-                  source={{ uri: `data:image/jpeg;base64,${message.image}` }}
+                  source={{ uri: getImageSource(message.image) }}
                   style={styles.messageImage}
                   resizeMode="cover"
                 />
@@ -397,7 +405,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
             }}
             onTextChange={() => {
               setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
+                effectiveScrollViewRef.current?.scrollToEnd({ animated: true });
               }, 100);
             }}
           />
@@ -409,10 +417,8 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
   // Render a conversation group with its products
   const renderConversationGroup = (group: ConversationGroup, index: number) => {
     // Get the number of products to show for this group
-    const currentShowCount = productsToShowCount[index] || PRODUCTS_PER_GROUP;
-
     // Calculate if there are more products to show
-    const productsToShow = group.products.slice(0, currentShowCount);
+    const productsToShow = group.uiProductsList;
     const hasMoreProducts = group.products.length > productsToShow.length;
 
     return (
@@ -420,18 +426,28 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
         {/* User message */}
         {group.userMessage && renderMessageAvatar(group.userMessage, index)}
 
+        {showTypewriter && group.id === activeConversationGroup ?
+          (
+            <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
+              {renderAIMessageWithTypewriter()}
+            </View>
+          )
+          : group.aiMessage && renderMessageAvatar(group.aiMessage, index)}
         {/* AI response */}
-        {group.aiMessage && renderMessageAvatar(group.aiMessage, index)}
+        {/* {group.aiMessage && } */}
 
         {/* Products for this conversation */}
-        {group.aiMessage && productsToShow.length > 0 && !isProductQueryLoading && (
+        {group.aiMessage && group.uiProductsList.length > 0 && (
           <View style={styles.productSection}>
             <View style={styles.productGrid}>
-              {productsToShow.map((item, pIndex) => (
+              {group.uiProductsList.map((item, pIndex) => (
                 <View
                   key={`group-${index}-product-${item.id}`}
-                  style={pIndex % 2 === 0 ? styles.productItemLeft : styles.productItemRight}
+                  style={[pIndex % 2 === 0 ? styles.productItemLeft : styles.productItemRight, cardAnimatedStyle]}
                 >
+                  <TouchableOpacity onPress={() => onFollowUpPress(item)} style={styles.followUpActions}>
+                    <MessageSquare size={22} color={theme.colors.primary.purple} strokeWidth={2} />
+                  </TouchableOpacity>
                   {renderProduct(item, pIndex)}
                 </View>
               ))}
@@ -452,105 +468,42 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     );
   };
 
+  const conversationGroupsToRender = useMemo(() => {
+    return conversationGroups
+  }, [conversationGroups, activeConversationGroup]);
+
   // Main render method
   return (
     <View style={styles.mainContainer}>
       <View style={styles.container}>
-        {/* If there are no conversation groups yet, show all chat history */}
-        {conversationGroups.length === 0 ? (
-          <ScrollView
-            ref={scrollViewRef}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-            style={styles.chatHistoryContainer}
-          >
-            {currentChatHistory.map((message, index) => (
-              <View key={`message-${index}`} style={message.role === 'user' ? styles.messageContainer : styles.aiMessageContainer}>
-                {message.role === 'assistant' || message.role === 'ai' ? renderMessageAvatar(message) : renderMessageAvatar(message)}
-              </View>
-            ))}
-            {/* Loading sequence */}
-            {
-              isPartQueryLoading && (
-                <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                  <ImageLoader />
-                </View>
-              )
-            }
-            {showTypewriter && (
-              <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                {renderAIMessageWithTypewriter()}
-              </View>
-            )}
-            {isProductQueryLoading && (
-              <SearchProgressSteps
-                isLoading={true}
-                inputMode={"text"}
-                steps={[
-                  { title: "Analyzing the product" },
-                  { title: "Searching fashion database" },
-                ]}
-              />
-            )}
 
-            {/* Product grid */}
-            {showProducts && currentProducts.length > 0 && (
-              <View style={styles.productSection}>
-                <View style={styles.productGrid}>
-                  {currentProducts.slice(0, productsToShowCount[-1] || PRODUCTS_PER_GROUP).map((item, index) => (
-                    <View
-                      key={`initial-${item.id}-${index}`}
-                      style={index % 2 === 0 ? styles.productItemLeft : styles.productItemRight}
-                    >
-                      {renderProduct(item, index)}
-                    </View>
-                  ))}
-                </View>
-
-                {/* See More button */}
-                {currentProducts.length > (productsToShowCount[-1] || PRODUCTS_PER_GROUP) && (
-                  <TouchableOpacity
-                    style={styles.seeMoreButton}
-                    onPress={() => {
-                      setProductsToShowCount(prev => ({
-                        ...prev,
-                        [-1]: (prev[-1] || PRODUCTS_PER_GROUP) + PRODUCTS_PER_GROUP
-                      }));
-                    }}
-                  >
-                    <ThemedText style={styles.seeMoreText}>See More</ThemedText>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </ScrollView>
-        ) : (
-          /* Render conversation groups and their associated products */
+        <View style={styles.chatHistoryContainer} >
           <ScrollView
-            ref={scrollViewRef}
-            contentContainerStyle={styles.contentContainer}
+            ref={effectiveScrollViewRef}
+            contentContainerStyle={[
+              styles.contentContainer,
+              // Add extra padding at the bottom to ensure enough scroll space
+              { paddingBottom: 100 }
+            ]}
             showsVerticalScrollIndicator={false}
-            style={styles.chatHistoryContainer}
+            onScroll={handleScroll}
+            scrollEventThrottle={16} // Improve scroll performance
           >
-            {conversationGroups.map(renderConversationGroup)}
+            {conversationGroupsToRender.map(renderConversationGroup)}
 
             {/* Loading sequence */}
             {
               isPartQueryLoading && (
-                <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                  <ImageLoader />
+                <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', }}>
+                  <ImageLoader size={60} />
                 </View>
               )
             }
-            {showTypewriter && (
-              <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                {renderAIMessageWithTypewriter()}
-              </View>
-            )}
+
             {isProductQueryLoading && (
               <SearchProgressSteps
                 isLoading={true}
-                inputMode={"text"}
+                inputMode={inputType}
                 steps={[
                   { title: "Analyzing the product" },
                   { title: "Searching fashion database" },
@@ -558,342 +511,13 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
               />
             )}
           </ScrollView>
-        )}
+        </View>
+
       </View>
     </View>
   );
 };
 
-// Styles don't include colors - they're applied dynamically based on theme
-const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.primary.lavender,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.primary.lavender,
-  },
-  contentContainer: {
-    paddingBottom: 20, // Reduced padding without input box
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    position: 'absolute',
-    top: 0,
-    zIndex: 1000,
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  chatHistoryContainer: {
-    padding: 16,
-    margin: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    opacity: 0.9,
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)', // white/40
-    borderRadius: 24, // rounded-3xl = 1.5rem = 24px
-    marginHorizontal: 24, // mx-6 = 1.5rem = 24px
-    overflow: 'hidden',
-    flexDirection: 'column',
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    // Shadow for Android
-    elevation: 5,
-  },
-  conversationGroup: {
-    marginBottom: 24,
-    borderBottomWidth: 0,
-    paddingBottom: 16,
-  },
-  messageContainer: {
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  aiMessageContainer: {
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  avatarContainer: {
-    marginRight: 12,
-    height: 36,
-    width: 36,
-    backgroundColor: theme.colors.primary.white,
-    borderRadius: 18,
-  },
-  avatarGradient: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  avatarText: {
-    color: theme.colors.primary.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  userAvatarContainer: {
-    padding: 6,
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  userAvatarBackground: {
-    width: 28,
-    height: 28,
-    // borderRadius: 18,
-    // backgroundColor: theme.colors.primary.lavender,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  userAvatarText: {
-    color: theme.colors.secondary.darkGray,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  userMessageContainer: {
-    maxWidth: '75%',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: theme.colors.secondary.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1
-  },
-  userMessageGradient: {
-    padding: 16,
-    borderRadius: 20,
-  },
-  userMessage: {
-    borderRadius: 20,
-    padding: 16,
-    backgroundColor: '#f0e6ff',
-    maxWidth: '75%',
-    shadowColor: theme.colors.secondary.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  aiMessage: {
-    borderRadius: 20,
-    padding: 16,
-    backgroundColor: theme.colors.primary.white,
-    maxWidth: '75%',
-    flex: 1,
-    shadowColor: theme.colors.secondary.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  messageText: {
-    fontSize: 16,
-    color: theme.colors.primary.white,
-    lineHeight: 22,
-  },
-  messageImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary.white,
-    maxWidth: '75%',
-    flex: 1,
-  },
-  loadingText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
-  },
-  productSection: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-    justifyContent: 'space-between',
-  },
-  productItemLeft: {
-    width: '48.5%',
-    marginBottom: 16,
-  },
-  productItemRight: {
-    width: '48.5%',
-    marginBottom: 16,
-  },
-  productItem: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  productTouchable: {
-    width: '100%',
-  },
-  imageWrapper: {
-    position: 'relative',
-    width: '100%',
-    height: 340,
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f2f2f2',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 12,
-    marginTop: 8,
-    color: '#777777',
-  },
-  imageGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-    justifyContent: 'flex-end',
-    paddingBottom: 60,
-    paddingHorizontal: 16,
-  },
-  productLabel: {
-    width: '100%',
-  },
-  productLabelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 5,
-    lineHeight: 24,
-  },
-  productPriceLabel: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: '#ffffff',
-    lineHeight: 24,
-  },
-  actionOverlay: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  leftActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionIconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookmarkButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: theme.colors.primary.purple,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bookmarkButtonActive: {
-    backgroundColor: '#6b5cd1',
-  },
-  successButton: {
-    backgroundColor: '#4CAF50', // Green
-  },
-  errorButton: {
-    backgroundColor: '#F44336', // Red
-  },
-  loadingButton: {
-    backgroundColor: '#6b5cd1',
-  },
-  productBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 10,
-    paddingRight: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  ratingButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#6b5cd1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f7f7f7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activeBtn: {
-    backgroundColor: '#6b5cd1',
-  },
-  seeMoreButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-    borderRadius: 8,
-    backgroundColor: theme.colors.primary.white,
-  },
-  seeMoreText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.secondary.veryDarkGray,
-    fontFamily: 'default-semibold',
-  },
-});
+
 
 export default ProductSearchResults; 

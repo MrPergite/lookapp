@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useProtectedMutation } from "../hooks/query";
 import { Toast } from "react-native-toast-message/lib/src/Toast";
 import { getSaveToShoppingListPayload } from "../utils";
-import { Product } from "../context";
+import { Product, useChatProducts } from "../context";
 import { useAuth } from "@clerk/clerk-expo";
 
 export const useSaveShoppingList = (openLoginModal: () => void) => {
@@ -11,6 +11,8 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
     const [saveSuccess, setSaveSuccess] = useState<Record<string, boolean>>({});
     const [saveError, setSaveError] = useState<Record<string, boolean>>({});
     const { isSignedIn } = useAuth();
+    const { conversationGroups } = useChatProducts();
+    const allProducts = conversationGroups.flatMap(group => group.products);
     const { mutate: saveToShoppingList, isPending } = useProtectedMutation("saveShoppingList", {
         onSuccess: (data, payload: any) => {
             // Update local state for immediate UI feedback
@@ -77,8 +79,8 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
             });
         }
     });
-    const saveShoppingItem = ({ products, productId, fetchedProductInfo }: { products: Product[], productId: string, fetchedProductInfo: boolean }) => {
-
+    const saveShoppingItem = ({ products, productId, fetchedProductInfo = true }: { products: Product[], productId: string, fetchedProductInfo: boolean }) => {
+        console.log("saveShoppingItem", allProducts, productId, fetchedProductInfo)
         if (!isSignedIn) {
             openLoginModal();
             return;
@@ -99,7 +101,7 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
             ...prev,
             [productId]: false
         }));
-        saveToShoppingList(getSaveToShoppingListPayload({ products, productId, fetchedProductInfo: true }));
+        saveToShoppingList(getSaveToShoppingListPayload({ products: allProducts, productId, fetchedProductInfo }));
     }
     return {
         savedProducts,

@@ -2,15 +2,17 @@ import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
 import { Slot, SplashScreen, Stack } from "expo-router";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import Toast, { BaseToast, ErrorToast, ToastConfig } from "react-native-toast-message";
 import { OnBoardingContext, OnBoardingProvider } from "./(onboarding)/context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { X } from "lucide-react-native";
 import theme from "@/styles/theme";
-import { useEffect } from "react";
 import React from "react";
+import Constants from 'expo-constants';
+
+const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
 
 // Create a client
 const queryClient = new QueryClient({
@@ -97,14 +99,12 @@ const toastConfig: ToastConfig = {
   ),
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  
+export default function RootLayout() {  
 
   return (
-    <ClerkProvider tokenCache={tokenCache}>
+    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={DefaultTheme}>
           <OnBoardingProvider>
             <Slot />
             <Toast

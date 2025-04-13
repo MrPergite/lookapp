@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     try {
       const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.example.com';
       const response = await axios.get(
-        `${backendUrl}/users/${userId}/onboarding`,
+        `${backendUrl}/users/getOnboardingInfo`,
         {
           headers: {
             'Authorization': authHeader,
@@ -141,15 +141,12 @@ export async function POST(request: NextRequest) {
     try {
       const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.example.com';
       const response = await axios.post(
-        `${backendUrl}/users/${userId}/onboarding`,
+        `${backendUrl}/users/onboardingInfo`,
         {
-          userId,
           onboardingInfo
         },
         {
           headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
             ...(await applyHeaderStyles(request))
           }
         }

@@ -9,10 +9,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   useColorScheme,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import theme from "../../../styles/theme";
@@ -20,13 +20,11 @@ import Constants from "expo-constants";
 import { useChatProducts, chatActions, ChatProductsProvider, Product } from "./context";
 import Toast from "react-native-toast-message";
 import ProductSearchResults from "./product-search-results";
-import { useAuth } from "@clerk/clerk-expo";
 import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
-import { extractImageUrl } from "./util";
+import { extractImageUrl, transformShoppingList } from "./util";
 import { useApi } from "@/client-api";
 import useAppTheme from "@/hooks/useTheme";
 import { useNavigation } from "@react-navigation/native";
-import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { ArrowUp, Camera, Search, Mic, Image, Instagram, CircleArrowUp } from "lucide-react-native";
 import ProductDetails from "@/components/ProductDetails";
 import { useSaveShoppingList } from "./queries/save-shopping-list";
@@ -34,6 +32,11 @@ import { AuthModal } from "@/components";
 import { router } from "expo-router";
 import * as ImagePicker from 'expo-image-picker';
 import ImagePreview from "@/components/image-preview";
+import MessageInput, { MessageSendButton } from "@/app/components/MessageInput";
+import { ImageLoader } from "@/components/SearchProgressSteps";
+import ProductDetailCard from "@/components/ProductDetailCard";
+import { useProdCardQueryMutation } from "./hooks/query";
+import { getSavedDetails } from "@/utils";
 // Define the param list type to match what's in _layout.tsx
 type TabParamList = {
   Home: { headerProps?: object };
@@ -42,12 +45,6 @@ type TabParamList = {
 
 // Create a client
 const queryClient = new QueryClient();
-
-// Get environment variables
-const ENV = Constants.expoConfig?.extra || {};
-
-console.log(`Using environment: ${ENV.ENV}`);
-console.log(`API URL: ${ENV.AUTH_API_CLERK}`);
 
 const ChatScreenContent = () => {
   const {
@@ -60,14 +57,37 @@ const ChatScreenContent = () => {
     inputType,
     error,
     dispatch,
+    conversationGroups
   } = useChatProducts();
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (navigation && navigation.isFocused()) {
+      // @ts-ignore - Type error with React Navigation event listener
+      const unsubscribe = navigation.addListener('tabPress', e => {
+        // Force refresh logic here
+        // For example, you can reset some state or trigger data fetching
+        setSearchText("");
+        setImageUris([]);
+        setLatestAiMessage("");
+        setShowLoginModal(false);
+        setIsPartQueryLoading(false);
+        setIsProductQueryLoading(false);
+        setImageUris([]);
+        setFetchProduct(null);
+        dispatch(chatActions.reset());
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation]);
 
   const [searchText, setSearchText] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
   const appTheme = useAppTheme();
-  const colorScheme = useColorScheme();
-  const navigation = useNavigation<BottomTabNavigationProp<TabParamList, 'Home'>>();
   const [fetchProduct, setFetchProduct] = useState<Product | null>(null);
+  const [followUpProduct, setFollowUpProduct] = useState<Product | null>(null);
   const { savedProducts, savingProducts, saveSuccess, saveError, saveShoppingItem, isPending } = useSaveShoppingList(() => setShowLoginModal(true))
   const [showLoginModal, setShowLoginModal] = useState(false);
   // Get API client from useApi hook
@@ -81,7 +101,6 @@ const ChatScreenContent = () => {
     try {
       // Use client-api pattern instead of direct axios call
       const { ...payload } = { ...data, ...(sessionId ? { sessionId } : {}) };
-      console.log("payload", payload);
       setIsPartQueryLoading(true);
       if (isAuthenticated) {
         const response = await callProtectedEndpoint('searchPart', {
@@ -101,7 +120,6 @@ const ChatScreenContent = () => {
 
       // Implement retry logic
       if (retries > 0 && (error.response?.status >= 500 || !error.response)) {
-        console.log(`Retrying searchPart API call, ${retries} retries left`);
         return new Promise(resolve => {
           setTimeout(() => {
             resolve(searchPartQuery(data, retries - 1));
@@ -138,7 +156,6 @@ const ChatScreenContent = () => {
 
       // Implement retry logic
       if (retries > 0 && (error.response?.status >= 500 || !error.response)) {
-        console.log(`Retrying search API call, ${retries} retries left`);
         return new Promise(resolve => {
           setTimeout(() => {
             resolve(handleProductSearch(data, retries - 1));
@@ -153,6 +170,17 @@ const ChatScreenContent = () => {
     }
   }, [isAuthenticated, callPublicEndpoint, callProtectedEndpoint]);
 
+  const prodCardQueryMutation = useProdCardQueryMutation(
+    (data: any, variables: any) => {
+      setIsProductQueryLoading(false);
+      const shoppingList = data.shopping_results;
+      const transformedShoppingList = transformShoppingList(shoppingList);
+      dispatch(chatActions.addProducts(transformedShoppingList, sessionId || "", data.aiResponse));
+    },
+    (error: any, variables: any) => {
+      setIsProductQueryLoading(false);
+    }
+  );
   // Reset error if it exists when component mounts
   useEffect(() => {
     if (error) {
@@ -164,13 +192,10 @@ const ChatScreenContent = () => {
   const transformProducts = useCallback((apiProducts: any[]): Product[] => {
     if (!apiProducts || !Array.isArray(apiProducts)) return [];
 
-    console.log("Raw API products received:", apiProducts);
 
     return apiProducts.map((item, index) => {
       // Use our utility to get a properly formatted image URL
       const imageUrl = extractImageUrl(item);
-
-      console.log(`Product ${index} image URL: ${imageUrl}`);
 
       return {
         id: item.id || item.product_id || String(Math.random()),
@@ -183,7 +208,7 @@ const ChatScreenContent = () => {
       };
     });
   }, []);
-  
+
 
   // React Query mutation for product search
   const searchMutation = useMutation({
@@ -210,7 +235,6 @@ const ChatScreenContent = () => {
 
       // Step 1: First call the searchPart API to get AI-generated search query
       const searchPartResponse = await searchPartQuery(payload);
-      console.log("searchPartResponse", searchPartResponse.includes("Sorry"));
 
       // Check if we got a valid search query response
       if (!searchPartResponse || searchPartResponse.includes("Sorry")) {
@@ -252,11 +276,9 @@ const ChatScreenContent = () => {
       dispatch(chatActions.setLoading(false));
 
       setImageUris([]);
-      console.log("data.productResults", data);
       // Add products if they exist
       if (data.productResults && data.productResults.shopping_results && data.productResults.shopping_results.length > 0) {
         const transformedProducts = transformProducts(data.productResults.shopping_results);
-        console.log("Transformed products:", transformedProducts);
 
         if (transformedProducts.length > 0) {
           // Always use addProducts to append new products rather than replacing
@@ -336,25 +358,12 @@ const ChatScreenContent = () => {
   };
 
   const handleProductPress = (product: Product) => {
-    console.log("Product pressed:", product);
     setFetchProduct(product);
     // Implement product navigation/details view
   };
-
-  const handleSeeMorePress = () => {
-    console.log("See more pressed");
-    // Implement loading more products
-  };
-
-  // Suggestion item click handler
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchText(suggestion);
-  };
-
   const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage]);
 
   const handleImageUpload = () => {
-    console.log("Image upload pressed");
     ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -363,7 +372,6 @@ const ChatScreenContent = () => {
       base64: true,
     }).then((result) => {
       if (!result.canceled) {
-        console.log("Image picked:", result.assets[0].base64);
         if (result.assets[0].base64) {
           setImageUris([result.assets[0].base64]);
         }
@@ -375,85 +383,136 @@ const ChatScreenContent = () => {
     setImageUris(imageUris.filter((imageUri) => imageUri !== uri));
   };
 
-  return (
-    <LinearGradient
-      colors={colorScheme === 'dark'
-        ? ['#352b59', '#3a3a66'] as const
-        : [appTheme.colors.primary.lavender, appTheme.colors.primary.periwinkle] as const
+  const handleFollowUpPress = (product: Product) => {
+    setFollowUpProduct(product);
+    // Implement follow up logic
+  };
+
+  const handleProdCardQuery = async (question: string, product: any) => {
+    setIsProductQueryLoading(true);
+    dispatch(chatActions.addUserMessage(question, product?.image))
+    dispatch(chatActions.addAiMessage("Your searched products"))
+    prodCardQueryMutation.mutate(
+      {
+        "product_title": followUpProduct?.name,
+        "product_img_url": followUpProduct?.image,
+        "query": question,
+        "chat_history": [
+          ...chatHistory,
+          {
+            "role": "user",
+            "text": question
+          }
+        ],
+        "gender": await getSavedDetails('gender') || "male"
       }
-      style={styles.container}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    );
+    setFollowUpProduct(null);
+  };
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[{ flex: 1 }, styles.keyboardAvoidingContainer]}>
+      <LinearGradient
+        colors={["rgba(243, 234, 244, 1)", "rgba(237, 212, 240, 1)", "rgba(243, 234, 244, 1)"] as const
+        }
+        style={[styles.container]}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
 
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.chatContainer}>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.chatContainer}>
+              <View style={[styles.fullscreenContainer]}>
+                {conversationGroups.length ? (
+                  <ProductSearchResultsMemo
+                    inputType={inputType}
+                    latestAiMessage={latestAiMessage}
+                    products={products}
+                    chatHistory={chatHistory}
+                    conversationGroups={conversationGroups}
+                    isLoading={isLoading}
+                    onProductPress={handleProductPress}
+                    title="Search Results"
+                    subtitle="Based on your search"
+                    onBack={() => dispatch(chatActions.reset())}
+                    isPartQueryLoading={isPartQueryLoading}
+                    isProductQueryLoading={isProductQueryLoading}
+                    setShowLoginModal={setShowLoginModal}
+                    saveShoppingItemConfig={{
+                      savedProducts,
+                      savingProducts,
+                      saveSuccess,
+                      saveError,
+                      saveShoppingItem,
+                      isPending
+                    }}
+                    onFollowUpPress={handleFollowUpPress}
+                    followUpProduct={followUpProduct}
+                    scrollViewRef={scrollViewRef}
+                  />
+                ) : (
+                  <></>
+                )}
+              </View>
+              {fetchProduct &&
+                <ProductDetails
+                  fetchProduct={fetchProduct}
+                  isVisible={true}
+                  onClose={() => setFetchProduct(null)}
+                  onAddToShoppingList={() => {
+                    saveShoppingItem({
+                      products: [fetchProduct],
+                      productId: fetchProduct.id,
+                      fetchedProductInfo: true
+                    });
+                  }}
+                  isSaved={savedProducts[fetchProduct.id] || false}
+                  isPending={isPending}
+
+                />}
+              {followUpProduct &&
+                <ProductDetailCard
+                  product={followUpProduct}
+                  isVisible={true}
+                  onClose={() => setFollowUpProduct(null)}
+                  onSendQuestion={handleProdCardQuery}
+                />
+              }
+              {showLoginModal && !fetchProduct && (
+                <AuthModal
+                  isVisible={showLoginModal}
+                  onClose={() => setShowLoginModal(false)}
+                  onSignIn={() => {
+                    setShowLoginModal(false);
+                    router.push("/(authn)/signin");
+                  }}
+                  onSignUp={() => {
+                    setShowLoginModal(false);
+                    router.push("/(authn)/signup");
+                  }}
+                />
+              )}
 
 
-            <View style={[styles.fullscreenContainer]}>
-              {chatHistory.length ? 
-              <ProductSearchResultsMemo
-                latestAiMessage={latestAiMessage}
-                products={products}
-                chatHistory={chatHistory}
-                isLoading={isLoading}
-                onProductPress={handleProductPress}
-                onSeeMorePress={handleSeeMorePress}
-                title=""
-                subtitle=""
-                onBack={() => {
-                  dispatch(chatActions.reset());
-                }}
-                isPartQueryLoading={isPartQueryLoading}
-                isProductQueryLoading={isProductQueryLoading}
-                setShowLoginModal={setShowLoginModal}
-                saveShoppingItemConfig={{
-                  savedProducts,
-                  savingProducts,
-                  saveSuccess,
-                  saveError,
-                  saveShoppingItem,
-                }}
-              /> : <></>}
             </View>
-            {fetchProduct &&
-              <ProductDetails
-                fetchProduct={fetchProduct}
-                isVisible={true}
-                onClose={() => setFetchProduct(null)}
-                onAddToShoppingList={() => {
-                  saveShoppingItem({
-                    products: [fetchProduct],
-                    productId: fetchProduct.id,
-                    fetchedProductInfo: true
-                  });
-                }}
-                isSaved={savedProducts[fetchProduct.id] || false}
-                isPending={isPending}
-
-              />}
-            {showLoginModal && !fetchProduct && (
-              <AuthModal
-                isVisible={showLoginModal}
-                onClose={() => setShowLoginModal(false)}
-                onSignIn={() => {
-                  setShowLoginModal(false);
-                  router.push("/(authn)/signin");
-                }}
-                onSignUp={() => {
-                  setShowLoginModal(false);
-                  router.push("/(authn)/signup");
-                }}
-              />
-            )}
-
             {/* Input box at the bottom */}
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
-              style={styles.keyboardAvoidingContainer}
-            >
-              <View style={styles.chatFooter}>
-                {imageUris.length > 0 && <ImagePreview onRemoveImage={handleRemoveImage} imageUris={imageUris} />}
+
+            {chatHistory.length ?
+              <View style={[{ position: 'absolute', bottom: -20, left: 0, right: 0, zIndex: 1000 }]}>
+                <MessageInput
+                  searchText={searchText}
+                  setSearchText={setSearchText}
+                  showImagePreview={imageUris.length > 0} renderImagePreview={() => (
+                    <ImagePreview imageUris={imageUris} onRemoveImage={handleRemoveImage} />
+                  )}
+                  onSend={handleSendMessage}
+                  onImageSelect={handleImageUpload}
+
+                />
+              </View>
+              : <View style={styles.chatFooter}>
+                {imageUris.length > 0 &&
+                  <ImagePreview onRemoveImage={handleRemoveImage} imageUris={imageUris} />}
                 <View style={styles.searchInput}>
                   <TextInput
                     style={styles.messageInput}
@@ -463,36 +522,26 @@ const ChatScreenContent = () => {
                     onChangeText={setSearchText}
                     multiline
                   />
-                  {searchText.trim().length > 0 && (
-                    <TouchableOpacity onPress={handleSendMessage} style={styles.sendButtonContainer}>
-                      <ArrowUp size={16} color={theme.colors.primary.white} fill={appTheme.colors.secondary.black} />
-                    </TouchableOpacity>
-                  )}
+                  <MessageSendButton searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
                 </View>
-                <View style={styles.actionBar}>
+                {/* <View style={styles.actionBar}>
                   <View style={styles.leftButtons}>
                     <TouchableOpacity onPress={handleImageUpload} style={styles.actionButtonPill}>
                       <Image size={16} color="#000" />
-                      <Text style={styles.actionButtonText}>Visual search</Text>
+                      <Text className="text-sm text-red">Visual search</Text>
                     </TouchableOpacity>
-
-                    {/* <TouchableOpacity style={styles.actionButtonPill}>
-                      <Instagram size={16} color="#000" />
-                      <Text style={styles.actionButtonText}>Social search</Text>
-                    </TouchableOpacity> */}
                   </View>
-                </View>
+                </View> */}
                 <Text style={styles.disclaimerText}>
                   Look AI can make mistakes. shop at your own risk.
                 </Text>
-              </View>
-            </KeyboardAvoidingView>
-          </View>
+              </View>}
+          </SafeAreaView>
 
-        </SafeAreaView>
-      </TouchableWithoutFeedback>
+        </TouchableWithoutFeedback>
 
-    </LinearGradient>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -516,7 +565,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.md,
-    position: "relative",
+    // position: "relative",
   },
   card: {
     backgroundColor: theme.colors.primary.white,
@@ -602,6 +651,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: theme.spacing.lg,
+
   },
   disclaimerContainer: {
     alignItems: "center",
@@ -618,9 +668,9 @@ const styles = StyleSheet.create({
   chatContainer: {
     marginVertical: theme.spacing.md,
     width: '100%',
-    height: '100%',
     flexDirection: 'column',
-    alignItems: 'flex-end'
+    alignItems: 'flex-end',
+    height: Dimensions.get('window').height - 200,
   },
   messageContainer: {
     padding: theme.spacing.md,
@@ -657,9 +707,9 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: theme.spacing.xl - 8,
     overflow: "hidden",
-    position: "relative",
+    // position: "relative",
     borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    borderBottomRightRadius: 0
   },
   // Input styles
   chatFooter: {
@@ -672,6 +722,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
+    position: 'absolute',
+    bottom: -10,
   },
   messageInput: {
     backgroundColor: '#fff',
@@ -735,7 +787,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     color: theme.colors.secondary.darkGray,
-    marginTop: 8,
+    marginBottom: 8,
   },
   keyboardAvoidingContainer: {
     width: "100%",

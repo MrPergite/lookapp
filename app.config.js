@@ -15,7 +15,12 @@ const appConfig = {
     ios: {
       supportsTablet: true,
       // bundleIdentifier: "com.lookai.lookapp"
-      "bundleIdentifier": "com.egustav2027.lookapp"
+      "bundleIdentifier": "com.egustav2027.lookapp",
+      infoPlist: {
+        "NSCameraUsageDescription": "This app uses the camera to let you take photos.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you pick images.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves images to your photo library."
+      },
     },
     android: {
       adaptiveIcon: {
@@ -42,7 +47,7 @@ const appConfig = {
       [
         "expo-router",
         {
-          "origin": "https://egustav2027-lookapp.expo.app"
+          "origin": "https://mobile-api-opal.vercel.app"
         }
       ]
     ],
@@ -57,10 +62,10 @@ const appConfig = {
         projectId: "4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
       },
       enableCors: true,
-      origin: "https://egustav2027-lookapp.expo.app",
+      origin: "https://mobile-api-opal.vercel.app",
       ...envConfig,
     },
-    
+
     updates: {
       url: "https://u.expo.dev/4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
     },

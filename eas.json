@@ -9,7 +9,6 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "API_BASE_URL": "http://exkyapi.test.lookai.me",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
         "EXPO_PUBLIC_API_BASE_URL": "http://exkyapi.test.lookai.me",
         "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
@@ -20,24 +19,27 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "API_BASE_URL": "https://api.lookai.me",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.lookai.me",
+        "EXPO_PUBLIC_API_BASE_URL": "http://exkyapi.test.lookai.me",
         "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "distribution": "store",
       "env": {
-        "API_BASE_URL": "https://api.lookai.me",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsudGVzdC5sb29rYWkubWUk",
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.lookai.me",
+        "EXPO_PUBLIC_API_BASE_URL": "http://exkyapi.test.lookai.me",
         "CLERK_SECRET_KEY": "lookai.mobile.allareequal"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6744337310"
+      }
+    }
   }
 }

@@ -1,4 +1,6 @@
+import theme from '@/styles/theme';
 import React, { useState, useEffect, memo } from 'react';
+import { StyleSheet } from 'react-native';
 import { Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 
@@ -31,6 +33,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({
       } else {
         clearInterval(interval);
         onComplete?.();
+        onTextChange?.();
       }
     }, speed);
 
@@ -46,11 +49,20 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Text style={{ fontSize: 16, color: '#000' }}>{displayedText}</Text>
+      <Text style={styles.text}>{displayedText}</Text>
     </View>
   );
 };
 
 export default memo(TypewriterText, (prevProps, nextProps) => {
   return prevProps.text === nextProps.text;
-}); 
+});
+
+const styles = StyleSheet.create({
+  text: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: 'default-regular',
+    fontWeight: '700',
+  }
+});

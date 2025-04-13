@@ -3,14 +3,20 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  Image, 
   TouchableOpacity, 
   Dimensions,
-  ScrollView
+  ScrollView,
+  SafeAreaView,
+  Animated
 } from 'react-native';
 import theme from '@/styles/theme';
 import { AVATARS } from '@/constants';
 import { useOnBoarding } from '../context';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAnimatedStyle } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
+import { withTiming } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -41,14 +47,23 @@ function SelectAvatars() {
     }
   };
 
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withTiming(scale.value, { duration: 300 }) }],
+  }));
+
+
   // Only show the first 4 avatars (2x2 grid) as in the image
   const displayAvatars = AVATARS;
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.gridContainer}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.gridContainer}>
         {displayAvatars.map((avatar) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={avatar.id}
             style={[
               styles.avatarCard,
@@ -56,21 +71,28 @@ function SelectAvatars() {
             ]}
             onPress={() => handleSelection(avatar)}
             activeOpacity={0.9}
+            onPressIn={() => (scale.value = 1.02)}
+            onPressOut={() => (scale.value = 1)}
           >
-            <View style={styles.imageContainer}>
+            <Animated.View style={[styles.imageContainer,animatedStyle]}>
               <Image 
                 source={{ uri: avatar.src }} 
                 style={styles.avatarImage}
-                resizeMode="contain"
+                contentFit='cover'
+                contentPosition={'top'}
               />
-            </View>
-            <View style={styles.nameContainer}>
+            </Animated.View>
+            <LinearGradient
+              colors={['rgba(0,0,0,0.6)', 'transparent']} // from-black/60 to-transparent
+              start={{ x: 0.5, y: 1 }}
+              end={{ x: 0.5, y: 0 }}
+              style={styles.nameContainer}>
               <Text style={styles.avatarName}>{avatar.name}</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </View>
+    </SafeAreaView> 
   );
 }
 
@@ -78,7 +100,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    paddingTop: 10
+    paddingTop: 10,
+    height: '100%'
   },
   gridContainer: {
     width: '100%',
@@ -86,17 +109,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    gap: 16
+    gap: 16,
+    paddingBottom: 240, 
   },
   avatarCard: {
-    width: width * 0.425,
-    height: width * 0.55,
-    borderRadius: 24,
+    width: width * 0.4,
+    height: width * 0.62,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: "#e9e9e9",
     marginBottom: 16,
     position: 'relative',
-    borderWidth: 3,
+    borderWidth: 1,
     borderColor: 'transparent',
   },
   selectedAvatarCard: {
@@ -109,6 +133,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: "#e9e9e9",
+    
   },
   avatarImage: {
     width: '100%',
@@ -120,13 +145,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     paddingVertical: 8,
     alignItems: 'center',
+    
   },
   avatarName: {
     color: theme.colors.primary.white,
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: 'bold',
   }
 });
