@@ -146,44 +146,27 @@ function TabSection({ activeTab, setActiveTab,
     <>
       {isMyOutfitsExpanded && (
         <MotiView
-          initial={{ opacity: 0 }}
+          from={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-white dark:bg-gray-900 z-40"
+          className="fixed inset-0 bg-white z-40"
         />
       )}
       <MotiView
         className={`fixed top-4 bottom-0 left-0 right-0 bg-gray-50/95 rounded-t-3xl relative ${isMyOutfitsExpanded ? "z-50" : "z-10"}`}
         animate={{
-          translateY: isMyOutfitsExpanded ? "0" : 0,
-          height: isMyOutfitsExpanded ? screenHeight * 1.8 : screenHeight * 0.4,
-          transition: {
-            type: "spring",
-            damping: 20,
-            stiffness: 100,
-          },
+          transform: [{ translateY: isMyOutfitsExpanded ? -80 : 0 }],
+          height: isMyOutfitsExpanded ? screenHeight * 1 : screenHeight * 0.4,
+        }}
+        transition={{
+          type: "spring",
+          damping: 20,
+          stiffness: 100
         }}
 
         style={{
-          height: isMyOutfitsExpanded ? screenHeight * 1.8 : "auto",
-          maxHeight: isMyOutfitsExpanded ? screenHeight * 1.8 : 220,
-          ...(isMyOutfitsExpanded && {
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            position: 'absolute',
-
-            backgroundColor: 'rgba(249, 250, 251, 0.95)', // gray-50/95
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            zIndex: 50,
-            shadowColor: '#000',
-            shadowOpacity: 0.1,
-            shadowRadius: 10,
-            elevation: 8,
-            overflow: 'hidden',
-          })
+          height: isMyOutfitsExpanded ? screenHeight : "auto",
+          maxHeight: isMyOutfitsExpanded ? screenHeight  : 220
         }}>
         <View style={styles.container}>
           <View className='

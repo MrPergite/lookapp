@@ -101,7 +101,18 @@ const AvatarSection = ({
   };
 
   return (
-    <View style={styles.mainContainer}>
+    <MotiView
+      animate={{
+        height: isExpanded ? 0 : screenHeight,
+        opacity: isExpanded ? 0.3 : 1,
+      }}
+      transition={{ duration: 0.3 }}
+      id={
+        isSignedIn
+          ? "virtual-tryon-image-mobile"
+          : "virtual-tryon-image-mobile-loggedout"
+      }
+      style={styles.mainContainer}>
       <View style={[styles.imageCard, isSignedIn && { width: "auto" }]}>
         <View style={styles.topControls}>
           <TouchableOpacity
@@ -154,8 +165,8 @@ const AvatarSection = ({
                 <Image
                   style={[styles.avatarImage,
                   isSignedIn ? styles.signedInAvatar : {
-                    alignSelf: 'flex-start',
-                    aspectRatio: 3 / 4,
+                    width: '100%',
+                    height: '100%',
                   }]}
                   source={{ uri: selectedAvatar.src }}
                   id="virtual-avatar-content-mobile"
@@ -164,7 +175,7 @@ const AvatarSection = ({
                   ...(isSignedIn ? {
                     contentPosition: 'bottom center'
                   } : {
-                    contentPosition: "top center"
+                    contentPosition: "top center",
                   })
                   }
                 />
@@ -304,7 +315,7 @@ const AvatarSection = ({
           </View>
         </SafeAreaView>
       </Modal>
-    </View>
+    </MotiView>
   );
 };
 
@@ -373,7 +384,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     overflow: 'hidden',
     borderRadius: responsiveFontSize(24),
-    alignSelf: 'center',
   },
   avatarImage: {
     width: '100%',

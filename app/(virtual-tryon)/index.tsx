@@ -535,12 +535,12 @@ function VirtualTryOn({ route }: { route: any }) {
                 <AnimatePresence>
                     {isFullscreen && (
                         <MotiView
-                            initial={{ opacity: 0 }}
+                            from={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="flex-1 w-full h-full absolute inset-0 z-50 bg-black/90 p-4 flex items-center justify-center"
                         >
-                            <View style={[styles.fullscreenImageContainer]} className="relative w-full bg-white rounded-3xl overflow-hidden">
+                            <View style={[styles.fullscreenImageContainer]} className="relative w-full h-full bg-white rounded-3xl overflow-hidden">
                                 <Image
                                     style={{ width: "100%", height: "100%" }}
                                     source={{
@@ -549,8 +549,8 @@ function VirtualTryOn({ route }: { route: any }) {
                                             : selectedAvatar.src
                                     }}
                                     alt={selectedAvatar.name}
-                                    contentFit='contain'
-                                    contentPosition='center'
+                                    contentFit='cover'
+                                    contentPosition='top center'
                                 />
                                 <TouchableOpacity
                                     className="absolute top-4 right-4 text-gray-800 hover:bg-white/20 rounded-full"
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     },
     fullscreenImageContainer: {
         // width: Dimensions.get("window").width - 50,
-        height: Dimensions.get("window").height - 200,
+        // height: Dimensions.get("window").height - 200,
     }
 });
 
