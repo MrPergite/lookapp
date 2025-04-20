@@ -24,5 +24,9 @@ export const routes = {
         getProductDetails: '/api/product-details/get-product-details',
         getUserName: '/api/users/getUserName',
         prodCardQuery: '/api/products/prodCardQuery',
+        vtonTryon: '/api/vton/tryon',
+        vtonOutfits: '/api/vton/outfits',
+        vtonCredits: '/api/vton/credits',
+        vtonOutfitsDelete: '/api/vton/outfits',
     }
 }

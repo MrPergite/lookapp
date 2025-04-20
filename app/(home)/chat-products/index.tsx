@@ -37,11 +37,6 @@ import { ImageLoader } from "@/components/SearchProgressSteps";
 import ProductDetailCard from "@/components/ProductDetailCard";
 import { useProdCardQueryMutation } from "./hooks/query";
 import { getSavedDetails } from "@/utils";
-// Define the param list type to match what's in _layout.tsx
-type TabParamList = {
-  Home: { headerProps?: object };
-  'Virtual TryOn': { headerProps?: object };
-};
 
 // Create a client
 const queryClient = new QueryClient();
@@ -59,6 +54,8 @@ const ChatScreenContent = () => {
     dispatch,
     conversationGroups
   } = useChatProducts();
+
+  console.log("conversationGroups", conversationGroups);
 
   const navigation = useNavigation();
 
@@ -255,6 +252,7 @@ const ChatScreenContent = () => {
 
       // Add AI message to chat
       setLatestAiMessage(aiGeneratedQuery);
+      dispatch(chatActions.addAiMessage(aiGeneratedQuery));
 
       // Make the second API call to get products using the appropriate endpoint
       return {
@@ -274,7 +272,7 @@ const ChatScreenContent = () => {
     onSuccess: (data) => {
       // Stop loading
       dispatch(chatActions.setLoading(false));
-
+      console.log("chat search success", data);
       setImageUris([]);
       // Add products if they exist
       if (data.productResults && data.productResults.shopping_results && data.productResults.shopping_results.length > 0) {
@@ -355,13 +353,14 @@ const ChatScreenContent = () => {
 
     // Execute the search mutation with both text and any image
     searchMutation.mutate({ text: userMessage, image: imageData });
+    Keyboard.dismiss();
   };
 
   const handleProductPress = (product: Product) => {
     setFetchProduct(product);
     // Implement product navigation/details view
   };
-  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage]);
+  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage,conversationGroups]);
 
   const handleImageUpload = () => {
     ImagePicker.launchImageLibraryAsync({

@@ -27,6 +27,7 @@ const TextBox: ForwardRefRenderFunction<TextInput, TextBoxProps> = ({ label, err
         ]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        placeholderTextColor={theme.colors.secondary.mediumDarkGray}
       />
     </View>
   );

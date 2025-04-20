@@ -63,7 +63,7 @@ type ActionType =
   | { type: 'TOGGLE_SIGN_IN_MODAL'; payload?: undefined }
   | { type: 'REMOVE_USER_MESSAGE'; }
   | { type: 'REMOVE_AI_MESSAGE' }
-  | { type: 'GET_MORE_PRODUCTS'; payload: { activeConversationGroup: string } };
+  | { type: 'GET_MORE_PRODUCTS'; payload: { conversationId: string } };
 
 // Context type
 interface ChatProductsContextType extends ChatProductsState {
@@ -163,13 +163,13 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
       };
 
     case "GET_MORE_PRODUCTS":
-      const activeGroup = state.conversationGroups.find(group => group.id === action.payload.activeConversationGroup);
+      const activeGroup = state.conversationGroups.find(group => group.id === action.payload.conversationId);
       if (!activeGroup) return state;
       const newProducts = activeGroup.products.slice(activeGroup.uiProductsList.length, activeGroup.uiProductsList.length + activeGroup.pagination.limit);
       return {
         ...state,
         conversationGroups: state.conversationGroups.map(group =>
-          group.id === state.activeConversationGroup
+          group.id === action.payload.conversationId
             ? {
               ...group, uiProductsList: [...group.uiProductsList, ...newProducts],
               pagination: {
@@ -236,7 +236,8 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
     case 'RESET':
       return {
         ...initialState,
-        sessionId: undefined
+        sessionId: undefined,
+        conversationGroups: []
       };
 
     default:
@@ -273,9 +274,9 @@ export const chatActions = {
     payload: { text, image }
   }),
 
-  getMoreProducts: (activeConversationGroup: string) => ({
+  getMoreProducts: (conversationId: string) => ({
     type: 'GET_MORE_PRODUCTS' as const,
-    payload: { activeConversationGroup }
+    payload: { conversationId }
   }),
 
   addAiMessage: (text: string) => ({

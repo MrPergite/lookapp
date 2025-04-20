@@ -7,7 +7,7 @@ import { useFonts as useRoboto, Roboto_400Regular } from '@expo-google-fonts/rob
 import * as Updates from 'expo-updates';
 import { Alert } from "react-native";
 import 'react-native-get-random-values';
-
+import "../global.css"
 
 
 export function useAppFonts() {

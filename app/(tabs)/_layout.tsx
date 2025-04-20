@@ -25,6 +25,7 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { TabHeader } from "@/components/tab-header";
 import { Camera, MessageCircle, UserCircle } from "lucide-react-native";
 import Profile from "../profile/_layout";
+import VirtualTryOn from "../(virtual-tryon)";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -33,7 +34,7 @@ SplashScreen.preventAutoHideAsync();
 // Define the param types for our tabs
 type TabParamList = {
     Chat: { headerProps?: object };
-    'Virtual TryOn': { headerProps?: object };
+    'Try-On': { headerProps?: object };
     Profile: { headerProps?: object };
 };
 
@@ -68,7 +69,12 @@ export default function RootLayout() {
             <Tab.Navigator
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ color, size }) => {
-                        const icon = route.name === "Chat" ? <MessageCircle size={size} color={color} /> : <UserCircle size={size} color={color} />;
+                        const iconMap = {
+                            Chat: <MessageCircle size={size} color={color} />,
+                            "Try-On": <Camera size={size} color={color} />,
+                            Profile: <UserCircle size={size} color={color} />,
+                        }
+                        const icon = iconMap[route.name];
                         return icon;
                     },
                     tabBarActiveTintColor: theme.colors.primary.purple,
@@ -111,9 +117,9 @@ export default function RootLayout() {
                     name="Chat"
                     component={ChatScreen}
                 />
-                {/* <Tab.Screen
-                    name="Virtual TryOn"
-                    component={ProfileScreen}
+                <Tab.Screen
+                    name="Try-On"
+                    component={VirtualTryOn}
                     options={({ route }) => {
                         const { params } = route;
                         if (params && params.headerProps) {
@@ -121,7 +127,7 @@ export default function RootLayout() {
                         }
                         return {};
                     }}
-                /> */}
+                />
                 <Tab.Screen
                     name="Profile"
                     component={Profile}

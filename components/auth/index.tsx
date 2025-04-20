@@ -3,7 +3,7 @@ import GradientText from "../GradientText";
 
 
 
-export const GradientHeading = ({ text, additionalStyles }: { text: string; additionalStyles?: StyleSheet.NamedStyles<any> }) => {
+export const GradientHeading = ({ text, additionalStyles = {}, className = '' }: { text: string; additionalStyles?: StyleSheet.NamedStyles<any>, className?: string }) => {
     return (
         <GradientText style={[styles.lookPassTitle, {
             ...(additionalStyles && {
@@ -13,6 +13,7 @@ export const GradientHeading = ({ text, additionalStyles }: { text: string; addi
             gradientColors={['#9333ea', '#ec4899']} // purple-600 → pink-600
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
+            className={className}
         >
             {text}
         </GradientText>

@@ -16,7 +16,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return Response.json({ message: "Shopping List New API is up and running" });
+
+  const response = await axios.get(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/shoppingListNew`, {
+    headers: {
+      ...(await applyHeaderStyles(request)),
+    }
+  });
+
+  console.log("shopping list new", response.data);
+
+  return Response.json(response.data);
 }
 
 /**

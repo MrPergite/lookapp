@@ -15,7 +15,7 @@ const BackButton: React.FC<BackButtonProps> = ({ routeName }) => {
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(routeName as any);
+    router.back();
   };
 
   return (

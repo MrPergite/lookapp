@@ -146,8 +146,9 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
 
 
   const toggleGroupExpansion = (groupIndex: number) => {
+    const conversationId = conversationGroups[groupIndex].id;
     if (activeConversationGroup) {
-      dispatch(chatActions.getMoreProducts(activeConversationGroup));
+      dispatch(chatActions.getMoreProducts(conversationId));
     }
   };
 
@@ -399,7 +400,6 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
             speed={30}
             onComplete={() => {
               if (isProductQueryLoading) {
-                dispatch(chatActions.addAiMessage(latestAiMessage));
                 setShowTypewriter(false);
               }
             }}
@@ -468,9 +468,13 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     );
   };
 
+
   const conversationGroupsToRender = useMemo(() => {
     return conversationGroups
   }, [conversationGroups, activeConversationGroup]);
+
+  console.log("conversationGroups in product search results",conversationGroupsToRender, conversationGroups,activeConversationGroup);
+
 
   // Main render method
   return (

@@ -135,7 +135,7 @@ export function useApi(): ApiHook {
         endpointKey: string,
         options: EndpointCallOptions = {}
     ): Promise<T> => {
-        const { method = 'GET', data = null, params = null } = options;
+        const { method = 'GET', data = {}, params = {} } = options;
         const endpoint = apiConfig.endpoints.protected[endpointKey];
 
         if (!endpoint) {
@@ -151,8 +151,8 @@ export function useApi(): ApiHook {
             const response: AxiosResponse<T> = await protectedAxios({
                 method,
                 url: endpoint,
-                data: method !== 'GET' ? data : null,
-                params: method === 'GET' ? params : null
+                ...(method !== "GET" && { data }),
+                params
             });
 
             console.log("AXIOS INTERCEPTOR RESPONSE : ", JSON.stringify(response, null, 2))

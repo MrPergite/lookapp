@@ -4,6 +4,8 @@ import { Dimensions } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
 
 
+
+
 export function withHaptick(fn: Function) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     return function (...args: any[]) {
@@ -42,3 +44,18 @@ export const saveDetails = async (key: string, value: Record<string, any> | stri
         console.error('Error saving details:', error);
     }
 }
+
+// export const getVirtualTryOnDetails = async () => {
+//     const fetchValues = [
+//         "hasSeenVirtualTour",
+//         "hasSeenVirtualTourLoggedOut",
+//         "hasSeenVirtualTour1stStep"
+//     ]
+
+//     const fetchValuesFromStorage = await Promise.all(fetchValues.map(async (value) => {
+//         const valueFromStorage = await AsyncStorage.getItem(value);
+//         return { [value]: valueFromStorage };
+//     }))
+
+//     return Object.assign({}, ...fetchValuesFromStorage);
+// }

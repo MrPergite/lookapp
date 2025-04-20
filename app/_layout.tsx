@@ -10,6 +10,7 @@ import { X } from "lucide-react-native";
 import theme from "@/styles/theme";
 import React from "react";
 import Constants from 'expo-constants';
+import { ImageProvider } from "@/common/providers/image-search";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -37,7 +38,7 @@ const toastConfig: ToastConfig = {
       </View>
       <View style={styles.toastTextContainer}>
         <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text1}</Text>
-        {text2 && text2.length ? <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text2}</Text>:<></>}
+        {text2 && text2.length ? <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text2}</Text> : <></>}
       </View>
       <TouchableOpacity
         style={styles.closeButton}
@@ -99,20 +100,22 @@ const toastConfig: ToastConfig = {
   ),
 };
 
-export default function RootLayout() {  
+export default function RootLayout() {
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={DefaultTheme}>
-          <OnBoardingProvider>
-            <Slot />
-            <Toast
-              position='bottom'
-              bottomOffset={65}
-              config={toastConfig}
-            />
-          </OnBoardingProvider>
+          <ImageProvider>
+            <OnBoardingProvider>
+              <Slot />
+            </OnBoardingProvider>
+          </ImageProvider>
+          <Toast
+            position='bottom'
+            bottomOffset={65}
+            config={toastConfig}
+          />
         </ThemeProvider>
       </QueryClientProvider>
     </ClerkProvider>
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     marginHorizontal: '5%',
-  
+
   },
   iconContainer: {
     marginRight: 12,
