@@ -22,17 +22,18 @@ const ProductDetails = ({ description, size, rating, reviewCount }: IProductDeta
                 Details
             </Text> : <></>}
 
-            <View className="flex-row items-center mb-5">
-                {rating && reviewCount ?
+            {rating && reviewCount ?
+                <View className="flex-row items-center mb-5">
+
                     <View className="flex-row items-center gap-4">
                         <ProductRating rating={rating} reviewCount={reviewCount} />
                         <Text className="text-lg">
                             {reviewCount > 20 ? "20+" : reviewCount} reviews
                         </Text>
                     </View>
-                    : <></>
-                }
-            </View>
+                </View>
+                : <></>
+            }
 
             {size ? <Text className="text-sm text-gray-600 leading-relaxed">
                 {description || ""}
