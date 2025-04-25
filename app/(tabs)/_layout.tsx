@@ -19,13 +19,14 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import theme from "@/styles/theme";
 import * as Haptics from "expo-haptics";
-import ChatScreen from "../(home)/chat-products";
+import ChatScreen from "./chat/chat-products";
 import Toast from "react-native-toast-message";
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { TabHeader } from "@/components/tab-header";
-import { Camera, MessageCircle, UserCircle } from "lucide-react-native";
-import Profile from "../profile/_layout";
-import VirtualTryOn from "../(virtual-tryon)";
+import { Camera, MessageCircle, ShoppingCart, UserCircle } from "lucide-react-native";
+import Profile from "./profile/_layout";
+import VirtualTryOn from "./virtual-tryon";
+import ShoppingList from "./shopping-list";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -33,9 +34,10 @@ SplashScreen.preventAutoHideAsync();
 
 // Define the param types for our tabs
 type TabParamList = {
-    Chat: { headerProps?: object };
-    'Try-On': { headerProps?: object };
-    Profile: { headerProps?: object };
+    chat: { headerProps?: object };
+    "virtual-tryon": { headerProps?: object };
+    profile: { headerProps?: object };
+    "shopping-list": { headerProps?: object };
 };
 
 export default function RootLayout() {
@@ -70,9 +72,10 @@ export default function RootLayout() {
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ color, size }) => {
                         const iconMap = {
-                            Chat: <MessageCircle size={size} color={color} />,
-                            "Try-On": <Camera size={size} color={color} />,
-                            Profile: <UserCircle size={size} color={color} />,
+                            chat: <MessageCircle size={size} color={color} />,
+                            "virtual-tryon": <Camera size={size} color={color} />,
+                            profile: <UserCircle size={size} color={color} />,
+                            "shopping-list": <ShoppingCart size={size} color={color} />,
                         }
                         const icon = iconMap[route.name];
                         return icon;
@@ -84,18 +87,13 @@ export default function RootLayout() {
                         backgroundColor: theme.colors.primary.white,
                     },
                 })}
-                // screenListeners={{
-                //     tabPress: (ev) => {
-                //         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                //         console.log("tabPress", ev.target);
-                //     },
-                // }}
+             
                 listeners={({ navigation }) => ({
                     tabPress: e => {
-                      const key = Math.random().toString();
-                      navigation.navigate('Home', { key }); // forces remount
+                        const key = Math.random().toString();
+                        navigation.navigate('Home', { key }); // forces remount
                     },
-                  })}
+                })}
             >
                 <Tab.Screen
                     options={({ route, navigation }) => {
@@ -112,27 +110,35 @@ export default function RootLayout() {
                             return { ...defaultHeaderProps, ...params.headerProps };
                         }
 
-                        return defaultHeaderProps;
+                        return { ...defaultHeaderProps, title: "Chat" };
                     }}
-                    name="Chat"
+                    name="chat"
                     component={ChatScreen}
                 />
                 <Tab.Screen
-                    name="Try-On"
+                    name="virtual-tryon"
                     component={VirtualTryOn}
                     options={({ route }) => {
                         const { params } = route;
                         if (params && params.headerProps) {
                             return params.headerProps;
                         }
-                        return {};
+                        return {
+                            title: "Try-On",
+                        };
                     }}
                 />
                 <Tab.Screen
-                    name="Profile"
+                    name="shopping-list"
+                    component={ShoppingList}
+                    options={{
+                        title: "Shopping List",
+                    }}
+                />
+                <Tab.Screen
+                    name="profile"
                     component={Profile}
                     options={({ route, navigation }) => {
-                        // Default header props
                         const defaultHeaderProps = {
                             headerShown: false,
                             headerTitle: "",
@@ -145,7 +151,7 @@ export default function RootLayout() {
                             return { ...defaultHeaderProps, ...params.headerProps };
                         }
 
-                        return defaultHeaderProps;
+                        return { ...defaultHeaderProps, title: "Profile" };
                     }}
                 />
             </Tab.Navigator>

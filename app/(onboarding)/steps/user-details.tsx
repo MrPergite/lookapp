@@ -73,7 +73,6 @@ function UserDetails() {
         }
     }, [userCountry]);
 
-    console.log({ userCountry, countries })
 
     // Get values from context with default values
     const clothingSize = payload?.clothing_size || clothingSizeOptions[0].value;

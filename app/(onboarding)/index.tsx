@@ -89,7 +89,6 @@ const Onboarding = () => {
                     console.log('User not authenticated, skipping onboarding fetch');
                     return null;
                 }
-                console.log({ token })
 
                 const response = await axios<{ success: boolean, data: { onboardingInfo: OnboardingData } }>(
                     `${Constants.expoConfig?.extra?.origin}${routes.protected.getOnboardingInfo}`,
@@ -116,7 +115,6 @@ const Onboarding = () => {
 
     // Set fetched data to context when available
     useEffect(() => {
-        console.log({ data })
         if (data?.data) {
             // Update each field in the context
             Object.entries(data.data).forEach(([key, value]) => {
@@ -186,35 +184,6 @@ const Onboarding = () => {
             return;
         }
         setSaveOnboardingData(true);
-        // const token = await getToken();
-        // try {
-        //     const response = await axios.post(
-        //         `${Constants.expoConfig?.extra?.origin}${routes.protected.saveOnboardingInfo}`,
-        //         {
-        //             method: 'POST',
-        //             data: { onboardingInfo: payload },
-        //             headers: {
-        //                 'Authorization': `Bearer ${token}`
-        //             }
-        //         }
-        //     );
-
-        //     // Navigate to home after saving
-        //     router.navigate('/(tabs)');
-
-        //     Toast.show({
-        //         type: 'success',
-        //         text1: 'Success',
-        //         text2: 'Your profile has been saved!'
-        //     });
-        // } catch (err) {
-        //     console.error('Failed to save onboarding data:', err);
-        //     Toast.show({
-        //         type: 'error',
-        //         text1: 'Error',
-        //         text2: 'Failed to save your profile'
-        //     });
-        // }
     };
 
     const renderStep = () => {
@@ -247,7 +216,7 @@ const Onboarding = () => {
         >
             <SafeAreaView style={styles.safeArea}>
 
-                {saveOnboardingData ? <FinalOnboardingLoad onComplete={() => router.replace("/(tabs)" as any)} onboardingData={payload} /> :
+                {saveOnboardingData ? <FinalOnboardingLoad onComplete={() => router.replace("/(tabs)/chat" as any)} onboardingData={payload} /> :
                     <>
                         <MotiView
                             key={currentStep}
@@ -279,8 +248,8 @@ const Onboarding = () => {
                             {isLoading && (
                                 <ThemedText style={styles.loadingText}>Loading your profile...</ThemedText>
                             )}
-                            <GradientHeading text={Steps[currentStep].title.text} additionalStyles={styles.title} />
-                            <ThemedText type='default' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
+                            <GradientHeading className='text-2xl md:text-3xl font-bold mb-2 text-transparent bg-clip-text' text={Steps[currentStep].title.text} additionalStyles={styles.title} />
+                            <ThemedText type='default' className='text-base text-gray-600' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
 
                             {/* Rest of the content */}
                             <MotiScrollView

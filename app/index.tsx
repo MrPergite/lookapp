@@ -45,10 +45,9 @@ export default function IndexPage() {
 
 
     useEffect(() => {
-        console.log({ isSignedIn, fontsLoaded })
         if (fontsLoaded) {
             SplashScreen.hideAsync(); // Hide splash screen once fonts are loaded
-            router.replace("(tabs)"); // Navigate to signin if not authenticated
+            router.replace("/(tabs)/chat"); // Navigate to signin if not authenticated
         }
     }, [fontsLoaded]);
 

@@ -32,10 +32,9 @@ import Animated, {
 import theme from '@/styles/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { ProductDetails } from '@/app/(home)/chat-products/types';
-import { Product } from '@/app/(home)/chat-products/context';
+import { Product } from '@/app/(tabs)/chat/chat-products/context';
 import { AlertTriangle, Bookmark, Check, ChevronLeft, ChevronRight, CircleX, ExternalLink, LoaderCircle, X } from 'lucide-react-native';
-import { useGetProductDetails } from '@/app/(home)/chat-products/queries/get-product-details';
+import { useGetProductDetails } from '@/app/(tabs)/chat/chat-products/queries/get-product-details';
 import { useAuth } from '@clerk/clerk-expo';
 import AuthModal from './AuthModal';
 import { AnimatePresence, MotiView } from 'moti';
@@ -71,7 +70,6 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   const [showLoginModal, setShowLoginModal] = useState(false);
   const rotation = useSharedValue(0);
 
-  console.log("inside product details modal", product);
 
   // Handle background fade animation
   React.useEffect(() => {
@@ -140,7 +138,6 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   };
 
   const handleAddToShoppingList = () => {
-    console.log("handleAddToShoppingList", isSignedIn);
     if (!isSignedIn) {
       setShowLoginModal(true);
       return;
@@ -239,7 +236,6 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
       <TouchableOpacity
         style={styles.visitProductButton}
         onPress={() => {
-          console.log("product link -->", fetchProduct);
           if (fetchProduct.url) {
             Linking.openURL(fetchProduct.url).catch((err) =>
               console.error('Error opening product link:', err));

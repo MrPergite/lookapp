@@ -80,7 +80,6 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
 
     const handleSendQuestion = () => {
         // Add logic to handle the question
-        console.log("Question:", inputText);
         onSendQuestion(inputText, product);
         // Clear input after sending
         setInputText('');

@@ -68,7 +68,6 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
                         },
                         data: { onboardingInfo: onboardingData },
                     });
-                    console.log("resp in saveOnboardingData", resp.data.success);
                     if (resp.status === 200) {
                         resolve(resp.data.success);
                     }
@@ -148,7 +147,6 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
     }, []); // Empty array means this effect runs once on mount
 
     const handleContinue = () => {
-        console.log("handleContinue");
         setShowDialog(false);
         onComplete();
     };

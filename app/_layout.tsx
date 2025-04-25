@@ -11,6 +11,7 @@ import theme from "@/styles/theme";
 import React from "react";
 import Constants from 'expo-constants';
 import { ImageProvider } from "@/common/providers/image-search";
+import { ScreenHistoryProvider } from "@/common/providers/screen-history";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -38,7 +39,7 @@ const toastConfig: ToastConfig = {
       </View>
       <View style={styles.toastTextContainer}>
         <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text1}</Text>
-        {text2 && text2.length ? <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text2}</Text> : <></>}
+        {text2 && text2.length ? <Text style={[styles.toastText, { color: theme.colors.primary.green }]}>{text2}</Text> : null}
       </View>
       <TouchableOpacity
         style={styles.closeButton}
@@ -56,7 +57,7 @@ const toastConfig: ToastConfig = {
         </View>
       </View>
       <Text style={styles.toastText}>{text1}</Text>
-      {text2 && <Text style={styles.toastText}>{text2}</Text>}
+      {text2 && text2.length ? <Text style={styles.toastText}>{text2}</Text> : <></>}
       <TouchableOpacity
         style={styles.closeButton}
         onPress={() => Toast.hide()}
@@ -100,6 +101,12 @@ const toastConfig: ToastConfig = {
   ),
 };
 
+Toast.show({
+  type: 'success',
+  text1: 'Item added to shopping list',
+  visibilityTime: 10000000000
+});
+
 export default function RootLayout() {
 
   return (
@@ -107,9 +114,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={DefaultTheme}>
           <ImageProvider>
-            <OnBoardingProvider>
-              <Slot />
-            </OnBoardingProvider>
+            <ScreenHistoryProvider>
+              <OnBoardingProvider>
+                <Slot />
+              </OnBoardingProvider>
+            </ScreenHistoryProvider>
           </ImageProvider>
           <Toast
             position='bottom'
@@ -136,6 +145,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     marginHorizontal: '5%',
+    alignContent: 'center',
+    justifyContent: 'center',
+    height: "100%",
 
   },
   iconContainer: {
@@ -184,14 +196,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     fontWeight: '500',
+    lineHeight: 18, // match or slightly more than fontSize
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   closeButton: {
     padding: 4,
   },
   toastTextContainer: {
-    flex: 1,
     flexDirection: 'column',
+    flex: 1,
     justifyContent: 'center',
-    height: "100%"
+    textAlign: 'center',
+    height: "100%",
   }
 });

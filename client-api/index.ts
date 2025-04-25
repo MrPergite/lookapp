@@ -154,6 +154,7 @@ export function useApi(): ApiHook {
                 ...(method !== "GET" && { data }),
                 params
             });
+            
 
             console.log("AXIOS INTERCEPTOR RESPONSE : ", JSON.stringify(response, null, 2))
 
@@ -205,7 +206,6 @@ export function ApiExample() {
     const fetchPublicData = async (): Promise<Product[] | null> => {
         try {
             const products = await callPublicEndpoint<Product[]>('getProducts');
-            console.log('Products:', products);
             return products;
         } catch (error) {
             console.error('Failed to fetch public data:', error);
@@ -222,7 +222,6 @@ export function ApiExample() {
             }
 
             const profile = await callProtectedEndpoint<UserProfile>('getUserProfile');
-            console.log('User profile:', profile);
             return profile;
         } catch (error) {
             console.error('Failed to fetch user profile:', error);
