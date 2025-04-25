@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useState } from 'react';
 import { useEffect } from 'react';
+import { countries } from "countries-list"
 
 /**
  * Fetches the current user's IP-based location data
@@ -8,8 +9,8 @@ import { useEffect } from 'react';
  */
 export const fetchUserCountry = async (): Promise<string> => {
     try {
-        const response = await axios.get('https://ipapi.co/json/');
-        return response.data.country_name;
+        const response = await axios.get('https://ipwho.is/');
+        return response.data.country;
     } catch (error) {
         console.error('Error fetching user country:', error);
         return '';
@@ -20,20 +21,13 @@ export const fetchUserCountry = async (): Promise<string> => {
  * Fetches all countries from the REST Countries API
  * @returns Array of country names
  */
-export const fetchAllCountries = async (): Promise<{ label: string, value: string }[]> => {
-    try {
-        const response = await axios.get('https://restcountries.com/v3.1/all');
+export const fetchAllCountries = (): { label: string, value: string }[] => {
+    const countriesList = Object.values(countries).map((country) => ({
+        label: country.name,
+        value: country.name
+    }));
 
-        // Sort countries alphabetically by common name
-        const countries = response.data
-            .map((country: any) => ({ label: country.name.common, value: country.name.common }))
-            .sort((a: any, b: any) => a.value.localeCompare(b.value));
-
-        return countries;
-    } catch (error) {
-        console.error('Error fetching countries:', error);
-        return [];
-    }
+    return countriesList;
 };
 
 export type CountryData = {

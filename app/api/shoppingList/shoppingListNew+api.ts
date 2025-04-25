@@ -23,8 +23,6 @@ export async function GET(request: NextRequest) {
     }
   });
 
-  console.log("shopping list new", response.data);
-
   return Response.json(response.data);
 }
 

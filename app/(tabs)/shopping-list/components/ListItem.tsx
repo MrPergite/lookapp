@@ -14,8 +14,8 @@ import {
 } from "lucide-react-native";
 import FeatureDescriptionPopup from "./FeatureDescriptionPopup";
 import ImageSlider from "./ImageSlider";
-import { Alert, Linking, Pressable, TouchableOpacity } from "react-native";
-import { router, useNavigation, useRouter } from "expo-router";
+import { Linking, TouchableOpacity } from "react-native";
+import { router } from "expo-router";
 import { MotiView } from "moti";
 import { LinearTransition } from "react-native-reanimated";
 import { View } from "react-native";
@@ -24,6 +24,7 @@ import { MotiPressable } from "moti/interactions";
 import { StyleSheet } from "react-native";
 import { responsiveFontSize } from "@/utils";
 import { LinearGradient } from "expo-linear-gradient";
+import ProductDetails from "./ProductDetails";
 
 interface IListItem {
     item: any;
@@ -41,7 +42,6 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
 
 
     const closeFeaturePopup = () => {
-        console.log("Closing feature popup");
         setActiveFeature(null);
     };
 
@@ -81,7 +81,6 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
         router.push("/(tabs)/virtual-tryon");
     };
 
-    console.log({ item })
 
     return (
         <MotiView
@@ -92,18 +91,6 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
             transition={{ duration: 0.3, delay: 0.1 }}
             key={item.id}
         >
-            {/* <TouchableOpacity
-                disabled={isDeleting}
-                className={`absolute top-2 right-2 z-50 rounded-full bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all duration-300 
-          ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onPress={() => onRemove(item.id, item?.product_link)}
-            >
-                {isDeleting ? (
-                    <Loader2 className="h-4 w-4 text-red-500 dark:text-red-400 animate-spin" />
-                ) : (
-                    <Trash className="h-4 w-4 text-red-500 dark:text-red-400" />
-                )}
-            </TouchableOpacity> */}
 
             <View key={item.id} className="borde border-gray-200 rounded-xl overflow-hidden mb-4">
                 <View>
@@ -222,11 +209,11 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
                             onPress={() => setIsExpanded(!isExpanded)}
                             className='flex-row gap-1.5 justify-center items-center px-2'
                             style={styles.actionButtonContainer}>
-                                <View
-                                    style={styles.secondaryButton}
-                                >
-                                    <Text className="text-[#7E69AB] font-medium">See more</Text>
-                                </View>
+                            <View
+                                style={styles.secondaryButton}
+                            >
+                                <Text className="text-[#7E69AB] font-medium">See more</Text>
+                            </View>
                             {isExpanded ? <ChevronUp size={18} color="#000" className="ml-1" /> : <ChevronDown size={18} color="#000" className="ml-1" />}
                         </TouchableOpacity>
 
@@ -235,87 +222,13 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
 
                 {/* Additional Options (Expanded View) */}
                 {isExpanded && (
-                    <View className="p-4 border-t border-gray-200">
-                        <View className="flex-row flex-wrap">
-                            {/* Price Alert */}
-                            {
-                                [
-                                    {
-                                        icon: <Bell size={22} color="#9b87f5" />,
-                                        title: 'Set Price Alert',
-                                        description: 'Set a price alert for this item',
-                                        activeFeature: 'priceAlert'
-                                    },
-                                    {
-                                        icon: <BarChart2 size={22} color="#9b87f5" />,
-                                        title: 'See Price History',
-                                        description: 'See the price history for this item',
-                                        activeFeature: 'priceHistory'
-                                    },
-                                    {
-                                        icon: <Tag size={22} color="#9b87f5" />,
-                                        title: 'Find Discount Codes',
-                                        description: 'Find discount codes for this item',
-                                        activeFeature: 'findDeals'
-                                    },
-                                    {
-                                        icon: <MessageSquare size={22} color="#9b87f5" />,
-                                        title: 'Summarize Reviews',
-                                        description: 'Summarize the reviews for this item',
-                                        activeFeature: 'reviews'
-                                    },
-
-                                ].map(featureItem => (
-                                    <View key={featureItem.activeFeature} className="w-1/2 p-2">
-                                        <TouchableOpacity
-                                            activeOpacity={0.7}
-                                            onPress={() => {
-                                                setActiveFeature(featureItem.activeFeature);
-                                                console.log(`Feature "${featureItem.title}" activated: ${featureItem.activeFeature}`);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                height: 64,
-                                                borderRadius: 12,
-                                                backgroundColor: '#F1F0FB',
-                                                borderWidth: 1,
-                                                borderColor: '#E5E7EB',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                position: 'relative',
-                                                overflow: 'visible'
-                                            }}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            delayPressIn={0}
-                                        >
-                                            <View
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: -4,
-                                                    right: -4,
-                                                    backgroundColor: '#9b87f5',
-                                                    paddingHorizontal: 8,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 50,
-                                                    zIndex: 10
-                                                }}
-                                            >
-                                                <Text style={{ color: 'white', fontSize: 10, fontWeight: '500' }}>
-                                                    Soon
-                                                </Text>
-                                            </View>
-
-                                            <View style={{ alignItems: 'center' }}>
-                                                {featureItem.icon}
-                                                <Text style={{ fontSize: 10, fontWeight: '500', color: '#374151', marginTop: 4 }}>
-                                                    {featureItem.title}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    </View>
-                                ))
-                            }
-                        </View>
+                    <View className="px-3 pb-3">
+                        <ProductDetails
+                            description={item.description}
+                            size={item.size}
+                            rating={item.rating}
+                            reviewCount={item.review_count}
+                        />
                     </View>
                 )}
             </View>

@@ -15,6 +15,7 @@ import { ScreenHistoryProvider } from "@/common/providers/screen-history";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+console.log({ publishableKey })
 
 // Create a client
 const queryClient = new QueryClient({

@@ -1,59 +1,46 @@
-import React from 'react';
 import Star from '@/common/icons/Star';
+import React from 'react';
 import { View } from 'react-native';
-import { Text } from 'react-native';
+
 interface IProductRating {
     rating: number;
     reviewCount: number;
 }
 
-const ProductRating = ({ rating, reviewCount }: IProductRating) => {
+const ProductRating = ({ rating }: IProductRating) => {
     return (
-        reviewCount && (
-            <View className="flex items-center space-x-2 relative bottom-5">
-                <View className="flex items-center space-x-0.5">
-                    {[...Array(5)].map((_, index) => {
-                        // Calculate full and fractional stars
-                        const starValue = index + 1; // 1-indexed
-                        let starFillPercentage = 0;
-                        const isFull = starValue <= Math.floor(rating);
-                        if (isFull) {
-                            starFillPercentage = 100;
-                        }
-                        // Full star condition
-                        const isHalf = starValue === Math.ceil(rating) && rating % 1 !== 0; // Half star condition
-                        if (isHalf) {
-                            starFillPercentage = 50;
-                        }
-                        const isEmpty = !isFull && !isHalf; // Empty star condition
+        <View className="flex-row">
+            {[...Array(5)].map((_, index) => {
+                const starValue = index + 1; // 1-indexed
+                const isFull = starValue <= Math.floor(rating);
+                const isHalf = starValue === Math.ceil(rating) && rating % 1 !== 0;
+                const isEmpty = !isFull && !isHalf;
 
-                        // For fractional stars (e.g., 4.3, 4.7), calculate the fill percentage
+                // Determine fill and stroke colors based on star type
+                let fill = "transparent";
+                let stroke = "#d1d5db"; // gray-300
 
-                        if (rating % 1 !== 0 && starValue === Math.ceil(rating)) {
-                            starFillPercentage = (rating % 1) * 100; // Percentage of the last star to fill
-                        }
+                if (isFull) {
+                    fill = "#FFDE00"; // bright yellow
+                    stroke = "#FFDE00"; // bright yellow
+                } else if (isHalf) {
+                    fill = "#FFDE00"; // We'll set opacity to handle half-filled stars
+                    stroke = "#FFDE00";
+                } else {
+                    fill = "transparent";
+                    stroke = "#d1d5db"; // gray-300
+                }
 
-                        return (
-                            <Star
-                                key={index}
-                                className={`w-4 h-4 ${isFull
-                                        ? 'text-yellow-400 fill-yellow-400'
-                                        : isEmpty
-                                            ? 'text-gray-300'
-                                            : 'text-yellow-400' // For fractional stars
-                                    }`}
-                                fillPercentage={starFillPercentage} // Pass the fill percentage to handle fractional fill
-                            />
-                        );
-                    })}
-                </View>
-                <Text className="text-sm text-white">
-                    {reviewCount > 20 ? "20+" : reviewCount} reviews
-                </Text>
-            </View>
-        )
+                return (
+                    <Star
+                        key={index}
+                        size={24}
+                        fillPercentage={isHalf ? 50 : isFull ? 100 : 0}
+                    />
+                );
+            })}
+        </View>
     );
 };
-
 
 export default ProductRating;

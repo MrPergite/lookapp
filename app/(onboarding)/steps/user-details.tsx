@@ -16,6 +16,7 @@ import TextBox from '@/components/text-box';
 import theme from '@/styles/theme';
 import { useOnBoarding } from '../context';
 import { useUserCountry } from '../queries';
+import { ChevronDown } from 'lucide-react-native';
 
 function UserDetails() {
     const { payload, dispatch } = useOnBoarding() as any;
@@ -123,8 +124,8 @@ function UserDetails() {
         if (Platform.OS === 'android') {
             return (
                 <TouchableOpacity
-                    style={styles.pickerWrapper}
                     onPress={() => setVisible(true)}
+                    className='flex flex-row mt-2 h-12 items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm w-full bg-white shadow-none'
                 >
                     <Picker
                         selectedValue={value}
@@ -145,8 +146,8 @@ function UserDetails() {
         return (
             <>
                 <Pressable
-                    style={styles.pickerWrapper}
                     onPress={() => setVisible(true)}
+                    className='flex flex-row mt-2 h-12 items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm w-full bg-white shadow-none'
                 >
                     <Text style={styles.pickerText}>
                         {value
@@ -154,6 +155,7 @@ function UserDetails() {
                             : placeholder
                         }
                     </Text>
+                    <ChevronDown size={20} color={theme.colors.secondary.black} />
                 </Pressable>
                 <Modal
                     animationType="slide"
@@ -204,7 +206,7 @@ function UserDetails() {
             >
                 <View style={styles.container}>
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Clothing Size</Text>
+                        <Text style={[styles.label]}>Clothing Size</Text>
                         {renderPicker(
                             clothingSize,
                             handleClothingSizeChange,
@@ -215,8 +217,8 @@ function UserDetails() {
                         )}
                     </View>
 
-                    <View style={styles.shoeSizeContainer}>
-                        <View style={[styles.inputContainer, { flex: 2, marginRight: 10 }]}>
+                    <View className='gap-4' style={styles.shoeSizeContainer}>
+                        <View style={[{ flex: 2 }]}>
                             <TextBox
                                 labelStyle={styles.label}
                                 style={[{
@@ -230,6 +232,7 @@ function UserDetails() {
                                 }, styles.input]}
                                 label="Shoe Size"
                                 placeholderTextColor="#374151"
+                                className='h-12'
                                 value={shoeSize}
                                 onChangeText={handleShoeSizeChange}
                                 keyboardType="numeric"
@@ -297,11 +300,12 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         width: '100%',
         padding: 13,
-       
+
     },
     shoeSizeContainer: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     pickerWrapper: {
         marginTop: 5,
@@ -313,17 +317,17 @@ const styles = StyleSheet.create({
         borderColor: '#e5e7eb',
         backgroundColor: 'white',
         width: '100%',
-            ...Platform.select({
-      android: {
-        elevation: 0,
-      },
-      ios: {
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-      },
-    }),
+        ...Platform.select({
+            android: {
+                elevation: 0,
+            },
+            ios: {
+                shadowColor: 'transparent',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0,
+                shadowRadius: 0,
+            },
+        }),
     },
     picker: {
         height: 50,
@@ -335,7 +339,6 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 14,
-        // marginBottom: 5,
         color: '#374151',
         fontFamily: 'default-semibold',
         fontWeight: '500',

@@ -214,7 +214,9 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
                                 animate={{ opacity: 1, translateY: 0 }}
                                 exit={{ opacity: 0, translateY: -20 }}
                                 transition={{ duration: 1000 }}
-                                style={styles.message}>
+                                style={styles.message}
+                                className="text-lg font-medium text-gray-700 mb-4"
+                            >
                                 {loadingMessages[currentMessageIndex]}
                             </MotiText>
                         </AnimatePresence>
@@ -255,10 +257,10 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.dialogContent}>
-                        <Text style={styles.dialogTitle}>
+                        <Text className="tracking-tight text-2xl font-bold text-center">
                             {error ? "Oops!" : "Setup Complete!"}
                         </Text>
-                        <Text style={styles.dialogDescription}>
+                        <Text style={{ color: '#657285' }} className="text-sm text-center">
                             {error ||
                                 "Your personalized shopping profile is ready. Get ready for an amazing shopping experience!"}
                         </Text>

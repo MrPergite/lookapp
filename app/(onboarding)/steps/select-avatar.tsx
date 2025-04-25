@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   Dimensions,
   ScrollView,
   SafeAreaView,
@@ -31,17 +31,17 @@ interface Avatar {
 function SelectAvatars() {
   const { payload, dispatch } = useOnBoarding();
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(payload.pref_avatar_url);
-  
+
   const handleSelection = (avatar: Avatar) => {
     setSelectedAvatar(avatar.src);
-    
+
     // Update context
     if (dispatch) {
       dispatch({
         type: "SET_PAYLOAD",
-        payload: { 
-          key: "pref_avatar_url", 
-          value: avatar.src 
+        payload: {
+          key: "pref_avatar_url",
+          value: avatar.src
         }
       });
     }
@@ -74,12 +74,14 @@ function SelectAvatars() {
             onPressIn={() => (scale.value = 1.02)}
             onPressOut={() => (scale.value = 1)}
           >
-            <Animated.View style={[styles.imageContainer,animatedStyle]}>
-              <Image 
-                source={{ uri: avatar.src }} 
+            <Animated.View
+              style={[styles.imageContainer, animatedStyle]}>
+              <Image
+                source={{ uri: avatar.src }}
                 style={styles.avatarImage}
                 contentFit='cover'
                 contentPosition={'top'}
+                transition={100}
               />
             </Animated.View>
             <LinearGradient
@@ -92,7 +94,7 @@ function SelectAvatars() {
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </SafeAreaView> 
+    </SafeAreaView>
   );
 }
 
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     gap: 16,
-    paddingBottom: 240, 
+    paddingBottom: 240,
   },
   avatarCard: {
     width: width * 0.4,
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: "#e9e9e9",
-    
+
   },
   avatarImage: {
     width: '100%',
@@ -147,7 +149,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingVertical: 8,
     alignItems: 'center',
-    
+
   },
   avatarName: {
     color: theme.colors.primary.white,

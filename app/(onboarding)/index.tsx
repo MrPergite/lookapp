@@ -26,6 +26,7 @@ import { GradientHeading } from '@/components/auth';
 import { MotiScrollView, MotiView } from 'moti'
 import FinalOnboardingLoad from '../../components/FinalOnboardingLoad';
 import Spinner from '@/components/Spinner';
+import GradientText from '@/components/GradientText';
 const Steps = [
     {
         title: {
@@ -209,7 +210,7 @@ const Onboarding = () => {
 
     return (
         <LinearGradient
-            colors={['#f3e8ff', '#ffffff']}
+            colors={['#E9D5FF', '#FFFFFF']}
             style={styles.container}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
@@ -248,7 +249,9 @@ const Onboarding = () => {
                             {isLoading && (
                                 <ThemedText style={styles.loadingText}>Loading your profile...</ThemedText>
                             )}
-                            <GradientHeading className='text-2xl md:text-3xl font-bold mb-2 text-transparent bg-clip-text' text={Steps[currentStep].title.text} additionalStyles={styles.title} />
+                            <GradientText gradientColors={['#9333ea', '#ec4899']} className='text-2xl font-bold mb-2 text-transparent bg-clip-text' style={styles.title} >
+                                {Steps[currentStep].title.text}
+                            </GradientText>
                             <ThemedText type='default' className='text-base text-gray-600' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
 
                             {/* Rest of the content */}
@@ -256,13 +259,12 @@ const Onboarding = () => {
                                 key={currentStep}
                                 contentContainerStyle={[styles.stepContainer]}
                                 // style={{ height: '100%', width: '100%', justifyContent: 'flex-start', alignItems: 'center' }}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
+                                from={{ opacity: 0, translateX: 20 }}
+                                animate={{ opacity: 1, translateX: 0 }}
+                                exit={{ opacity: 0, translateX: -20 }}
                                 transition={{ duration: 0.3 }}
                             >
                                 {renderStep()}
-
                             </MotiScrollView>
 
                         </MotiView>
@@ -312,6 +314,7 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
+        opacity: 1
     },
     header: {
         flexDirection: 'row',
