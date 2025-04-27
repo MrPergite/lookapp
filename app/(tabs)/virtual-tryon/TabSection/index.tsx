@@ -263,7 +263,7 @@ function TabSection({ activeTab, setActiveTab,
                   {savedOutfits.length === 0 ? (
                     <EmptyOutfits />
                   ) : (
-                    <View className="flex flex-row flex-wrap gap-4 p-4">
+                    <View className="flex flex-row items-center justify-center flex-wrap gap-4 p-4">
                       {savedOutfits.map((outfit) => (
                         <Pressable
                           key={outfit.id}
