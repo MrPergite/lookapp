@@ -9,10 +9,14 @@ export const useGetProductDetails = () => {
     const [productItem, setProductItem] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isError, setError] = useState<boolean>(false);
+    const [productVariants, setProductVariants] = useState<ProductDetailsResponse["colors"][] | null>(null);
     const { mutate: getProductDetails } = useProtectedMutation("getProductDetails", {
         onSuccess: (data: ProductDetailsResponse, payload: any) => {
             // Update local state for immediate UI feedback
+            console.log("data", data);
             setProductDetails({ ...data.colors[0], ...productItem });
+            setProductVariants(data.colors);
+            // setProductVariants(data?.colors);
             setIsLoading(false);
         },
         onError: (error, payload: any) => {
@@ -32,19 +36,28 @@ export const useGetProductDetails = () => {
         setProductItem({ ...product });
         getProductDetails({ product_id: product.id });
     }
+
+    const getPartialProductDetails = (product: Product) => {
+        setIsLoading(true);
+        setError(false);
+        getProductDetails({ product_id: product.product_id, partial: "true" });
+    }
+
     const closeProductDetails = () => {
         setProductDetails(null);
         setProductItem(null);
         setError(false);
     }
-    
+
 
     return {
         getProductDetails,
         productDetails,
         getProductDetailsFromId,
+        getPartialProductDetails,
         closeProductDetails,
         isLoading,
-        isError
+        isError,
+        productVariants
     } as const;
 }

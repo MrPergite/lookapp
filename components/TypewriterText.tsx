@@ -49,7 +49,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Text style={styles.text}>{displayedText}</Text>
+      <Text className='text-sm leading-relaxed'>{displayedText}</Text>
     </View>
   );
 };

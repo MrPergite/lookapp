@@ -6,11 +6,9 @@ export // Styles don't include colors - they're applied dynamically based on the
     const styles = StyleSheet.create({
         mainContainer: {
             flex: 1,
-            backgroundColor: theme.colors.primary.lavender,
         },
         container: {
             flex: 1,
-            backgroundColor: theme.colors.primary.lavender,
         },
         contentContainer: {
             paddingBottom: 20, // Reduced padding without input box
@@ -37,7 +35,7 @@ export // Styles don't include colors - they're applied dynamically based on the
             // borderWidth: 1,
             opacity: 0.9,
             flex: 1,
-            backgroundColor: 'rgba(255, 255, 255, 0.5)', // white/40
+            // backgroundColor: 'rgba(255, 255, 255, 0.5)', // white/40
             borderRadius: 24, // rounded-3xl = 1.5rem = 24px
             marginHorizontal: 24, // mx-6 = 1.5rem = 24px
             overflow: 'hidden',
@@ -72,9 +70,9 @@ export // Styles don't include colors - they're applied dynamically based on the
         },
         avatarContainer: {
             marginRight: 12,
-            height: 36,
-            width: 36,
-            backgroundColor: theme.colors.primary.white,
+            height: 56,
+            width: 40,
+            // backgroundColor: theme.colors.primary.white,
             borderRadius: 18,
         },
         avatarGradient: {
@@ -262,7 +260,7 @@ export // Styles don't include colors - they're applied dynamically based on the
         actionOverlay: {
             position: 'absolute',
             bottom: 6,
-            left: 16,
+            left: 10,
             right: 10,
             flexDirection: 'row',
             justifyContent: 'space-between',
@@ -332,7 +330,6 @@ export // Styles don't include colors - they're applied dynamically based on the
         seeMoreButton: {
             alignItems: 'center',
             paddingVertical: 12,
-            marginTop: 8,
             borderRadius: 8,
         },
         seeMoreText: {

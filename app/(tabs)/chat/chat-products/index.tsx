@@ -411,8 +411,9 @@ const ChatScreenContent = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[{ flex: 1 }, styles.keyboardAvoidingContainer]}>
       <LinearGradient
-        colors={["rgba(243, 234, 244, 1)", "rgba(237, 212, 240, 1)", "rgba(243, 234, 244, 1)"] as const
-        }
+        colors={['#FFFFFF', '#FFFFFF'] as const}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={[styles.container]}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -494,7 +495,7 @@ const ChatScreenContent = () => {
             </View>
             {/* Input box at the bottom */}
 
-            {chatHistory.length ?
+            {conversationGroups.length ?
               <View style={[{ position: 'absolute', bottom: -20, left: 0, right: 0, zIndex: 1000 }]}>
                 <MessageInput
                   searchText={searchText}
@@ -504,7 +505,7 @@ const ChatScreenContent = () => {
                   )}
                   onSend={handleSendMessage}
                   onImageSelect={handleImageUpload}
-
+                  source="chat"
                 />
               </View>
               : <View style={styles.chatFooter}>
@@ -706,7 +707,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     // position: "relative",
     borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0
+    borderBottomRightRadius: 0,
   },
   // Input styles
   chatFooter: {
@@ -716,9 +717,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    borderRadius: 20,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+    // borderRadius: 20,
+    // borderBottomLeftRadius: 0,
+    // borderBottomRightRadius: 0,
     position: 'absolute',
     bottom: -10,
   },

@@ -232,7 +232,7 @@ const Step = React.memo(
           )}
         </Animated.View>
 
-        <Text style={[styles.stepTitle, isActive && styles.activeStepTitle]}>
+        <Text className="text-sm font-medium text-gray-700 whitespace-prewrap text-center mb-2">
           {step.title}
         </Text>
 
@@ -333,38 +333,22 @@ const SearchProgressSteps = ({
   if (!isLoading && isComplete) return null;
 
   return (
-    <Animated.View
+    <View
       style={styles.container}
-      exiting={FadeOut.duration(500)}
     >
-      <View style={styles.card}>
-        {isMobile ? (
-          // For mobile, only show the current step
-          <AnimatePresence>
-            <Step
-              key={searchSteps[currentStep].title}
-              step={searchSteps[currentStep]}
-              isActive={true}
-              isCompleted={false}
-              progress={progress}
-            />
-          </AnimatePresence>
-        ) : (
-          // For larger screens, show all steps
-          <View style={styles.stepsRow}>
-            {searchSteps.map((step, index) => (
-              <Step
-                key={step.title}
-                step={step}
-                isActive={index === currentStep}
-                isCompleted={index < currentStep}
-                progress={index === currentStep ? progress : 0}
-              />
-            ))}
-          </View>
-        )}
+      <View className="rounded-xl bg-white/80 backdrop-blur-sm shadow-[0_2px_4px_rgba(0,0,0,0.1)] px-3 py-3">
+        <AnimatePresence>
+          <Step
+            key={searchSteps[currentStep].title}
+            step={searchSteps[currentStep]}
+            isActive={true}
+            isCompleted={false}
+            progress={progress}
+          />
+        </AnimatePresence>
+
       </View>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -377,7 +361,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 1)",
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

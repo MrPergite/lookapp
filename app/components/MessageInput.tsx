@@ -10,6 +10,7 @@ import {
 import { Camera, ArrowUp } from 'lucide-react-native';
 import theme from '@/styles/theme';
 import Disclaimer from './Disclaimer';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface MessageInputProps {
   onSend: (message: string) => void;
@@ -20,9 +21,42 @@ interface MessageInputProps {
   showImagePreview?: boolean;
   setSearchText: (text: string) => void;
   searchText: string;
+  source?: string;
 }
 
-export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSelect }: Partial<MessageInputProps>) => {
+
+export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSelect, source = "home" }: Partial<MessageInputProps>) => {
+
+  const SendBtn = ({ source }: { source: string }) => {
+    if (source === "home") {
+      return (
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: searchText.trim() ? "#3b82f6" : "transparent", borderRadius: 100 }]}
+          onPress={onSend}
+          disabled={disabled || !searchText.trim()}
+        >
+          <ArrowUp size={20} color={searchText.trim() ? "#fff" : theme.colors.secondary.mediumLightGray} />
+        </TouchableOpacity>
+      )
+    }
+    return (
+      <TouchableOpacity
+        style={[styles.iconButton, { backgroundColor: "transparent", borderRadius: 100 }]}
+        onPress={onSend}
+        disabled={disabled || !searchText.trim()}
+      >
+        <LinearGradient
+          colors={['#7C3AED', '#EC4899', '#3B82F6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ borderRadius: 100, padding: 4 }}
+        >
+          <ArrowUp size={20} color={searchText.trim() ? "#fff" : theme.colors.secondary.mediumLightGray} />
+        </LinearGradient>
+      </TouchableOpacity>
+    )
+  }
+
   return (
     <View style={styles.actions}>
       <TouchableOpacity
@@ -31,14 +65,7 @@ export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSe
       >
         <Camera size={20} color="#9ca3af" />
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.iconButton, { backgroundColor: searchText.trim() ? "#3b82f6" : "transparent", borderRadius: 100 }]}
-        onPress={onSend}
-        disabled={disabled || !searchText.trim()}
-      >
-        <ArrowUp size={20} color={searchText.trim() ? "#fff" : theme.colors.secondary.mediumLightGray} />
-      </TouchableOpacity>
+      <SendBtn source={source} />
     </View>
   )
 }
@@ -52,6 +79,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   showImagePreview = false,
   setSearchText,
   searchText,
+  source = "home"
 }) => {
 
   const handleSend = () => {
@@ -71,7 +99,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {showImagePreview && <View style={styles.imagePreviewContainer}>
           {renderImagePreview()}
         </View>}
-        <View style={[styles.inputContainer, showImagePreview && { borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
+        <View className='relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-purple-100' style={[styles.inputContainer, showImagePreview && { borderTopLeftRadius: 0, borderTopRightRadius: 0 }]}>
           <TextInput
             style={styles.input}
             placeholder={placeholder}
@@ -83,7 +111,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onSubmitEditing={handleSend}
             returnKeyType="send"
           />
-          <MessageSendButton searchText={searchText} disabled={disabled} onSend={handleSend} onImageSelect={onImageSelect} />
+
+          <MessageSendButton searchText={searchText} disabled={disabled} onSend={handleSend} onImageSelect={onImageSelect} source={source} />
         </View>
         <Disclaimer />
       </View>

@@ -118,9 +118,10 @@ export default function ShoppingList() {
 
       {/* Content based on active tab */}
       {activeTab === 'shopping-list' ? (
-        items.length === 0 ? <EmptyState /> : <ScrollView className="flex-1 px-5">
-          {renderContent(items)}
-        </ScrollView>
+        items.length === 0 && !isLoadingShoppingList.shoppingListLoading ? <EmptyState /> :
+          <ScrollView className="flex-1 px-5">
+            {renderContent(items)}
+          </ScrollView>
 
       ) : (
         // Digital Wardrobe Tab (Empty state for now)

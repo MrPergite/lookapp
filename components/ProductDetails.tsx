@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
   ScrollView,
   Pressable,
   Modal,
-  Linking
+  Linking,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -39,6 +39,9 @@ import { useAuth } from '@clerk/clerk-expo';
 import AuthModal from './AuthModal';
 import { AnimatePresence, MotiView } from 'moti';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+import ProductRating from '@/app/(tabs)/shopping-list/components/ProductRating';
+import ColorTileSelector from '@/app/components/ColorTileSelector';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ProductDetailsProps {
@@ -65,11 +68,15 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const opacity = useSharedValue(0);
-  const { isLoading, isError, getProductDetailsFromId, closeProductDetails, productDetails: product } = useGetProductDetails();
+  const { isLoading, isError, getProductDetailsFromId, closeProductDetails, productDetails: product, productVariants, getPartialProductDetails } = useGetProductDetails();
   const { isSignedIn } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const rotation = useSharedValue(0);
-
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedVariant, setSelectedVariant] = useState(
+    product?.product_id || product?.product_link || product?.link
+  );
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Handle background fade animation
   React.useEffect(() => {
@@ -80,6 +87,11 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
       opacity.value = withTiming(0, { duration: 300, easing: Easing.ease });
     }
   }, [isVisible]);
+
+  const fetchSelectedVariant = (selectedIndex: number) => {
+    const selectedVariant = productVariants?.[selectedIndex];
+    getPartialProductDetails(selectedVariant);
+  }
 
   // Add rotation animation for the loader
   useEffect(() => {
@@ -147,6 +159,7 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
     }
   };
 
+
   const renderDots = () => {
     if (!product?.img_urls_list) return null;
 
@@ -165,6 +178,63 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
     );
   };
 
+  const ProductCarousel = () => {
+    return (
+      <View style={styles.carouselContainer}>
+        <Image
+          source={{ uri: product?.img_urls_list?.[currentImageIndex] || '' }}
+          style={styles.productImage}
+          contentFit='cover'
+          transition={1000}
+          contentPosition={"center"}
+        />
+
+        {/* Navigation arrows if there are multiple images */}
+        {product?.img_urls_list && product.img_urls_list.length > 1 && (
+          <>
+            <TouchableOpacity
+              style={[styles.navArrow, styles.leftArrow]}
+              onPress={handlePrevImage}
+              disabled={currentImageIndex === 0}
+            >
+              <BlurView intensity={30} style={styles.arrowBlur}>
+                <ChevronLeft
+                  size={24}
+                  color="white"
+                  style={{ opacity: currentImageIndex === 0 ? 0.5 : 1 }}
+                />
+              </BlurView>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.navArrow, styles.rightArrow]}
+              onPress={handleNextImage}
+              disabled={currentImageIndex === product.img_urls_list.length - 1}
+            >
+              <BlurView intensity={30} style={styles.arrowBlur}>
+                <ChevronRight
+                  size={24}
+                  color="white"
+                  style={{ opacity: currentImageIndex === product.img_urls_list.length - 1 ? 0.5 : 1 }}
+                />
+              </BlurView>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* Indicator dots */}
+        {renderDots()}
+
+        {/* Color selector */}
+        {/* <View style={styles.colorSelector}>
+      <View style={[styles.colorOption, styles.selectedColor]}>
+        <View style={[styles.colorCircle, { backgroundColor: 'black' }]} />
+      </View>
+    </View> */}
+      </View>
+    )
+  }
+
   // Custom Loading Indicator
   const renderLoadingContent = () => (
     <View style={styles.loaderFullPage}>
@@ -173,7 +243,9 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
         <Image
           source={{ uri: fetchProduct.image || '' }}
           style={styles.loadingProductImage}
-          resizeMode="cover"
+          contentFit='cover'
+          transition={1000}
+          contentPosition={"center"}
         />
 
         {/* Centered loader on image */}
@@ -226,6 +298,14 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   // Error State Content
   const renderErrorContent = () => (
     <View style={styles.errorContainer}>
+      <Image
+        source={{ uri: fetchProduct.image || '' }}
+        style={styles.loadingProductImage}
+        contentFit='cover'
+        transition={1000}
+        contentPosition={"center"}
+      />
+      <View className='absolute inset-0 border-b border-red-500' />
       <AlertTriangle size={70} color="#e74c3c" style={styles.errorIcon} />
       <Text style={styles.errorTitle}>Unable to load product details</Text>
       <Text style={styles.errorMessage}>
@@ -250,10 +330,11 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
     </View>
   );
 
+  console.log({ product })
 
 
   return (
-    <Modal style={styles.modalContainer}>
+    <Modal transparent={true} animationType="fade" style={styles.modalContainer}>
       {/* Animated background */}
       <Animated.View
         style={[styles.backgroundOverlay, backgroundStyle]}
@@ -296,68 +377,33 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
                 nestedScrollEnabled={true}
               >
                 {/* Image Carousel Section */}
-                <View style={styles.carouselContainer}>
-                  <Image
-                    source={{ uri: product?.img_urls_list?.[currentImageIndex] || '' }}
-                    style={styles.productImage}
-                    resizeMode="cover"
-                  />
-
-                  {/* Navigation arrows if there are multiple images */}
-                  {product?.img_urls_list && product.img_urls_list.length > 1 && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.navArrow, styles.leftArrow]}
-                        onPress={handlePrevImage}
-                        disabled={currentImageIndex === 0}
-                      >
-                        <BlurView intensity={30} style={styles.arrowBlur}>
-                          <ChevronLeft
-                            size={24}
-                            color="white"
-                            style={{ opacity: currentImageIndex === 0 ? 0.5 : 1 }}
-                          />
-                        </BlurView>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.navArrow, styles.rightArrow]}
-                        onPress={handleNextImage}
-                        disabled={currentImageIndex === product.img_urls_list.length - 1}
-                      >
-                        <BlurView intensity={30} style={styles.arrowBlur}>
-                          <ChevronRight
-                            size={24}
-                            color="white"
-                            style={{ opacity: currentImageIndex === product.img_urls_list.length - 1 ? 0.5 : 1 }}
-                          />
-                        </BlurView>
-                      </TouchableOpacity>
-                    </>
-                  )}
-
-                  {/* Indicator dots */}
-                  {renderDots()}
-
-                  {/* Color selector */}
-                  {/* <View style={styles.colorSelector}>
-                  <View style={[styles.colorOption, styles.selectedColor]}>
-                    <View style={[styles.colorCircle, { backgroundColor: 'black' }]} />
-                  </View>
-                </View> */}
-                </View>
+                <ProductCarousel />
 
                 {/* Product Info Section */}
-                <View style={styles.infoContainer}>
+                <View className='p-4 flex-grow' style={styles.infoContainer}>
                   {/* Brand */}
-                  <Text style={styles.brandText}>{product?.brand || ''}</Text>
+                  <Text
+                    className='text-sm uppercase tracking-wider opacity-90'
+                  >{product?.brand || ''}</Text>
 
                   {/* Product Name */}
-                  <Text style={styles.productName}>{product?.name || ''}</Text>
+                  <Text
+                    className='text-xl font-bold mt-1'
+                  >{product?.name || ''}</Text>
 
                   {/* Price */}
-                  <Text style={styles.priceText}>{product?.price || ''}</Text>
+                  <Text
+                    className='text-lg font-semibold'
+                  >{product?.price || ''}</Text>
 
+                  <View className='mb-6' />
+
+                  {product?.rating && product?.num_ratings &&
+                    <>
+                      <ProductRating size={20} rating={product?.rating} reviewCount={product?.num_ratings} />
+                      <View className='mb-4' />
+                    </>
+                  }
                   {/* Section Title */}
 
                   {/* Product Description */}
@@ -371,14 +417,20 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
                     }}
                     style={styles.descriptionContainer}
                   >
-                    <Text style={styles.sectionTitle}>Details</Text>
-                    <Text style={styles.descriptionText}>
+                    <Text className='text-lg font-medium text-gray-900 mb-2'>Details</Text>
+                    <Text className='text-sm text-gray-600 dark:text-gray-300 leading-relaxed'>
                       {product?.description || 'No product details available.'}
                     </Text>
                   </MotiView>
 
                   {/* Add extra padding for button */}
                   <View style={styles.buttonSpacer} />
+                  <ColorTileSelector
+                    selectedVariant={selectedVariant}
+                    onSelectVariant={setSelectedVariant}
+                    variants={productVariants?.filter((item, index) => index !== 0) || []}
+                    selectIndex={fetchSelectedVariant}
+                  />
                 </View>
                 {showLoginModal && (
                   <AuthModal
@@ -408,8 +460,6 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
                   }
                 </View>
               </ScrollView>
-
-
             </>
           )}
         </MotiView>
@@ -428,17 +478,17 @@ const styles = StyleSheet.create({
   },
   backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: '#0003',
   },
   modalContent: {
     position: 'relative',
     width: '90%',
-    height: '90%',
+    height: '80%',
     backgroundColor: theme.colors.primary.white,
     borderRadius: 16,
     overflow: 'hidden',
     alignSelf: 'center',
-    top: 60
+    top: 80,
   },
   carouselContainer: {
     width: '100%',
@@ -543,7 +593,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   infoContainer: {
-    padding: theme.spacing.lg,
+    // padding: theme.spacing.lg,
     paddingBottom: 0,
   },
   brandText: {
@@ -595,6 +645,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: theme.spacing.sm,
+    width: '100%',
   },
   buyButtonText: {
     fontSize: 14,

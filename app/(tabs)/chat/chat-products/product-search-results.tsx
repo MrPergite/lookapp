@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useMemo, useReducer } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -25,6 +24,8 @@ import { getImageSource } from './util';
 import { MotiView } from 'moti';
 import { responsiveFontSize } from '@/utils';
 import { styles } from './styles';
+import GradientText from '@/components/GradientText';
+import { Image } from 'expo-image';
 const PRODUCTS_PER_GROUP = 4; // Max products to show per query group
 
 const DEVICE_HEIGHT = Dimensions.get('window').height;
@@ -243,11 +244,19 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
 
     return (
       <MotiView
-        layoutId={`product-${item.url}`}
+        id={`product-${item.url}`}
+        from={{
+          scale: 1,
+          shadowOpacity: 0,
+        }}
+        animate={{
+          scale: 1,
+          shadowOpacity: 0.2,
+        }}
         transition={{
-          type: 'spring',
-          duration: 0.4,
-          ease: [0.23, 1, 0.32, 1],
+          type: 'timing',
+          duration: 400,
+          easing: Easing.bezier(0.23, 1, 0.32, 1),
         }}
         key={`product-${item.id}-${index}`} style={[styles.productItem]}>
         <TouchableOpacity
@@ -261,17 +270,28 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
                 <Image
                   source={{ uri: item.image }}
                   style={styles.productImage}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  transition={100}
+                  contentPosition={"center"}
                 />
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.55)']}
                   locations={[0, 0.45, 1]}
                   style={styles.imageGradient}
                 >
-                  <View style={styles.productLabel}>
-                    <Text numberOfLines={1} style={styles.brandLabel}>{item.brand}</Text>
-                    <Text numberOfLines={1} style={styles.nameLabel}>{item.name}</Text>
-                    <Text numberOfLines={1} style={styles.priceLabel}>{item.price}</Text>
+                  <View className='absolute bottom-0 left-0 right-0 p-2 sm:p-2 text-white translate-y-0 sm:translate-y-0 h-24'>
+                    <View className='flex-col gap-0.5'>
+                      <Text numberOfLines={1}
+                        className='text-[8px] uppercase tracking-wider opacity-9 truncate text-white'
+                      >{item.brand}</Text>
+                      <Text numberOfLines={1}
+                        className='font-bold text-xs truncate text-white'
+                      >{item.name}</Text>
+                      <Text
+                        className='font-semibold text-xs text-white'
+                        numberOfLines={1}
+                      >{item.price}</Text>
+                    </View>
                   </View>
                 </LinearGradient>
               </View>
@@ -284,14 +304,20 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
 
             <View key={`${item.id}-actions`} style={styles.actionOverlay}>
               <View key={`${item.id}-actions-left`} style={styles.leftActions}>
-                <ThumbsUp fill={likeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, true)}
-                  key={`like-${item.url}`} data-testid={`like-${item.id}`} size={12} color="#fff" strokeWidth={2} />
-                <ThumbsDown fill={dislikeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, false)} key={`dislike-${item.url}`} data-testid={`dislike-${item.id}`} size={12} color="#fff" strokeWidth={2} />
+                <View className='p-1 rounded-md transition-colors bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                >
+                  <ThumbsUp fill={likeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, true)}
+                    key={`like-${item.url}`} data-testid={`like-${item.id}`} size={12} color="#fff" strokeWidth={2} />
+                </View>
+                <View className='p-1 rounded-md transition-colors bg-white/10 backdrop-blur-sm hover:bg-white/20'
+                >
+                  <ThumbsDown fill={dislikeFillColor[item.id] || "transparent"} onPress={() => handleReaction(item.product_info, false)} key={`dislike-${item.url}`} data-testid={`dislike-${item.id}`} size={12} color="#fff" strokeWidth={2} />
+                </View>
               </View>
               <TouchableOpacity
-                style={bookmarkButtonStyle}
                 onPress={() => toggleSave(item.id)}
                 disabled={isSaving}
+                className='p-1 sm:p-1.5 rounded-full bg-purple-500/90 hover:bg-purple-600/90 transition-all duration-200 transform hover:scale-105 shadow-md'
               >
                 {renderSaveIcon()}
               </TouchableOpacity>
@@ -353,24 +379,25 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
         >
           <View style={[styles.userMessageContainer, { width: message.image ? '100%' : 'auto' }]}>
             <LinearGradient
-              colors={["#a855f7", "#c084fc", "#ec4899"]}
+              colors={['#7C3AED', '#EC4899', '#3B82F6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.userMessageGradient}
             >
-              <Text style={styles.messageText}>{message.text}</Text>
+              <Text className='text-sm leading-relaxed' style={styles.messageText}>{message.text}</Text>
               {message.image && (
                 <Image
                   source={{ uri: getImageSource(message.image) }}
                   style={styles.messageImage}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  transition={100}
                 />
               )}
             </LinearGradient>
           </View>
 
           <LinearGradient
-            colors={['#f3e8ff', '#fce7f3']} // purple-100 to pink-100
+            colors={['#E9D5FF', '#FBCFE8']} // purple-100 to pink-100
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.userAvatarContainer}>
@@ -381,9 +408,11 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     }
     return (
       <View style={styles.aiMessageContainer}>
-        <Image source={require('@/assets/images/ai-message-avatar.png')} style={styles.avatarContainer} />
+        <View className='h-12 rounded-full overflow-hidden flex items-center justify-center '>
+          <Image source={require('@/assets/images/logo.png')} style={[styles.avatarContainer, {  height: 56, marginRight: 0 }]} contentFit="cover" />
+        </View>
         <View style={styles.aiMessage}>
-          <Text style={[styles.messageText, { color: theme.colors.secondary.black }]}>{message.text}</Text>
+          <Text className='text-sm leading-relaxed'>{message.text}</Text>
         </View>
       </View>
     )
@@ -392,7 +421,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
   const renderAIMessageWithTypewriter = () => {
     return (
       <View style={styles.aiMessageContainer}>
-        <Image source={require('@/assets/images/ai-message-avatar.png')} style={styles.avatarContainer} />
+        <Image source={require('@/assets/images/logo.png')} style={styles.avatarContainer} />
         <View style={styles.aiMessage}>
           <TypewriterText
             text={latestAiMessage || "I'm searching for products that match your description..."}
@@ -444,7 +473,9 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
                   key={`group-${index}-product-${item.id}`}
                   style={[pIndex % 2 === 0 ? styles.productItemLeft : styles.productItemRight, cardAnimatedStyle]}
                 >
-                  <TouchableOpacity onPress={() => onFollowUpPress(item)} style={styles.followUpActions}>
+                  <TouchableOpacity onPress={() => onFollowUpPress(item)}
+                    className='absolute top-2 left-2 z-10 p-1.5 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm'
+                  >
                     <MessageSquare size={22} color={theme.colors.primary.purple} strokeWidth={2} />
                   </TouchableOpacity>
                   {renderProduct(item, pIndex)}
@@ -458,7 +489,10 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
                 style={styles.seeMoreButton}
                 onPress={() => toggleGroupExpansion(index)}
               >
-                <ThemedText style={styles.seeMoreText}>See More</ThemedText>
+                <GradientText
+                  gradientColors={['#7C3AED', '#EC4899', '#3B82F6']}
+                  className='bg-clip-text animate-gradient text-xl font-semibold'
+                >See More</GradientText>
               </TouchableOpacity>
             )}
           </View>
@@ -472,7 +506,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     return conversationGroups
   }, [conversationGroups, activeConversationGroup]);
 
-  console.log("conversationGroups in product search results",conversationGroupsToRender, conversationGroups,activeConversationGroup);
+  console.log("conversationGroups in product search results", conversationGroupsToRender, conversationGroups, activeConversationGroup);
 
 
   // Main render method

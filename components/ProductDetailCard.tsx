@@ -23,6 +23,7 @@ import Animated, {
     FadeOut,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { responsiveFontSize } from '@/utils';
 
 // Adjust the Product interface to match what we need
 interface ProductCardProps {
@@ -127,8 +128,8 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
                                     colors={['transparent', 'rgba(0,0,0,0.7)']}
                                     style={styles.gradient}
                                 >
-                                    <Text style={styles.overlayTitle}>{product.name}</Text>
-                                    <Text style={styles.questionText}>Ask a follow-up question about this item:</Text>
+                                    <Text className='text-xl font-bold mt-1 text-white'>{product.name}</Text>
+                                    <Text className='text-sm mt-2 text-white'>Ask a follow-up question about this item:</Text>
                                 </LinearGradient>
                             </View>
 
@@ -139,11 +140,11 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
                                     <View style={styles.inputContainer}>
                                         <TextInput
                                             ref={inputRef}
-                                            style={styles.input}
                                             placeholder="e.g. Find me this but in blue..."
                                             placeholderTextColor="#6B7280"
                                             value={inputText}
                                             onChangeText={setInputText}
+                                            className='flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1'
                                         />
                                         <TouchableOpacity
                                             disabled={inputText.length === 0}
@@ -270,23 +271,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 16,
+        gap: responsiveFontSize(8),
     },
     input: {
         flex: 1,
-        height: 56,
+        // height: 56,
         borderWidth: 1,
         borderColor: theme.colors.secondary.mediumLightGray,
         borderRadius: 12,
         paddingHorizontal: 16,
         fontFamily: 'default-regular',
-        fontSize: 16,
+        fontSize: responsiveFontSize(14),
         marginRight: 8,
     },
     sendButton: {
-        width: 56,
-        height: 56,
+        width: 36,
+        height: 36,
         backgroundColor: theme.colors.primary.purple,
-        borderRadius: 12,
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
     },

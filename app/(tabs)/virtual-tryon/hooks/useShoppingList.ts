@@ -3,6 +3,7 @@ import useShoppingAPI from './useShoppingAPI';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@clerk/clerk-react';
 import { useFocusEffect } from 'expo-router';
+import { Alert } from 'react-native';
 
 export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
     const { getToken } = useAuth();
@@ -22,6 +23,8 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
             refetch.refetchShoppingList();
         }, [])
     );
+
+    console.log({  isLoading, isLoadingShoppingList });
 
     useEffect(() => {
         if (data.removeFromShoppingListData) {

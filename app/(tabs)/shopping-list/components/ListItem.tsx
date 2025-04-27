@@ -232,11 +232,6 @@ const ListItem = ({ item, onRemove, isDeleting }: IListItem) => {
                     </View>
                 )}
             </View>
-
-
-
-
-
             <FeatureDescriptionPopup
                 isOpen={activeFeature !== null}
                 onClose={closeFeaturePopup}
