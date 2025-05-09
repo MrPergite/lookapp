@@ -47,7 +47,7 @@ const appConfig = {
       [
         "expo-router",
         {
-          "origin": "https://mobile-api-opal.vercel.app"
+          "origin": "http://192.168.1.34:8081"
         }
       ]
     ],
@@ -62,7 +62,7 @@ const appConfig = {
         projectId: "4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
       },
       enableCors: true,
-      origin: "https://mobile-api-opal.vercel.app",
+      origin: "http://192.168.1.34:8081",
       ...envConfig,
     },
 

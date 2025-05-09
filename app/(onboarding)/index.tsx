@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useEffect, useMemo } from 'react';
+import React, { useReducer, useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Button, Animated, SafeAreaView, Pressable, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Easing } from 'react-native-reanimated';
@@ -13,6 +13,8 @@ import { withHaptick } from '@/utils';
 import GenderSelect from './steps/gender-select';
 import UserDetails from './steps/user-details';
 import SelectAvatar from './steps/select-avatar';
+import AvatarPathChoice from './steps/avatar-path-choice';
+import StyleProfile, { StyleProfileRefHandles } from './steps/style-profile';
 import { useApi } from '@/client-api';
 import { useQuery } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
@@ -27,6 +29,11 @@ import { MotiScrollView, MotiView } from 'moti'
 import FinalOnboardingLoad from '../../components/FinalOnboardingLoad';
 import Spinner from '@/components/Spinner';
 import GradientText from '@/components/GradientText';
+import { StyleProfileDataType } from './context';
+
+// Define a more specific type for components that can be refs
+type StepComponentWithRef<P, T> = React.ForwardRefExoticComponent<P & React.RefAttributes<T>>;
+
 const Steps = [
     {
         title: {
@@ -39,12 +46,31 @@ const Steps = [
     },
     {
         title: {
+            text: "Choose Your Avatar Path",
+            subText: "How would you like to create your profile?"
+        },
+        name: "avatarPathChoice",
+        component: AvatarPathChoice,
+        requiredFields: ["avatarPath"]
+    },
+    {
+        title: {
             text: "Tell us your sizes and location",
             subText: "We'll use this to recommend items that fit you perfectly!"
         },
         name: "user-details",
         component: UserDetails,
         requiredFields: ["clothing_size", "shoe_size", "shoe_unit", "country"]
+    },
+   
+    {
+        title: {
+            text: "Create an avatar of you",
+            subText: "Help us understand you to create your virtual model for trying on clothes"
+        },
+        name: "styleProfile",
+        component: StyleProfile,
+        requiredFields: ["styleProfileState"]
     },
     {
         title: {
@@ -59,12 +85,16 @@ const Steps = [
 
 // Type for onboarding data
 interface OnboardingData {
-    gender: string | null;
+    gender: string;
     clothing_size: string | null;
     shoe_size: string | null;
     shoe_unit: string | null;
     country: string | null;
     pref_avatar_url: string | null;
+    avatarPath: string | null;
+    sizes: any | null;
+    avatar: any | null;
+    styleProfileState?: StyleProfileDataType | null;
 }
 
 const Onboarding = () => {
@@ -73,14 +103,10 @@ const Onboarding = () => {
     const navigation = useNavigation();
     const { getToken } = useAuth();
     const [saveOnboardingData, setSaveOnboardingData] = useState(false);
-
-    // Step control
     const [currentStep, setCurrentStep] = useState(0);
-
-    // Animated values
     const translateX = new Animated.Value(0);
-    // const [isLoading, setIsLoading] = useState(true);
-    // Use React Query to fetch onboarding data
+    const styleProfileRef = useRef<StyleProfileRefHandles>(null);
+
     const { data, isLoading, error } = useQuery({
         queryKey: ['onboardingData'],
         queryFn: async () => {
@@ -90,8 +116,7 @@ const Onboarding = () => {
                     console.log('User not authenticated, skipping onboarding fetch');
                     return null;
                 }
-
-                const response = await axios<{ success: boolean, data: { onboardingInfo: OnboardingData } }>(
+                const response = await axios<{ success: boolean, data: { onboardingInfo: OnboardingData } }>( 
                     `${Constants.expoConfig?.extra?.origin}${routes.protected.getOnboardingInfo}`,
                     {
                         method: 'GET', headers: {
@@ -99,7 +124,6 @@ const Onboarding = () => {
                         }
                     }
                 );
-
                 return response.data;
             } catch (err) {
                 console.error('Failed to fetch onboarding data:', err);
@@ -114,71 +138,104 @@ const Onboarding = () => {
         enabled: isAuthenticated,
     });
 
-    // Set fetched data to context when available
     useEffect(() => {
-        if (data?.data) {
-            // Update each field in the context
-            Object.entries(data.data).forEach(([key, value]) => {
-                if (value !== null) {
-                    dispatch({
-                        type: 'SET_PAYLOAD',
-                        payload: { key, value }
-                    });
-                }
-            });
-        }
+        // if (data?.data) {
+        //     Object.entries(data?.data?.onboardingInfo).forEach(([key, value]) => {
+        //         if (value !== null) {
+        //             dispatch({
+        //                 type: 'SET_PAYLOAD',
+        //                 payload: { key, value }
+        //             });
+        //         }
+        //     });
+        // }
     }, [data, dispatch]);
 
-    // Check if current step is complete
     const isCurrentStepComplete = useMemo(() => {
         const currentStepConfig = Steps[currentStep];
         if (!currentStepConfig.requiredFields || currentStepConfig.requiredFields.length === 0) {
             return true;
         }
-
-        // Check if all required fields for this step have values
         return currentStepConfig.requiredFields.every(field => {
-            // Use type assertion to handle dynamic field access
             const value = payload[field as keyof typeof payload];
             return value !== null && value !== undefined && value !== '';
         });
     }, [currentStep, payload]);
 
-    const handleNext = () => {
-        if (currentStep < Steps.length - 1) {
+    const handleNextParent = (pathFromAvatarChoice?: 'custom' | 'premade') => {
+        const currentStepConfig = Steps[currentStep];
+        let nextStepIndex = -1;
+
+        if (currentStepConfig.name === "avatarPathChoice") {
+            const chosenPath = pathFromAvatarChoice || payload.avatarPath;
+            if (!chosenPath) {
+                console.error("Avatar path not determined for navigation from avatarPathChoice.");
+                Toast.show({ type: 'error', text1: 'Selection Error', text2: 'Please make a selection to continue.' });
+                return;
+            }
+            const nextStepAfterAvatarChoice = chosenPath === 'custom' ? "styleProfile" : "select-avatar";
+            nextStepIndex = Steps.findIndex(step => step.name === nextStepAfterAvatarChoice);
+        } else if (currentStepConfig.name === "gender") {
+            nextStepIndex = Steps.findIndex(step => step.name === "avatarPathChoice");
+        } else if (currentStepConfig.name === "styleProfile") {
+            nextStepIndex = Steps.findIndex(step => step.name === "select-avatar");
+        } else {
+            if (currentStep < Steps.length - 1) {
+                nextStepIndex = currentStep + 1;
+                if (Steps[nextStepIndex]?.name === 'styleProfile' && payload.avatarPath === 'premade') {
+                    const selectAvatarIndex = Steps.findIndex(step => step.name === "select-avatar");
+                    if (selectAvatarIndex !== -1) nextStepIndex = selectAvatarIndex;
+                }
+            }
+        }
+
+        if (nextStepIndex !== -1 && nextStepIndex < Steps.length) {
             Animated.timing(translateX, {
-                toValue: -1000, // Direct value instead of using ._value
+                toValue: -1000,
                 duration: 300,
                 easing: Easing.ease,
                 useNativeDriver: true,
             }).start(() => {
-                setCurrentStep(currentStep + 1);
-                translateX.setValue(0); // Reset animation
+                setCurrentStep(nextStepIndex);
+                translateX.setValue(0);
             });
+        } else if (nextStepIndex === -1 && currentStepConfig.name !== "select-avatar" && currentStepConfig.name !== "styleProfile") {
+            console.warn("Could not determine next step from:", currentStepConfig.name, "with payload:", payload);
         } else {
-            // Save onboarding data on completion
             handleSaveOnboarding();
         }
     };
 
     const handleBack = () => {
-        if (currentStep > 0) {
+        const currentStepConfig = Steps[currentStep];
+        let prevStepIndex = -1;
+        if (currentStepConfig.name === "select-avatar") {
+            const prevStep = payload.avatarPath === 'custom' ? "styleProfile" : "avatarPathChoice";
+            prevStepIndex = Steps.findIndex(step => step.name === prevStep);
+        } else if (currentStepConfig.name === "styleProfile") {
+            prevStepIndex = Steps.findIndex(step => step.name === "avatarPathChoice");
+        } else if (currentStepConfig.name === "avatarPathChoice") {
+            prevStepIndex = Steps.findIndex(step => step.name === "gender"); 
+        } else {
+            if (currentStep > 0) {
+                prevStepIndex = currentStep - 1;
+            }
+        }
+        if (prevStepIndex !== -1) {
             Animated.timing(translateX, {
                 toValue: 1000,
                 duration: 300,
                 easing: Easing.ease,
                 useNativeDriver: true,
             }).start(() => {
-                setCurrentStep(currentStep - 1);
-                translateX.setValue(0); // Reset animation
+                setCurrentStep(prevStepIndex);
+                translateX.setValue(0);
             });
         } else {
-            // Return to previous screen if on first step
             router.back();
         }
     };
 
-    // Function to save onboarding data
     const handleSaveOnboarding = async () => {
         if (!isAuthenticated) {
             console.log('User not authenticated, skipping save');
@@ -188,17 +245,68 @@ const Onboarding = () => {
     };
 
     const renderStep = () => {
-        const StepComponent = Steps[currentStep].component;
-        return (
-            <StepComponent goToNextStep={handleNext} />
-        );
+        const stepConfig = Steps[currentStep];
+        const stepName = stepConfig.name;
+        switch (stepName) {
+            case "styleProfile":
+                return <StyleProfile ref={styleProfileRef} onNext={() => handleNextParent()} onBack={handleBack} />;
+            case "avatarPathChoice":
+                const AvatarPathComponent = stepConfig.component as React.FC<{onNext?: (path: 'custom' | 'premade') => void, onBack?: () => void}>;
+                return <AvatarPathComponent onNext={handleNextParent} onBack={handleBack} />;
+            case "gender":
+                const GenderSelectComponent = stepConfig.component as React.FC<{goToNextStep: () => void}>;
+                return <GenderSelectComponent goToNextStep={() => handleNextParent()} />;
+            case "user-details": 
+            case "select-avatar": 
+            default:
+                const OtherComponent = stepConfig.component as React.FC<{goToNextStep: () => void}>;
+                return <OtherComponent goToNextStep={() => handleNextParent()} />;
+        }
     };
 
-    // Determine if we're on the SelectAvatar step
-    const isAvatarStep = currentStep === 2;
+    const isAvatarStep = Steps[currentStep].name === "select-avatar";
+    const showNextButton = Steps[currentStep].name !== "avatarPathChoice";
+    const isAvatarPathStep = Steps[currentStep].name === "avatarPathChoice";
 
-    // Calculate progress percentage
-    const progressPercentage = ((currentStep + 1) / Steps.length) * 100;
+    const motiViewAnimationProps = isAvatarPathStep ? {
+        from: { opacity: 1, translateY: 0 },
+        animate: { opacity: 1, translateY: 0 },
+        transition: { duration: 0 }
+    } : {
+        from: { opacity: 0, translateY: 20 },
+        animate: { opacity: 1, translateY: 0 },
+        transition: { duration: 500 }
+    };
+
+    const motiScrollAnimationProps = isAvatarPathStep ? {
+        from: { opacity: 1, translateX: 0 },
+        animate: { opacity: 1, translateX: 0 },
+        exit: { opacity: 0, translateX: -20 }, 
+        transition: { duration: 0 }
+    } : {
+        from: { opacity: 0, translateX: 20 },
+        animate: { opacity: 1, translateX: 0 },
+        exit: { opacity: 0, translateX: -20 },
+        transition: { type: "timing" as const, duration: 300 }
+    };
+
+    const progressPercentage = useMemo(() => {
+        const isPremadePath = payload.avatarPath === 'premade';
+        const totalStepsInFlow = isPremadePath ? Steps.length - 1 : Steps.length; 
+        let currentLogicalStepNumber = 0;
+        if (isPremadePath) {
+            let count = 0;
+            for (let i = 0; i <= currentStep; i++) {
+                if (Steps[i].name !== 'styleProfile') {
+                    count++;
+                }
+            }
+            currentLogicalStepNumber = count;
+        } else {
+            currentLogicalStepNumber = currentStep + 1;
+        }
+        return (currentLogicalStepNumber / totalStepsInFlow) * 100;
+    }, [currentStep, payload.avatarPath, Steps]);
 
     if (isLoading) {
         return (
@@ -216,16 +324,12 @@ const Onboarding = () => {
             end={{ x: 0.5, y: 1 }}
         >
             <SafeAreaView style={styles.safeArea}>
-
-                {saveOnboardingData ? <FinalOnboardingLoad onComplete={() => router.replace("/(tabs)/chat" as any)} onboardingData={payload} /> :
+                {saveOnboardingData ? <FinalOnboardingLoad onComplete={() => router.replace("/(tabs)/chat" as any)} onboardingData={payload as OnboardingData} /> :
                     <>
                         <MotiView
                             key={currentStep}
-                            from={{ opacity: 0, translateY: 20 }}
-                            animate={{ opacity: 1, translateY: 0 }}
-                            transition={{ duration: 500 }}
+                            {...motiViewAnimationProps}
                         >
-                            {/* Header with back button and progress bar */}
                             <View style={styles.header}>
                                 <TouchableOpacity
                                     style={styles.backButton}
@@ -235,7 +339,7 @@ const Onboarding = () => {
                                 </TouchableOpacity>
                                 <View style={[styles.progressBarContainer, { width: `${progressPercentage - 20}%` }]}>
                                     <LinearGradient
-                                        colors={['#ec4899', '#8b5cf6']} // from-pink-500 to-purple-500
+                                        colors={['#ec4899', '#8b5cf6']}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 0 }}
                                     >
@@ -254,54 +358,54 @@ const Onboarding = () => {
                             </GradientText>
                             <ThemedText type='default' className='text-base text-gray-600' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
 
-                            {/* Rest of the content */}
                             <MotiScrollView
-                                key={currentStep}
+                                key={`scroll-${currentStep}`}
                                 contentContainerStyle={[styles.stepContainer]}
-                                // style={{ height: '100%', width: '100%', justifyContent: 'flex-start', alignItems: 'center' }}
-                                from={{ opacity: 0, translateX: 20 }}
-                                animate={{ opacity: 1, translateX: 0 }}
-                                exit={{ opacity: 0, translateX: -20 }}
-                                transition={{ duration: 0.3 }}
+                                {...motiScrollAnimationProps}
                             >
                                 {renderStep()}
                             </MotiScrollView>
 
                         </MotiView>
-                        <LinearGradient
-                            colors={['#ec4899', '#8b5cf6']} // from-pink-500 to-purple-500
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
-                        >
-                            <Pressable
-                                style={[
-                                    authnStyles.ctaActionContainer,
-                                    styles.button,
-                                    !isCurrentStepComplete && styles.disabledButton
-                                ]}
-                                onPress={() => {
-                                    if (isCurrentStepComplete) {
-                                        withHaptick(handleNext)()
-                                    }
-                                }}
-                                disabled={!isCurrentStepComplete}
+                        {showNextButton && (
+                            <LinearGradient
+                                colors={['#ec4899', '#8b5cf6']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
                             >
-                                <ThemedText
+                                <Pressable
                                     style={[
-                                        authnStyles.ctaActionText,
-                                        !isCurrentStepComplete && styles.disabledButtonText
+                                        authnStyles.ctaActionContainer,
+                                        styles.button,
+                                        !isCurrentStepComplete && styles.disabledButton
                                     ]}
+                                    onPress={() => {
+                                        if (isCurrentStepComplete) {
+                                            if (Steps[currentStep].name === "styleProfile" && styleProfileRef.current) {
+                                                withHaptick(() => styleProfileRef.current?.submitStep())();
+                                            } else {
+                                                withHaptick(() => handleNextParent())();
+                                            }
+                                        }
+                                    }}
+                                    disabled={!isCurrentStepComplete}
                                 >
-                                    {"Next"}
-                                </ThemedText>
-                            </Pressable>
-                        </LinearGradient>
+                                    <ThemedText
+                                        style={[
+                                            authnStyles.ctaActionText,
+                                            !isCurrentStepComplete && styles.disabledButtonText,
+                                            { color: '#ffffff', fontWeight: '900' }
+                                        ]}
+                                    >
+                                        {"Next"}
+                                    </ThemedText>
+                                </Pressable>
+                            </LinearGradient>
+                        )}
                     </>
-
                 }
             </SafeAreaView>
-
         </LinearGradient>
     );
 };
@@ -344,9 +448,8 @@ const styles = StyleSheet.create({
         borderRadius: 3,
     },
     stepContainer: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
         padding: 0,
-        // height: "100%",
         gap: theme.spacing.lg * 2,
         width: "100%",
         shadowColor: theme.colors.secondary.darkGray,
@@ -355,7 +458,6 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 4,
         position: "relative",
-
     },
     stepText: {
         fontSize: 24,
