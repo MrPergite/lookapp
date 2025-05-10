@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 
 /**
  * GET handler for product details API
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       {
         headers: {
           'Content-Type': 'application/json',
-          ...(await applyHeaderStyles(request))
+          ...(await applyHeaders(request))
         }
       }
     );

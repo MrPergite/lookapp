@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 /**
  * GET handler for product search
  * Simply returns a test message, primarily used for health checks
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       {
         headers: {
           'Authorization': `Bearer ${token}`,
-          ...(await applyHeaderStyles(request))
+          ...(await applyHeaders(request))
         }
       }
     );

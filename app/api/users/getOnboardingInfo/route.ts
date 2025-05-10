@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../../utils';
+import { applyHeaders } from '../../utils';
 /**
  * GET handler for retrieving user onboarding information
  */
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         {
           headers: {
             'Authorization': authHeader,
-            ...(await applyHeaderStyles(request))
+            ...(await applyHeaders(request))
           }
         }
       );

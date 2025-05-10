@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 /**
  * GET handler for shopping list new API
  * Simply returns a test message, primarily used for health checks
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   const response = await axios.get(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/shoppingListNew`, {
     headers: {
-      ...(await applyHeaderStyles(request)),
+      ...(await applyHeaders(request)),
     }
   });
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          ...(await applyHeaderStyles(request))
+          ...(await applyHeaders(request))
         }
       }
     );
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
       `${process.env.EXPO_PUBLIC_API_BASE_URL}/users/shoppingList/delete`, null,
       {
         headers: {
-          ...(await applyHeaderStyles(request))
+          ...(await applyHeaders(request))
         },
         params: {
           id: body.product_id

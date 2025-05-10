@@ -1,5 +1,5 @@
 import axios from "axios";
-import { applyHeaderStyles } from "../utils";
+import { applyHeaders } from "../utils";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
         console.log("outfit env ", process.env.EXPO_PUBLIC_API_BASE_URL, process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
         const response = await axios.get(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/vton/outfits`, {
             headers: {
-                ...(await applyHeaderStyles(req)),
+                ...(await applyHeaders(req)),
                 'Content-Type': 'application/json',
             },
         });
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
             { outfit_name, vton_img_url, base_avatar_id, top_img_id, bottom_img_id, one_pieces_img_id },
             {
                 headers: {
-                    ...(await applyHeaderStyles(req)),
+                    ...(await applyHeaders(req)),
                     'Content-Type': 'application/json',
                 },
             });
@@ -51,7 +51,7 @@ export async function DELETE(req: NextRequest) {
         const { id } = await req.json();
         const response = await axios.post(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/vton/outfits/delete?id=${id}`, null, {
             headers: {
-                ...(await applyHeaderStyles(req)),
+                ...(await applyHeaders(req)),
             },
         });
         return Response.json({ ...response.data, status: response.status });

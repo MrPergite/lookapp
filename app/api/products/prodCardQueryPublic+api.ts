@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 
 /**
  * Interface for product card query request
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
         const response = await axios.post(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/prodCardQueryPublic`,body, {
             method: 'POST',
             headers: {
-                ...(await applyHeaderStyles(req))
+                ...(await applyHeaders(req))
             },
         });
 

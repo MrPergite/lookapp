@@ -1,5 +1,5 @@
 import axios from "axios";
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 
 
 export async function GET(request: Request) {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         }
 
         const userResponse = await axios.get(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/getUserName`, {
-            headers: await applyHeaderStyles(request)
+            headers: await applyHeaders(request)
         })
 
         return Response.json(userResponse.data)

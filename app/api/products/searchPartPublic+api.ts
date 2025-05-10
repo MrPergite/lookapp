@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 /**
  * GET handler for searchPart API
  * Simply returns a test message, primarily used for health checks
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // Forward the request to the external searchPart API
     const response = await axios.post(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/searchPartPublic`, { ...body },{
       headers: {
-        ...(await applyHeaderStyles(request))
+        ...(await applyHeaders(request))
       }
     });
 
