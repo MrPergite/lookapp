@@ -15,7 +15,8 @@
     "test": "jest --watchAll",
     "lint": "expo lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "android": "expo run:android"
+    "android": "expo run:android",
+    "dev": "expo start"
   },
   "jest": {
     "preset": "jest-expo"
