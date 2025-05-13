@@ -7,7 +7,7 @@ const appConfig = {
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "myapp",
+    // scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     runtimeVersion: "0.0.1",
@@ -47,9 +47,11 @@ const appConfig = {
       [
         "expo-router",
         {
-          "origin": "http://192.168.1.34:8081"
+          "origin": "http://localhost:8081"
         }
-      ]
+      ],
+      "expo-camera",
+      "expo-image-picker"
     ],
     experiments: {
       typedRoutes: true,
@@ -62,7 +64,7 @@ const appConfig = {
         projectId: "4bd5f21a-069b-40e1-afe8-facc7d4fe0a4",
       },
       enableCors: true,
-      origin: "http://192.168.1.34:8081",
+       origin: "http://localhost:8081"
       ...envConfig,
     },
 

@@ -102,11 +102,7 @@ const toastConfig: ToastConfig = {
   ),
 };
 
-Toast.show({
-  type: 'success',
-  text1: 'Item added to shopping list',
-  visibilityTime: 10000000000
-});
+
 
 export default function RootLayout() {
 

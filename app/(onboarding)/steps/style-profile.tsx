@@ -6,6 +6,7 @@ import { Camera as CameraIcon, Check, Loader2 as Loader, X as XIcon } from 'luci
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
+import axios from 'axios';
 import CameraCapture from './CameraCapture';
 import ImageGrid from './ImageGrid';
 import PhotoRecommendations from './PhotoRecommendations';
@@ -14,6 +15,9 @@ import { useOnBoarding } from '../context';
 import theme from '@/styles/theme';
 import { ThemedText } from '@/components/ThemedText';
 import { useApi } from '@/client-api';
+import { StyleProfileDataType } from '../context';
+import { routes } from '@/client-api/routes';
+import { getSavedDetails } from '@/utils';
 
 // Define the props for StyleProfile, including the ref if you were to type it strictly for forwardRef
 interface StyleProfileProps {
@@ -38,6 +42,12 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
     return initial;
   });
   const [rejectionReasons, setRejectionReasons] = useState<Record<number, string>>(contextPayload.styleProfileState?.rejectionReasons || {});
+  
+  // Add a counter to force grid updates when validation changes
+  const [validationUpdateCount, setValidationUpdateCount] = useState(0);
+  
+  // Add state to track API processing for the Next button text
+  const [isApiProcessing, setIsApiProcessing] = useState(false);
 
   const [avatarStatus, setAvatarStatus] = useState(user?.publicMetadata?.avatar_creation_status || 'pending');
   const [isCameraModalVisible, setIsCameraModalVisible] = useState(false);
@@ -65,31 +75,22 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
     );
     const isValid = approvedUrlImages.length >= 3 && approvedUrlImages.length <= 5;
 
-    if (isValid) {
-      dispatch({
-        type: 'SET_PAYLOAD',
-        payload: {
-          key: 'styleProfileState',
-          value: {
-            images: approvedUrlImages,
-            processingStatus: processingStatus,
-            rejectionReasons: rejectionReasons,
-            progressValue: progressValue,
-            avatarStatus: avatarStatus,
-            avatarGenerationStartTime: avatarGenerationStartTime
-          }
-        }
-      });
-    } else {
-      dispatch({
-        type: 'SET_PAYLOAD',
-        payload: {
-          key: 'styleProfileState',
-          value: null // Setting to null will make isCurrentStepComplete in parent false
-        }
-      });
-    }
-  }, [images, processingStatus, rejectionReasons, progressValue, avatarStatus, avatarGenerationStartTime, dispatch]);
+    dispatch({
+      type: 'SET_PAYLOAD',
+      payload: {
+        key: 'styleProfileState',
+        value: isValid ? {
+          images: approvedUrlImages,
+          processingStatus: processingStatus,
+          rejectionReasons: rejectionReasons,
+          progressValue: progressValue,
+          avatarStatus: avatarStatus,
+          avatarGenerationStartTime: avatarGenerationStartTime,
+          isProcessing: isApiProcessing // Add the processing state
+        } : null // Still set to null if not valid to disable Next button
+      }
+    });
+  }, [images, processingStatus, rejectionReasons, progressValue, avatarStatus, avatarGenerationStartTime, isApiProcessing, dispatch]);
 // 
 //   useEffect(() => {
 //     return () => {
@@ -123,11 +124,46 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
       Toast.show({ type: 'error', text1: 'Camera permission denied' });
       return;
     }
-    setIsCameraModalVisible(true); // Show modal that then launches picker
+    
+    // Instead of showing the modal, directly launch the camera
+    try {
+      let result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+        aspect: [1, 1],
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileUri = asset.uri;
+        const fileName = asset.fileName || fileUri.split('/').pop() || 'camera_image.jpg';
+        const fileType = asset.type || 'image/jpeg'; // Or derive from extension
+
+        const fileToUpload = {
+            uri: fileUri,
+            name: fileName,
+            type: fileType,
+        };
+        uploadImage(fileToUpload, fileUri);
+      } else {
+        Toast.show({ type: 'info', text1: 'Image capture cancelled or failed.' });
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Failed to open camera', 
+        text2: 'Please check your app permissions in settings.'
+      });
+    }
+    
+    // No longer need to set this to true since we're not using the modal
+    // setIsCameraModalVisible(true);
   };
 
-  const capturePhotoFromCamera = async () => {
-    // This is now triggered by the CameraCaptureModal stub or directly by openNativeCamera if modal is simple
+  // This function is now commented out as we're no longer using the CameraCapture modal
+  /* const capturePhotoFromCamera = async () => {
     setIsCameraModalVisible(false); 
 
     let result = await ImagePicker.launchCameraAsync({
@@ -151,7 +187,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
     } else {
         Toast.show({ type: 'info', text1: 'Image capture cancelled or failed.' });
     }
-  };
+  }; */
 
   const uploadImage = async (file: { uri: string, name: string, type: string }, localDisplayUri: string) => {
   
@@ -160,9 +196,22 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
       return false;
     }
 
-    let newImageIndex = images.length;
-    setImages(prev => [...prev, localDisplayUri]);
-    setProcessingImageIndices(prev => ({ ...prev, [newImageIndex]: true }));
+    let newImageIndex:any;
+    setImages(prev => {
+      newImageIndex = prev.length;
+      console.log(`[uploadImage] Adding image at index ${newImageIndex}`);
+      return [...prev, localDisplayUri]; // Store file object directly
+    });
+    
+    // Wait for the state update to propagate
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    // Mark this index as processing
+    setProcessingImageIndices(prev => {
+      const newIndices = {...prev, [newImageIndex]: true};
+      console.log(`[uploadImage] Updated processing indices: ${JSON.stringify(newIndices)}`);
+      return newIndices;
+    });
     
     try {
       const formData = new FormData();
@@ -176,7 +225,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
 
       console.log("Attempting to call callPublicEndpoint('uploadImage')...");
       
-      const data = await callPublicEndpoint('uploadImage', { 
+      const data = await callProtectedEndpoint('uploadImage', { 
         method: 'POST',
         data: formData,
       });
@@ -277,7 +326,7 @@ console.log(result);
       processingStatus[index] === 'approved' && typeof image === 'string' && !image.startsWith('file:') && !image.startsWith('blob:')
     );
     if (approvedUrlImages.length < 3 || approvedUrlImages.length > 5) {
-      setErrors({ images: `Please upload and ensure 3 to 5 images are approved (currently ${approvedUrlImages.length}).` });
+      setErrors({ images: `Please upload and ensure 3 to 5 images are approved.` });
       return false;
     }
     setErrors({});
@@ -300,31 +349,97 @@ console.log(result);
       return;
     }
 
+    // Set loading and API processing states
     setIsLoading(true);
+    setIsApiProcessing(true);
+    
     try {
+      console.log('Creating personalized avatar...', await getSavedDetails('gender') );
       // Use callProtectedEndpoint
-      const data = await callPublicEndpoint('createPersonalizedAvatar', {
+      const response = await callProtectedEndpoint('createPersonalizedAvatar', {
         method: 'POST',
         data: {
           images: approvedUrlImages,
-          gender: contextPayload.gender,
+          gender: contextPayload.gender ||  await getSavedDetails('gender') || 'male'
         },
-        // headers: { 'Content-Type': 'application/json' }, // Usually default for useApi data
       });
 
-      // Assuming the API returns { message: '...' } on success
-      if (!data || data.error) { // Check for explicit error or missing success indicator
-         throw new Error(data?.error || data?.message || "Failed to start avatar creation.");
+      console.log('API Response:', response);
+
+      // For non-success responses (like 400), check for validation data
+      // We can detect this by checking for scored_images or error message
+      if (response.error || response.scored_images || Array.isArray(response)) {
+        console.log('Processing validation response:', response);
+        
+        // Handle validation response
+        const imageResults = Array.isArray(response) 
+          ? response 
+          : response?.scored_images || [];
+        
+        if (imageResults.length > 0) {
+          const resultsByUrl: Record<string, any> = {};
+          imageResults.forEach((result: any) => {
+            if (result.image_url) {
+              const matchingIndex = images.findIndex(img => 
+                (typeof img === 'string' && img === result.image_url) || 
+                (typeof img !== 'string' && (img as any).uri === result.image_url)
+              );
+              if (matchingIndex !== -1) {
+                resultsByUrl[matchingIndex] = result;
+              }
+            }
+          });
+          
+          const newProcessingStatus = { ...processingStatus };
+          const newRejectionReasons = { ...rejectionReasons };
+          
+          let hasRejectedImages = false;
+          
+          Object.entries(resultsByUrl).forEach(([indexStr, result]) => {
+            const index = parseInt(indexStr, 10);
+            if (result.reason) {
+              newProcessingStatus[index] = 'rejected';
+              newRejectionReasons[index] = result.reason;
+              hasRejectedImages = true;
+            } else {
+              newProcessingStatus[index] = 'approved';
+            }
+          });
+          
+          // Apply the updates to state
+          setProcessingStatus(newProcessingStatus);
+          setRejectionReasons(newRejectionReasons);
+          
+          // Force the UI to refresh with the new statuses
+          setValidationUpdateCount(prev => prev + 1);
+          
+          setIsLoading(false);
+          setIsApiProcessing(false);
+          
+          setTimeout(() => {
+            Toast.show({ 
+              type: hasRejectedImages ? 'error' : 'info', 
+              text1: hasRejectedImages ? 'Some images were rejected' : 'Image validation complete', 
+              text2: hasRejectedImages 
+                ? 'Please review flagged images and replace them before trying again.' 
+                : 'Your images have been validated. You can proceed.'
+            });
+          }, 100);
+          
+          return;
+        }
       }
       
-      Toast.show({ type: 'success', text1: data.message || 'Personalized avatar creation started' });
+      // Success case: API returned a success response
+      Toast.show({ type: 'success', text1: response.message || 'Personalized avatar creation started' });
       const newStyleProfileDataToSave = {
         images: approvedUrlImages,
         processingStatus,
         rejectionReasons,
         progressValue,
-        avatarStatus: 'processing',
+        avatarStatus: 'pending',
         avatarGenerationStartTime: avatarGenerationStartTime || Date.now(),
+        isProcessing: false // Reset processing state on success
       };
       dispatch({
         type: 'SET_PAYLOAD',
@@ -336,13 +451,21 @@ console.log(result);
       onNextProp({
         styleProfile: newStyleProfileDataToSave
       });
-
-    } catch (error: any) { // useApi hook might format errors differently
+      
+    } catch (error: any) {
       setIsLoading(false);
-      Toast.show({ type: 'error', text1: 'Avatar Creation Error', text2: error.message });
-      // Handle specific error cases from backend if needed
+      setIsApiProcessing(false);
+      
+      console.log('API Error Details:', error);
+      
+      // Only handle 401 or other non-4xx errors here, since 4xx are returned as normal responses now
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Avatar Creation Error', 
+        text2: error.message || 'An unexpected error occurred' 
+      });
     } finally {
-      // setIsLoading(false); // Only set false on success or caught error
+      // In case of errors we're already resetting isApiProcessing in the catch block
     }
   };
 
@@ -364,6 +487,7 @@ console.log(result);
           <ThemedText style={styles.sectionTitle}>Upload 3-5 photos of yourself *</ThemedText>
           
           <ImageGrid
+            key={`image-grid-${validationUpdateCount}`}
             images={images}
             processingImageIndices={processingImageIndices}
             processingStatus={processingStatus}
@@ -393,11 +517,13 @@ console.log(result);
         </MotiView>
       </ScrollView>
 
+      {/* CameraCapture component is no longer needed since we're using ImagePicker directly
       <CameraCapture
         visible={isCameraModalVisible}
-        onCapturePhoto={capturePhotoFromCamera}
+        onCapturePhoto={() => {}}
         onCancel={() => setIsCameraModalVisible(false)}
       />
+      */}
       {isLoading && (
         <View style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)'}}>
             <ActivityIndicator size="large" color={theme.colors.primary.purple} />
@@ -412,7 +538,7 @@ const styles = StyleSheet.create({
   scrollContentContainer: { 
     paddingBottom: 120, 
     alignItems: 'flex-start',
-    paddingHorizontal: 20 
+    // paddingHorizontal: 20 
   },
   contentWrapper: { 
     width: '100%', 
@@ -420,16 +546,19 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
-    color: theme.colors.text,
+    color: 'rgba(55 65 81  / 1)',
     marginBottom: 15,
-    marginTop: 0,
     alignSelf: 'flex-start',
     paddingLeft: 5,
     width: '100%',
+    lineHeight: 20,
+    opacity:1,
+    marginTop: 20,
+    marginLeft: 12,
   },
-  errorText: { fontSize: 13, color: theme.colors.error, marginTop: 5, marginBottom: 10, textAlign: 'center' },
+  errorText: { fontSize: 13, color: '#ef4444', marginTop: 5, marginBottom: 10, marginLeft:0,textAlign: 'center' },
   
   progressSection: { marginVertical: 20, alignItems: 'center', width: '100%' },
   progressText: { marginBottom: 10, fontSize: 15, color: theme.colors.text },

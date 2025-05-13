@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
             console.warn("WARN: No authorization header found in upload request.");
         }
 
-        const contentTypeHeader = request.headers.get('content-type') || 'multipart/form-data';
+        const contentTypeHeader = request.headers.get('content-type') || '';
         let fileBuffer: Buffer;
         let detectedType: string;
         let fileExtension: string;

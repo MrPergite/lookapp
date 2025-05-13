@@ -22,6 +22,8 @@ export interface StyleProfileDataType {
   progressValue: number;
   avatarStatus: string;
   avatarGenerationStartTime: number | null;
+  isProcessing?: boolean;
+  usingExisting?: boolean;
 }
 
 export interface OnboardingState {

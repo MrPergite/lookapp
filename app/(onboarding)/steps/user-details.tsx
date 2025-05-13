@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     StyleSheet,
@@ -9,17 +9,21 @@ import {
     KeyboardAvoidingView,
     ScrollView,
     TextInput,
-    Pressable
+    Pressable,
+    Animated
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import TextBox from '@/components/text-box';
 import theme from '@/styles/theme';
-import { useOnBoarding } from '../context';
+import { useOnBoarding, OnboardingPayload } from '../context';
 import { useUserCountry } from '../queries';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, Loader2 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MotiView } from 'moti';
+import AvatarCreationProgressCard from './AvatarCreationProgressCard';
 
 function UserDetails() {
-    const { payload, dispatch } = useOnBoarding() as any;
+    const { payload, dispatch } = useOnBoarding();
 
     // Modal visibility states (these remain local since they're UI state, not data)
     const [isClothingSizePickerVisible, setClothingSizePickerVisible] = useState(false);
@@ -27,7 +31,67 @@ function UserDetails() {
     const [isCountryPickerVisible, setCountryPickerVisible] = useState(false);
 
     // Reference for shoe size input
-    const shoeSizeInputRef = React.useRef<TextInput>(null);
+    const shoeSizeInputRef = useRef<TextInput>(null);
+
+    // Avatar Creation Progress State
+    const [avatarGenerationProgress, setAvatarGenerationProgress] = useState(0);
+    const [animatedProgressWidth] = useState(new Animated.Value(0));
+    const spinAnim = useRef(new Animated.Value(0)).current;
+
+    // Determine if avatar is being created
+    const _currentAvatarStatus = payload.styleProfileState?.avatarStatus;
+    const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime;
+    const _isProcessingNewAvatar = payload.avatarPath === 'custom' && _currentAvatarStatus === 'ready'
+
+    useEffect(() => {
+        let intervalId: NodeJS.Timeout | undefined = undefined;
+        if (_isProcessingNewAvatar && _avatarGenerationStartTime) {
+            const calculateProgress = () => {
+                const elapsedTime = Date.now() - _avatarGenerationStartTime;
+                // Assuming a 5-minute (300,000 ms) generation time, as in StyleProfile
+                const progress = Math.min((elapsedTime / 300000) * 100, 100);
+                setAvatarGenerationProgress(progress);
+                if (progress >= 100) {
+                    if (intervalId) clearInterval(intervalId);
+                    // Optionally, dispatch an action or update local state if avatar should be 'ready' or 'needs-review'
+                }
+            };
+            calculateProgress(); // Initial calculation
+            intervalId = setInterval(calculateProgress, 1000); // Update every second
+        } else {
+            setAvatarGenerationProgress(0); // Reset if not creating or no start time
+        }
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [_isProcessingNewAvatar, _avatarGenerationStartTime]);
+
+    useEffect(() => {
+        Animated.timing(animatedProgressWidth, {
+            toValue: avatarGenerationProgress,
+            duration: 100, // Short duration for smooth updates
+            useNativeDriver: false, // width animation not supported by native driver
+        }).start();
+    }, [avatarGenerationProgress]);
+    
+    useEffect(() => {
+        if (_isProcessingNewAvatar) {
+            Animated.loop(
+                Animated.timing(spinAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                })
+            ).start();
+        } else {
+            spinAnim.setValue(0); // Reset animation
+        }
+    }, [_isProcessingNewAvatar, spinAnim]);
+
+    const spin = spinAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
 
     // Define options
     const clothingSizeOptions = [
@@ -203,8 +267,18 @@ function UserDetails() {
                 style={styles.scrollView}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1 }}
             >
                 <View style={styles.container}>
+                    {_isProcessingNewAvatar && (
+                        <View style={styles.progressCardWrapper}>
+                            <AvatarCreationProgressCard 
+                                isProcessing={_isProcessingNewAvatar} 
+                                progressStartTime={_avatarGenerationStartTime || null} 
+                            />
+                        </View>
+                    )}
+
                     <View style={styles.inputContainer}>
                         <Text style={[styles.label]}>Clothing Size</Text>
                         {renderPicker(
@@ -373,6 +447,60 @@ const styles = StyleSheet.create({
     },
     modalPicker: {
         width: '100%'
+    },
+    progressCardWrapper: {
+        marginBottom: theme.spacing.lg,
+        width: '100%',
+    },
+    progressOuterContainer: {
+        marginTop: theme.spacing.xl, // mt-8 approx
+        marginBottom: theme.spacing.md, // mb-4 approx
+        borderRadius: 12, // rounded-lg
+        overflow: 'hidden', // For gradient border radius
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        // Pulse animation can be added via MotiView directly if needed
+    },
+    progressGradientBackground: {
+        padding: theme.spacing.md, // p-4
+        // backdrop-blur-sm is not directly translatable easily
+    },
+    progressHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8, // gap-2
+        marginBottom: theme.spacing.sm, // mb-2
+    },
+    progressIconWrapper: {
+        borderRadius: 999, // rounded-full
+        padding: theme.spacing.xs, // p-1
+        // shadow-sm can be added via elevation (Android) or shadow props (iOS)
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.00,
+    },
+    progressHeaderText: {
+        fontSize: 14,
+        fontWeight: '500',
+        // For gradient text, would ideally use a GradientText component or specific handling
+        color: theme.colors.primary.purple, // Fallback color
+    },
+    progressBarTrack: {
+        height: 10, // h-2.5
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', // bg-white/50
+        borderRadius: 999, // rounded-full
+        overflow: 'hidden',
+    },
+    progressBarFillWrapper: {
+        height: '100%',
+        // width is animated
+    },
+    progressBarFill: {
+        height: '100%',
+        width: '100%',
+        opacity: 0.9, // From original style example for the underline, adapting here
     }
 });
 

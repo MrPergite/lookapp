@@ -18,14 +18,18 @@ import SaveOutfitDialog from './SaveOutfitDialog';
 import AvatarList from './AvatarList';
 import useResetTab from './hooks/useResetTab';
 import { Image } from 'expo-image';
+import { AvatarStatus } from './AvatarStatusPill';
+import CustomAvatarSelectionModal from './CustomAvatarSelectionModal';
+import RecreateAvatarModal from './RecreateAvatarModal';
 
 function VirtualTryOn({ route }: { route: any }) {
     const { avatar } = useImageContext() as ImageContextType;
-    const { user, } = useUser();
+    const { user } = useUser();
     const { isSignedIn } = useAuth();
     const { openSignIn, openSignUp } = useClerk();
     const { callProtectedEndpoint, callPublicEndpoint } = useApi();
     const router = useRouter();
+    const [avatarStatusFromUser, setAvatarStatusFromUser] = useState<string>('pending');
 
 
 
@@ -62,6 +66,9 @@ function VirtualTryOn({ route }: { route: any }) {
     const [isAvatarLoading, setIsAvatarLoading] = useState(false);
     const [isLoadingPrefAvatar, setIsLoadingPrefAvatar] = useState(true);
     const [fetchPrefAvatar, setFetchPrefAvatar] = useState(false);
+    const [showCustomAvatarModal, setShowCustomAvatarModal] = useState(false);
+    const [isSettingPrefAvatarFromModal, setIsSettingPrefAvatarFromModal] = useState(false);
+    const [showRecreateAvatarModal, setShowRecreateAvatarModal] = useState(false);
 
     // Refs to prevent concurrent API calls
     const hasFetchedCredits = useRef(false);
@@ -176,7 +183,9 @@ function VirtualTryOn({ route }: { route: any }) {
             setIsLoadingPrefAvatar(true);
             const publicMetadata = user?.publicMetadata;
             const prefAvatar = publicMetadata?.pref_avatar_url;
-
+            setAvatarStatusFromUser(publicMetadata?.avatar_creation_status as string || 'pending');
+            console.log("publicMetadata : ", publicMetadata);
+            setCustomAvatars(publicMetadata?.custom_avatar_urls || []);
             if (prefAvatar) {
                 // Preload the preferred avatar image
                 const avatarSelected = {
@@ -444,7 +453,60 @@ function VirtualTryOn({ route }: { route: any }) {
             : [prefAvatar, ...AVATARS];
     };
 
+    const handleShowMyAvatars = () => { 
+        if (customAvatars.length > 0) {
+            setShowCustomAvatarModal(true);
+        } else {
+            Toast.show({ type: 'info', text1: 'No Custom Avatars', text2: 'You can create new ones during onboarding or from settings.' });
+        }
+    };
 
+    const handleSetPreferredAvatarFromModal = async (avatarUrl: string) => {
+        if (!isSignedIn) {
+            Toast.show({ type: 'error', text1: 'Please sign in to set a preferred avatar.' });
+            return;
+        }
+        setIsSettingPrefAvatarFromModal(true);
+        try {
+            await callProtectedEndpoint('setPreferredAvatarUrl', { 
+                method: 'POST',
+                data: { pref_avatar_url: avatarUrl },
+            });
+            await user?.reload(); 
+            setSelectedAvatar({ 
+                name: user?.firstName || 'My Avatar', 
+                src: avatarUrl,
+            });
+            setPrefAvatar({ // Also update prefAvatar state if you use it directly for getAvatars
+                id: selectedAvatar.id, // or a new ID if appropriate
+                name: user?.firstName || 'My Avatar',
+                src: avatarUrl,
+            });
+            Toast.show({ type: 'success', text1: 'Preferred avatar has been set!' });
+            setShowCustomAvatarModal(false); 
+        } catch (error: any) {
+            console.error('Failed to set preferred avatar from modal:', error);
+            Toast.show({ type: 'error', text1: 'Operation Failed', text2: error.message || 'Could not set preferred avatar.' });
+        } finally {
+            setIsSettingPrefAvatarFromModal(false);
+        }
+    };
+
+    const handleRecreateAvatar = () => { 
+        console.log("Recreate Avatar clicked, opening modal.");
+        setShowRecreateAvatarModal(true);
+    };
+
+    const handleRecreationSuccess = () => {
+        console.log("Avatar recreation process initiated from modal.");
+        setShowRecreateAvatarModal(false);
+        // IMPORTANT: Here you need to trigger a refresh of user data / avatar status.
+        // This might involve calling user.reload(), or re-fetching a specific status endpoint.
+        // For now, we'll just log and close. The AvatarStatusPill should eventually update
+        // once user.publicMetadata.avatar_creation_status changes to 'pending' or 'processing'.
+        user?.reload(); // Attempt to reload user data to get new avatar_creation_status
+        Toast.show({type: 'info', text1: 'Avatar recreation started!', text2: 'It might take a few minutes.'});
+    };
 
     return (
         <SafeAreaView style={styles.areaContainer} className='w-full bg-white'>
@@ -469,12 +531,16 @@ function VirtualTryOn({ route }: { route: any }) {
                                     setIsFullscreen={setIsFullscreen}
                                     isExpanded={isExpanded}
                                     credits={credits}
+                                    avatarStatus={avatarStatusFromUser}
                                     tryonImages={vtryonImg}
                                     onResetAvatar={handleResetAvatar}
                                     originalAvatar={originalAvatar}
                                     isAvatarLoading={isAvatarLoading}
                                     isLoadingPrefAvatar={isLoadingPrefAvatar}
                                     isFromSavedOutfit={isFromSavedOutfit}
+                                    onShowMyAvatars={handleShowMyAvatars}
+                                    showCustomAvatarModal={showCustomAvatarModal}
+                                    onRecreateAvatar={handleRecreateAvatar}
                                 />
                             </View>
                         </MotiView>
@@ -557,6 +623,25 @@ function VirtualTryOn({ route }: { route: any }) {
                         </MotiView>
                     )}
                 </AnimatePresence>
+
+                {/* Render the CustomAvatarSelectionModal */}
+                {isSignedIn && (
+                    <CustomAvatarSelectionModal
+                        visible={showCustomAvatarModal}
+                        onClose={() => setShowCustomAvatarModal(false)}
+                        customAvatars={customAvatars} 
+                        currentPreferredAvatarUrl={prefAvatar?.src}
+                        onSelectAvatar={handleSetPreferredAvatarFromModal}
+                        isSubmittingPreference={isSettingPrefAvatarFromModal}
+                    />
+                )}
+
+                {/* Render the RecreateAvatarModal */}
+                <RecreateAvatarModal 
+                    visible={showRecreateAvatarModal}
+                    onClose={() => setShowRecreateAvatarModal(false)}
+                    onRecreationSuccess={handleRecreationSuccess}
+                />
             </View>
 
         </SafeAreaView>

@@ -19,9 +19,13 @@ import { Easing, runOnJS } from "react-native-reanimated";
 import { Image } from 'expo-image';
 import { redirectToSignIn, redirectToSignUp, withAuthScreenHistory } from "../utils";
 import { useScreenHistoryContext } from "@/common/providers/screen-history";
+import AvatarStatusPill from "../AvatarStatusPill";
 
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Define AvatarStatus type (can be moved to a shared types file if used elsewhere)
+type AvatarStatus = 'ready' | 'processing' | 'pending' | 'failed' | string | null | undefined;
 
 interface AvatarSectionProps {
   selectedAvatar: any;
@@ -36,6 +40,10 @@ interface AvatarSectionProps {
   isAvatarLoading: boolean;
   isLoadingPrefAvatar: boolean;
   isFromSavedOutfit: boolean;
+  avatarStatus: AvatarStatus;
+  avatarCreationProgress?: number;
+  onShowMyAvatars?: () => void;
+  onRecreateAvatar?: () => void;
 }
 
 const AvatarSection = ({
@@ -51,11 +59,23 @@ const AvatarSection = ({
   isAvatarLoading,
   isLoadingPrefAvatar,
   isFromSavedOutfit,
+  avatarStatus,
+  avatarCreationProgress,
+  onShowMyAvatars,
+  onRecreateAvatar,
 }: AvatarSectionProps) => {
   const { isSignedIn } = useAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const { addScreenToHistory } = useScreenHistoryContext();
+
+  // LOGS FOR DEBUGGING PILL VISIBILITY - MOVED HERE
+  console.log('[AvatarSection] Props for Pill Condition:');
+  console.log('  tryonImages:', tryonImages);
+  console.log('  isSignedIn:', isSignedIn);
+  console.log('  isAvatarLoading (prop for general avatar load):', isAvatarLoading);
+  console.log('  avatarStatus (prop received for pill):', avatarStatus);
+  console.log('  avatarCreationProgress (prop received for pill):', avatarCreationProgress);
 
   // Loading messages that rotate
   const loadingMessages = [
@@ -102,6 +122,14 @@ const AvatarSection = ({
         text1: "Avatar has been reset to original",
       });
     }
+
+    // LOGS FOR DEBUGGING PILL VISIBILITY
+    console.log('[AvatarSection] Props for Pill Condition:');
+    console.log('  tryonImages:', tryonImages);
+    console.log('  isSignedIn:', isSignedIn);
+    console.log('  isAvatarLoading:', isAvatarLoading);
+    console.log('  avatarStatus (prop received):', avatarStatus);
+    console.log('  avatarCreationProgress (prop received):', avatarCreationProgress);
   };
 
   return (
@@ -152,7 +180,8 @@ const AvatarSection = ({
                   style={[styles.avatarImage, isSignedIn && styles.signedInAvatar]}
                   source={{ uri: tryonImages.output_images[0] }}
                   id="virtual-tryon-content-mobile"
-                  contentFit="cover"
+                  contentFit="contain"
+
                   {
                   ...(isSignedIn ? {
                     contentPosition: 'bottom center'
@@ -264,6 +293,17 @@ const AvatarSection = ({
             </TouchableOpacity>
           </View>
         )}
+
+        {!tryonImages && isSignedIn && !isAvatarLoading && (
+            <View style={styles.statusPillPositionContainer}>
+                <AvatarStatusPill 
+                    avatarStatus={avatarStatus}
+                    avatarCreationProgress={avatarCreationProgress}
+                    onShowMyAvatars={onShowMyAvatars}
+                    onRecreateAvatar={onRecreateAvatar}
+                />
+            </View>
+        )}
       </View>
 
       <Modal visible={showAuthDialog} onDismiss={() => setShowAuthDialog(false)}>
@@ -339,11 +379,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   topControls: {
-    // position: 'absolute',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     zIndex: 20,
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    right: 0,
   },
   fullscreenButton: {
     width: 45,
@@ -352,16 +395,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute',
-    top: 10,
-    left: 10,
-  },
-  rightControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-   
-   
   },
   avatarButton: {
     flexDirection: 'row',
@@ -371,9 +404,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     gap: 8,
-    position: 'absolute',
-    top: 10,
-    right: 10,
   },
   userIconContainer: {
     width: 24,
@@ -475,7 +505,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     alignSelf: 'center',
-
   },
   actionButton: {
     flexDirection: 'row',
@@ -617,6 +646,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     marginBottom: 16,
+  },
+  statusPillPositionContainer: {
+    position: 'absolute',
+    bottom: 20, 
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
   },
 });
 

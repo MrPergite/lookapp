@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse, Method } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse, Method, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '@clerk/clerk-expo';
 import { routes } from './routes';
@@ -50,14 +50,15 @@ const publicAxios = axios.create({
     baseURL: apiConfig.baseUrl,
     headers: {
         'Content-Type': 'application/json',
-
     }
 });
 
 const protectedAxios = axios.create({
     baseURL: apiConfig.baseUrl,
-    headers: {
-        'Content-Type': 'application/json',
+    // Don't automatically reject 4xx status codes as errors
+    validateStatus: (status) => {
+        // Consider all responses valid, except server errors (5xx)
+        return status < 500;
     }
 });
 
@@ -74,7 +75,7 @@ export function useApi(): ApiHook {
 
     // Configure interceptor for protected requests
     protectedAxios.interceptors.request.use(
-        async (config: AxiosRequestConfig): Promise<AxiosRequestConfig> => {
+        async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
             if (isLoaded && isSignedIn) {
                 try {
                     // Get token from Clerk
@@ -146,29 +147,61 @@ export function useApi(): ApiHook {
             throw new Error('User not authenticated');
         }
 
+        let dynamicHeaders: AxiosRequestConfig['headers'];
+        if (data instanceof FormData) {
+            // Setting Content-Type to null for FormData allows Axios to automatically
+            // set it to multipart/form-data with the correct boundary.
+            // This overrides any default Content-Type set at the Axios instance level.
+            dynamicHeaders = { 'Content-Type': 'multipart/form-data' };
+            console.log("👉 Dynamic Headers:", dynamicHeaders);
+        }
+        // For non-FormData types, dynamicHeaders will be undefined.
+        // In this case, the headers from the protectedAxios instance (defaulting to 'application/json')
+        // or Axios's own defaults will apply.
 
         try {
             const response: AxiosResponse<T> = await protectedAxios({
                 method,
                 url: endpoint,
-                ...(method !== "GET" && { data }),
-                params
+                ...(method !== "GET" && { data }), // Pass data if not a GET request
+                params,
+                headers: dynamicHeaders // Add the dynamicHeaders to the request config
             });
             
+            console.log("API Response:", { 
+                status: response.status, 
+                statusText: response.statusText,
+                data: response.data 
+            });
 
-            console.log("AXIOS INTERCEPTOR RESPONSE : ", JSON.stringify(response, null, 2))
-
+            // Now both 2xx and 4xx responses come here
             return response.data;
         } catch (error: any) {
-            // Handle specific error cases
+            // This will only be triggered for network errors, 
+            // 5xx server errors, or other exceptions
+            console.error(`API Error calling ${endpointKey}:`, error);
+            
+            // Detailed error logging
             if (error.response) {
-                // Server responded with a status code outside of 2xx range
-                if (error.response.status === 401) {
-                    console.error('Authentication error: Token may be expired');
-                }
+                console.error('Error Response Details:', {
+                    status: error.response.status,
+                    statusText: error.response.statusText,
+                    data: error.response.data,
+                    headers: error.response.headers
+                });
+            } else if (error.request) {
+                console.error('Error Request Details:', error.request);
+            } else {
+                console.error('Error Message:', error.message);
             }
-            console.log("AXIOS INTERCEPTOR ERROR : ", JSON.stringify(error, null, 2))
-            console.error(`Error calling ${endpointKey}:`, error);
+            console.error('Error Config:', error.config);
+            
+            // If it's actually a 400 error that's being misinterpreted, return the data
+            if (error.response && error.response.status === 400) {
+                console.log('Detected 400 status in error response, returning data');
+                return error.response.data as T;
+            }
+            
             throw error;
         }
     };

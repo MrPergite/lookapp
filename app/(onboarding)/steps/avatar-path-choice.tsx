@@ -35,7 +35,7 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
       description: 'Upload 3-5 images of yourself',
       time: 'Takes about 2 minutes',
       icon: Camera,
-      gradientColors: ['#ec4899', '#8b5cf6'], // pink-500 to purple-500
+      gradientColors: ['#ec4899', '#a855f7'], // pink-500 to purple-500
     },
     {
       key: 'premade',
@@ -43,47 +43,55 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
       description: 'Choose from our selection of ready-to-use avatars',
       time: 'Quick setup',
       icon: UserRound,
-      gradientColors: ['#ec4899', '#8b5cf6'], // pink-500 to purple-500
+      gradientColors: ['#ec4899', '#a855f7'], // pink-500 to purple-500
     },
   ];
 
   return (
     <MotiView
       style={styles.container}
+      from={{ opacity: 0, translateY: 20 }}
       animate={{ opacity: 1, translateY: 0 }}
+      transition={{
+        delay: 100, // milliseconds
+        type: 'timing',
+        duration: 300,
+      }}
     >
-      {options.map((option) => {
-        const IconComponent = option.icon;
-        const isSelected = selectedPath === option.key;
-        return (
-          <TouchableOpacity
-            key={option.key}
-            style={[
-              styles.optionButton,
-              isSelected && styles.selectedOptionButton
-            ]}
-            onPress={() => handlePathSelect(option.key as 'custom' | 'premade')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.buttonContent}>
-              <LinearGradient
-                colors={option.gradientColors as [string, string, ...string[]]}
-                style={styles.iconContainer}
-              >
-                <IconComponent color="white" size={28} />
-              </LinearGradient>
-              <View style={styles.textContainer}>
-                <ThemedText style={styles.titleText}>{option.title}</ThemedText>
-                <ThemedText style={styles.descriptionText}>{option.description}</ThemedText>
-                <View style={styles.timeContainer}>
-                  <Clock color={theme.colors.secondary.darkGray} size={14} style={styles.timeIcon} />
-                  <ThemedText style={styles.timeText}>{option.time}</ThemedText>
+      <View style={styles.contentContainer}>
+        {options.map((option) => {
+          const IconComponent = option.icon;
+          const isSelected = selectedPath === option.key;
+          return (
+            <TouchableOpacity
+              key={option.key}
+              style={[
+                styles.optionButton,
+                isSelected && styles.selectedOptionButton
+              ]}
+              onPress={() => handlePathSelect(option.key as 'custom' | 'premade')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.buttonContent}>
+                <LinearGradient
+                  colors={option.gradientColors as [string, string, ...string[]]}
+                  style={styles.iconContainer}
+                >
+                  <IconComponent color="white" size={28} />
+                </LinearGradient>
+                <View style={styles.textContainer}>
+                  <ThemedText style={styles.titleText}>{option.title}</ThemedText>
+                  <ThemedText style={styles.descriptionText}>{option.description}</ThemedText>
+                  <View style={styles.timeContainer}>
+                    <Clock color={theme.colors.secondary.darkGray} size={12} style={styles.timeIcon} />
+                    <ThemedText style={styles.timeText}>{option.time}</ThemedText>
+                  </View>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </MotiView>
   );
 };
@@ -91,27 +99,30 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    minHeight: 100,
     paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
-    gap: theme.spacing.md,
+    justifyContent: 'center',
+  },
+  contentContainer: {
+    width: '100%',
+    paddingTop: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   optionButton: {
     width: '100%',
-    maxWidth: 400,
-    padding: theme.spacing.md,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: theme.colors.secondary.lightGray,
+    borderColor: '#E9D5FF', // Tailwind purple-200
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
     ...Platform.select({
-      ios: {
-        shadowColor: theme.colors.secondary.darkGray,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
       android: {
-        elevation: 3,
+        elevation: 1,
       },
     }),
   },
@@ -136,14 +147,16 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs / 2,
   },
   titleText: {
-    fontFamily: 'default-semibold',
-    fontSize: 17,
+    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+    fontSize: 16,
     color: '#1F2937',
+    fontWeight: '600',
   },
   descriptionText: {
     fontFamily: 'default-regular',
     fontSize: 14,
-    color: '#6B7280',
+    lineHeight: 20,
+    color: 'rgba(75 85 99 / 1)',
     marginTop: theme.spacing.xs / 2,
   },
   timeContainer: {
@@ -152,12 +165,12 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   timeIcon: {
-    marginRight: theme.spacing.xs / 2,
+    marginRight: 4,
   },
   timeText: {
-    fontFamily: 'default-regular',
-    fontSize: 13,
-    color: '#9CA3AF',
+    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+    fontSize: 12,
+    color: 'rgba(107 114 128 / 1)',
   },
 });
 
