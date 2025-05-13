@@ -3,13 +3,13 @@ const fs = require("fs");
 const path = require("path");
 
 // Determine which environment to use
-const ENVFILE = process.env.ENVFILE || ".env.production";
+const ENV = process.env.ENV || "production";
 
 // Load the env file
-const envPath = path.resolve(__dirname, "../config", ENVFILE);
+const envPath = path.resolve(__dirname, "../config", `.env.${ENV}`);
 const envConfig = require("dotenv").config({ path: envPath });
 
-console.log({ ENVFILE, envPath, envConfig });
+console.log("Running on Environment: ", envPath);
 
 // Export the env values
-module.exports = { ...envConfig.parsed, ENV: ENVFILE };
+module.exports = { ...envConfig.parsed, ENV: `.env.${ENV}` };
