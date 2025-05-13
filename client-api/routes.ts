@@ -7,7 +7,7 @@ export const routes = {
         searchPartPublic: '/api/products/searchPartPublic',
         postReaction: '/api/reaction/cardReactionPublic',
         getProductDetails: '/api/product-details/get-product-details',
-        prodCardQueryPublic: '/api/products/prodCardQueryPublic'
+        prodCardQueryPublic: '/api/products/prodCardQueryPublic',
     },
 
     // Protected endpoints that require authentication
@@ -28,5 +28,12 @@ export const routes = {
         vtonOutfits: '/api/vton/outfits',
         vtonCredits: '/api/vton/credits',
         vtonOutfitsDelete: '/api/vton/outfits',
+        uploadImage: '/api/storage/upload',
+        createPersonalizedAvatar: '/api/users/createPersonalizedAvatar',
+        setPreferredAvatarUrl: '/api/users/setPreferredAvatarUrl',
+        registerDigitalWardrobe: '/api/users/registerDigitalWardrobe',
+        digitalWardrobeItems: '/api/users/digitalWardrobeItems'
     }
+        // createPersonalizedAvatar: '/api/users/createPersonalizedAvatar',
+    
 }

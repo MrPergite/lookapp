@@ -10,7 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import React from "react";
 import "react-native-reanimated";
-import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
+import {  useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { ThemedText } from "@/components/ThemedText";
@@ -23,10 +23,11 @@ import ChatScreen from "./chat/chat-products";
 import Toast from "react-native-toast-message";
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { TabHeader } from "@/components/tab-header";
-import { Camera, MessageCircle, ShoppingCart, UserCircle } from "lucide-react-native";
+import { Archive, Camera, MessageCircle, ShoppingCart, UserCircle } from "lucide-react-native";
 import Profile from "./profile/_layout";
 import VirtualTryOn from "./virtual-tryon";
 import ShoppingList from "./shopping-list";
+import DigitalWardrobe from "./digital-wardrobe";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +39,7 @@ type TabParamList = {
     "virtual-tryon": { headerProps?: object };
     profile: { headerProps?: object };
     "shopping-list": { headerProps?: object };
+    "digital-wardrobe": { headerProps?: object };
 };
 
 export default function RootLayout() {
@@ -76,7 +78,8 @@ export default function RootLayout() {
                             "virtual-tryon": <Camera size={size} color={color} />,
                             profile: <UserCircle size={size} color={color} />,
                             "shopping-list": <ShoppingCart size={size} color={color} />,
-                        }
+                            "digital-wardrobe": <Archive size={size} color={color} />,
+                        } as const;
                         const icon = iconMap[route.name];
                         return icon;
                     },
@@ -126,6 +129,13 @@ export default function RootLayout() {
                         return {
                             title: "Try-On",
                         };
+                    }}
+                />
+                 <Tab.Screen
+                    name="digital-wardrobe"
+                    component={DigitalWardrobe}
+                    options={{
+                        title: "Digital Wardrobe",
                     }}
                 />
                 <Tab.Screen

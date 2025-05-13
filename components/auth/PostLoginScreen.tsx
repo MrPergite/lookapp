@@ -22,7 +22,7 @@ interface PostLoginScreenProps {
 }
 
 const PostLoginScreen: React.FC<PostLoginScreenProps> = ({
-    userName = 'Rehan Mohiuddin',
+    userName = '',
     onRestartOnboarding,
     onSignOut,
     onInviteFriends,

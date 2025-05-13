@@ -39,6 +39,11 @@
     "production": {
       "ios": {
         "ascAppId": "6744337310"
+      },
+      "development": {
+        "ios": {
+          "ascAppId": "6744337310"
+        }
       }
     }
   }

@@ -40,11 +40,15 @@ const GenderSelect = ({ goToNextStep }: { goToNextStep: () => void }) => {
                 withHaptick(handleSelect)("male")
             }} style={[styles.cardContainer, { backgroundColor: mStyles.bg }]}>
                 <User style={{ marginBottom: 10 }} color={mStyles.icon} size={24} />
-                <ThemedText type='default' style={[{ color: mStyles.text, fontSize: 14, fontFamily: 'default-semibold' }]} >Male</ThemedText>
+                <ThemedText type='default' style={[{
+                    color: mStyles.text, fontSize: 14, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+                }]} >Male</ThemedText>
             </Pressable>
             <Pressable onPress={() => withHaptick(handleSelect)("female")} style={[styles.cardContainer, { backgroundColor: fStyles.bg }]}>
                 <UserRound style={{ marginBottom: 10 }} color={fStyles.icon} size={24} />
-                <ThemedText type='default' style={[{ color: fStyles.text, fontSize: 14, fontFamily: 'default-semibold' }]} >Female</ThemedText>
+                <ThemedText type='default' style={[{
+                    color: fStyles.text, fontSize: 14, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+                }]} >Female</ThemedText>
             </Pressable>
         </View>
     )
