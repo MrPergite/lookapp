@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 import { NextRequest, NextResponse } from 'next/server';
 import https from 'https';
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     const agent = new https.Agent({ rejectUnauthorized: false }); // dev ssl
 
-    const forwardedHeaders = await applyHeaderStyles(req);
+    const forwardedHeaders = await applyHeaders(req);
     const axiosHeaders: Record<string, string> = {};
     if (forwardedHeaders instanceof Headers) {
       forwardedHeaders.forEach((v: any, k: any) => {

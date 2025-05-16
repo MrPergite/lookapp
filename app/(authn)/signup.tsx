@@ -1,5 +1,5 @@
-import { useSignUp } from "@clerk/clerk-expo";
-import React, { useState } from "react";
+import { isClerkAPIResponseError, useAuth, useSession, useSignUp } from "@clerk/clerk-expo";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Image,
   StyleSheet,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { useSharedValue, withTiming } from "react-native-reanimated";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -22,10 +23,13 @@ import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import BackButton from "./components/BackButton";
+import * as SecureStore from 'expo-secure-store';
+import { CircleCheck, CircleX } from "lucide-react-native";
 
 const initialValues = {
   email: "",
   password: "",
+  confirmPassword: "",
   firstName: "",
   lastName: "",
   phone: "",
@@ -33,35 +37,114 @@ const initialValues = {
 
 const SignUpScreen = () => {
   const { signUp, setActive, isLoaded } = useSignUp();
+  const { session } = useSession();
+  const { signOut } = useAuth();
   const [credentials, setCredentials] = useState(initialValues);
-  const [errorMessage, setErrorMessage] = useState<
-    Record<string, string | null>
-  >({ email: null, password: null, combine: null });
+  const [errorMessage, setErrorMessage] = useState<Record<string, string | null>>({
+    email: null,
+    password: null,
+    confirmPassword: null,
+    combine: null
+  });
+  const [passwordMatch, setPasswordMatch] = useState<boolean | null>(null);
   const shake = useSharedValue(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  const router = useRouter();
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
+
+  const router = useRouter();
+
+  // Check and handle existing session
+  useEffect(() => {
+    const checkAndSignOut = async () => {
+      if (session) {
+        try {
+          await signOut();
+          console.log("Signed out existing session");
+        } catch (err) {
+          console.error("Error signing out:", err);
+        }
+      }
+    };
+    checkAndSignOut();
+  }, [session]);
+
+  const validatePassword = (password: string) => {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    if (!hasUpperCase) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number";
+    }
+    return null;
+  };
 
   const onSignUpPress = async () => {
     if (!isLoaded) return;
     setIsLoading(true);
 
-    try {
-      const { email, password } = credentials;
-      await signUp.create({
-        emailAddress: email,
-        password,
-      });
-
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setPendingVerification(true);
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+    // Validate password
+    const passwordError = validatePassword(credentials.password);
+    if (passwordError) {
       setErrorMessage({
         ...errorMessage,
-        combine: "Sign-up failed. Please check your information.",
+        password: passwordError,
+        combine: passwordError
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if passwords match
+    if (credentials.password !== credentials.confirmPassword) {
+      setErrorMessage({
+        ...errorMessage,
+        confirmPassword: "Passwords do not match",
+        combine: "Passwords do not match"
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Ensure we're signed out before starting signup
+      if (session) {
+        await signOut();
+      }
+
+      console.log("Starting signup process...");
+      console.log("Creating account for email:", credentials.email);
+
+      const { email, password, firstName, lastName } = credentials;
+      const signUpResult = await signUp.create({
+        emailAddress: email,
+        password
+      });
+
+      console.log("Signup result:", signUpResult);
+
+      // Prepare email verification
+      await signUpResult.prepareEmailAddressVerification({ strategy: "email_code" });
+      console.log("Email verification prepared");
+
+      setPendingVerification(true);
+    } catch (err) {
+      console.error("Signup error:", err);
+      let signUpErrorMessage = "Sign-up failed. Please check your information.";
+      if (isClerkAPIResponseError(err)) {
+        console.error("Clerk API Error:", {
+          message: err.message,
+          errors: err.errors,
+          status: err.status
+        });
+        signUpErrorMessage = err.errors[0].longMessage || "Sign-up failed. Please check your information.";
+      }
+      setErrorMessage({
+        ...errorMessage,
+        combine: signUpErrorMessage,
       });
       shake.value = withTiming(
         10,
@@ -76,6 +159,22 @@ const SignUpScreen = () => {
   const onTextChange = (key: string, value: string) => {
     setErrorMessage({ combine: null });
     setCredentials({ ...credentials, [key]: value });
+
+    // Check password match in real-time
+    if (key === 'password' || key === 'confirmPassword') {
+      if (key === 'password') {
+        setPasswordMatch(credentials.confirmPassword ? value === credentials.confirmPassword : null);
+      } else {
+        setPasswordMatch(credentials.password ? value === credentials.password : null);
+      }
+    }
+  };
+
+  const handleCodeChange = (value: string) => {
+    setCode(value);
+    if (value.length === 6) {
+      Keyboard.dismiss();
+    }
   };
 
   const resetToDefaults = () => {
@@ -90,32 +189,64 @@ const SignUpScreen = () => {
     setIsLoading(true);
 
     try {
-      // Use the code the user provided to attempt verification
+      console.log("Starting verification process...");
+      console.log("Email being verified:", credentials.email);
+
       const signUpAttempt = await signUp.attemptEmailAddressVerification({
         code,
       });
 
-      // If verification was completed, set the session to active
-      // and redirect the user
+      await signUpAttempt.update({
+        firstName: credentials.firstName,
+        lastName: credentials.lastName,
+      });
+
+      console.log("Verification attempt result:", signUpAttempt);
+
       if (signUpAttempt.status === "complete") {
+        console.log("Email verified, setting active session...");
         await setActive({ session: signUpAttempt.createdSessionId });
-        router.replace("(onboarding)" as any);
+        console.log("Session set active, redirecting to onboarding...");
+
+        // Add a delay to ensure session is properly set
+        setTimeout(() => {
+          router.replace("(onboarding)" as any);
+        }, 500);
       } else {
-        // If the status is not complete, check why. User may need to
-        // complete further steps.
-        console.error(JSON.stringify(signUpAttempt, null, 2));
+        console.log("Verification not complete:", signUpAttempt);
         Toast.show({ type: "error", text1: "Error in code verification!" })
       }
     } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
-      setErrorMessage({
-        ...errorMessage,
-        combine: "Verification failed. Please try again.",
-      });
+      console.error("Verification error:", err);
+      if (isClerkAPIResponseError(err)) {
+        console.error("Clerk API Error:", {
+          message: err.message,
+          errors: err.errors,
+          status: err.status
+        });
+        setErrorMessage({
+          ...errorMessage,
+          combine: err.errors[0].longMessage || "Verification failed. Please try again.",
+        });
+      }
     } finally {
       setIsLoading(false);
+      setCode("");
+    }
+  };
+
+  const resendCode = async () => {
+    try {
+      if (!signUp) {
+        throw new Error("signUp is not initialized");
+      }
+      console.log("Resending verification code to:", credentials.email);
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setPendingVerification(true);
+      Toast.show({ type: "success", text1: "Code sent successfully" });
+    } catch (err) {
+      console.error("Error resending code:", err);
+      Toast.show({ type: "error", text1: "Error sending code" });
     }
   };
 
@@ -128,30 +259,33 @@ const SignUpScreen = () => {
         style={styles.container}
       >
         <BackButton routeName="/(authn)/signin" />
-        
+
         <View style={styles.verificationContainer}>
-          <Image 
-            source={require('@/assets/images/verification.png')} 
+          <Image
+            source={require('@/assets/images/verification.png')}
             style={styles.verificationImage}
             resizeMode="contain"
           />
-          
+
           <ThemedText type='subtitle' style={styles.verificationTitle}>Please check your mail</ThemedText>
           <Text style={styles.verificationSubtext}>
             We've sent a code to <Text style={styles.emailHighlight}>{credentials.email}</Text>
           </Text>
-          
+
           <View style={styles.codeContainer}>
             <TextBox
               label={""}
               error={errorMessage?.combine ? errorMessage.combine : null}
               value={code}
               placeholder="Enter your verification code"
-              onChangeText={(code: string) => setCode(code)}
+              onChangeText={handleCodeChange}
               keyboardType='numeric'
               style={styles.codeInput}
+              onSubmitEditing={onVerifyPress}
+              returnKeyType="done"
+              maxLength={6}
             />
-            
+
             {errorMessage.combine && (
               <Animated.Text
                 entering={FadeIn}
@@ -161,14 +295,14 @@ const SignUpScreen = () => {
                 {errorMessage.combine}
               </Animated.Text>
             )}
-            
+
             <TouchableOpacity
-              style={styles.verifyButton}
+              style={[styles.verifyButton, !code && styles.buttonDisabled]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 onVerifyPress();
               }}
-              disabled={isLoading}
+              disabled={isLoading || !code}
             >
               <LinearGradient
                 colors={[theme.colors.primary.purple, '#8C52FF']}
@@ -177,11 +311,20 @@ const SignUpScreen = () => {
                 style={styles.buttonGradient}
               >
                 <Text style={styles.buttonText}>
-                  {isLoading ? "Verifying..." : "Verify"}
+                  {isLoading ? "Verifying..." : "Verify Code"}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
-            
+
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                resendCode();
+              }}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelButton}>Resend Code</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => resetToDefaults()}
               style={styles.cancelButton}
@@ -208,13 +351,13 @@ const SignUpScreen = () => {
         style={styles.container}
       >
         <BackButton routeName="/(authn)/signin" />
-        
+
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, {width: Dimensions.get('window').width-48}]}
+          contentContainerStyle={[styles.scrollContent, { width: Dimensions.get('window').width - 48 }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Image 
+            <Image
               source={require('@/assets/images/logo.png')}
               style={styles.logo}
               resizeMode="contain"
@@ -244,7 +387,7 @@ const SignUpScreen = () => {
                   style={styles.input}
                 />
               </View>
-              
+
               <View style={styles.nameField}>
                 <TextBox
                   label="Last Name"
@@ -272,9 +415,39 @@ const SignUpScreen = () => {
               value={credentials.password}
               onChangeText={(val: string) => onTextChange("password", val)}
               secureTextEntry
-              error={errorMessage?.combine ? errorMessage.combine : null}
+              error={errorMessage?.password || errorMessage?.combine}
               style={styles.input}
             />
+
+            <TextBox
+              label="Confirm Password"
+              placeholder="Confirm your password"
+              value={credentials.confirmPassword}
+              onChangeText={(val: string) => onTextChange("confirmPassword", val)}
+              secureTextEntry
+              error={errorMessage?.confirmPassword || errorMessage?.combine}
+              style={styles.input}
+            />
+
+            {passwordMatch !== null && (
+              passwordMatch ?
+                <View style={styles.passwordMatchContainer} >
+                  <CircleCheck translateY={-1} size={20} color={theme.colors.primary.green} />
+                  <Text style={[
+                    styles.passwordMatchText,
+                    { transform: [{ translateY: 5 }] },
+                    { color: theme.colors.primary.green }
+                  ]}>Passwords match</Text>
+                </View> :
+                <View style={styles.passwordMatchContainer} >
+                  <CircleX translateY={-1} size={20} color={'red'} />
+                  <Text style={[
+                    styles.passwordMatchText,
+                    { transform: [{ translateY: 5 }] },
+                    { color: 'red' }
+                  ]}>Passwords do not match</Text>
+                </View>
+            )}
           </Animated.View>
 
           {errorMessage.combine && (
@@ -320,7 +493,7 @@ const SignUpScreen = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
               By signing up, you agree to our <Text style={styles.textHighlight}>Terms of Service</Text> and <Text style={styles.textHighlight}>Privacy Policy</Text>
@@ -420,7 +593,7 @@ const styles = StyleSheet.create({
     fontFamily: 'default-semibold',
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   switchAuthButton: {
     padding: 12,
@@ -505,6 +678,22 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary.darkGray,
     fontSize: 16,
     fontFamily: 'default-medium',
+  },
+  passwordMatchText: {
+    fontSize: 14,
+    fontFamily: 'default-medium',
+    marginTop: 4,
+    marginBottom: 16,
+    textAlign: 'left',
+    width: '100%',
+  },
+  passwordMatchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    textAlign: 'center',
+    width: '100%',
+    gap: 4,
   },
 });
 

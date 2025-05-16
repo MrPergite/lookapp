@@ -23,6 +23,8 @@ export default function IndexPage() {
     const router = useRouter();
     const fontsLoaded = useAppFonts();
 
+    console.log("isSignedIn", isSignedIn);
+
     useEffect(() => {
         async function checkForUpdate() {
             try {
