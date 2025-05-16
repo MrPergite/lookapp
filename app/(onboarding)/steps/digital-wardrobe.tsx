@@ -48,10 +48,10 @@ const DigitalWardrobe: React.FC<DigitalWardrobeProps> = ({ goToNextStep }) => {
 
   useEffect(() => {
     if (user) {
-        console.log('userdata',user?.emailAddresses[0]?.emailAddress);
+     
       const storedEmail =user?.emailAddresses[0]?.emailAddress
       if (storedEmail) {
-        setEmailConnected(storedEmail as string);
+        // setEmailConnected(storedEmail as string);
 
         const digitalWardrobe = {
           connected: true,
@@ -92,8 +92,9 @@ const DigitalWardrobe: React.FC<DigitalWardrobeProps> = ({ goToNextStep }) => {
         const params = new URLSearchParams(result.url.split('#')[1]);
         const token = params.get('code');
         const expiresIn = params.get('expires_in');
+        const storedEmail =user?.emailAddresses[0]?.emailAddress
         // const email = await fetchGoogleUserEmail(token as string);
-
+        setEmailConnected(storedEmail as string);
         const digitalWardrobe = {
           connected: true,
           provider: 'gmail',
@@ -127,11 +128,12 @@ const DigitalWardrobe: React.FC<DigitalWardrobeProps> = ({ goToNextStep }) => {
     try {
       setIsRegistering(true);
       setIsSearchInProgress(true);
+      const storedEmail =user?.emailAddresses[0]?.emailAddress
       console.log('emailConnected', emailConnected);
       // Send to backend via protected endpoint
       await callProtectedEndpoint('registerDigitalWardrobe', {
         method: 'POST',
-        data: { userEmail: emailConnected},
+        data: { userEmail: storedEmail},
       });
       console.log('Digital wardrobe registered');
     } catch (err) {

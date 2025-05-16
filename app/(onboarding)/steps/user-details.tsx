@@ -21,6 +21,7 @@ import { ChevronDown, Loader2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import AvatarCreationProgressCard from './AvatarCreationProgressCard';
+import { useUser } from '@clerk/clerk-expo';
 
 function UserDetails() {
     const { payload, dispatch } = useOnBoarding();
@@ -32,6 +33,7 @@ function UserDetails() {
 
     // Reference for shoe size input
     const shoeSizeInputRef = useRef<TextInput>(null);
+    const { user, isLoaded: isUserLoaded } = useUser();
 
     // Avatar Creation Progress State
     const [avatarGenerationProgress, setAvatarGenerationProgress] = useState(0);
@@ -39,9 +41,9 @@ function UserDetails() {
     const spinAnim = useRef(new Animated.Value(0)).current;
 
     // Determine if avatar is being created
-    const _currentAvatarStatus = payload.styleProfileState?.avatarStatus;
-    const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime;
-    const _isProcessingNewAvatar = payload.avatarPath === 'custom' && _currentAvatarStatus === 'ready'
+    const _currentAvatarStatus = payload.styleProfileState?.avatarStatus || user?.publicMetadata?.avatar_creation_status;
+    const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime
+    const _isProcessingNewAvatar = payload.avatarPath === 'custom' && _currentAvatarStatus && _currentAvatarStatus !== 'ready'
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | undefined = undefined;
@@ -270,11 +272,11 @@ function UserDetails() {
                 contentContainerStyle={{ flexGrow: 1 }}
             >
                 <View style={styles.container}>
-                    {_isProcessingNewAvatar && (
+                    {!!_isProcessingNewAvatar && (
                         <View style={styles.progressCardWrapper}>
-                            <AvatarCreationProgressCard 
-                                isProcessing={_isProcessingNewAvatar} 
-                                progressStartTime={_avatarGenerationStartTime || null} 
+                            <AvatarCreationProgressCard
+                                isProcessing={!!_isProcessingNewAvatar}
+                                progressStartTime={_avatarGenerationStartTime || null}
                             />
                         </View>
                     )}
