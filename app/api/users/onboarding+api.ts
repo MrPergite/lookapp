@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 /**
  * GET handler for retrieving user onboarding information
  */
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ success: false, message: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json', ...(await applyHeaderStyles(request)) } }
+        { status: 401, headers: { 'Content-Type': 'application/json', ...(await applyHeaders(request)) } }
       );
     }
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         {
           headers: {
             'Authorization': authHeader,
-            ...(await applyHeaderStyles(request))
+            ...(await applyHeaders(request))
           }
         }
       );
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         },
         {
           headers: {
-            ...(await applyHeaderStyles(request))
+            ...(await applyHeaders(request))
           }
         }
       );

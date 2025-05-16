@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../../utils';
+import { applyHeaders } from '../../utils';
 /**
  * POST handler for saving user onboarding information
  */
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Authorization': authHeader,
             'Content-Type': 'application/json',
-            ...(await applyHeaderStyles(request))
+            ...(await applyHeaders(request))
           }
         }
       );

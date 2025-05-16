@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 
 /**
  * GET handler for product search
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Forward the request to the actual product search API
     const response = await axios.post(`${process.env.EXPO_PUBLIC_API_BASE_URL}/users/searchPublic`, body,{
       headers: {
-        ...(await applyHeaderStyles(request))
+        ...(await applyHeaders(request))
       }
     });
     
