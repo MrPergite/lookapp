@@ -170,6 +170,17 @@ const Onboarding = () => {
         }
         return currentStepConfig.requiredFields.every(field => {
             const value = payload[field as keyof typeof payload];
+            if (field === "styleProfileState" && currentStepConfig.name === "styleProfile") {
+                const currentAvatarStatus = user?.publicMetadata?.avatar_creation_status
+                if ( currentAvatarStatus &&  currentAvatarStatus!== 'ready' ) {
+                    // If avatar is ready, this specific field requirement is met for enabling Next button.
+                    return true; 
+                } else {
+                    return false
+                }
+            }
+            
+            // Default check for other fields or other steps
             return value !== null && value !== undefined && value !== '';
         });
     }, [currentStep, payload]);
@@ -381,8 +392,7 @@ const Onboarding = () => {
                             shoe_unit: payload.shoe_unit,
                             country: payload.country,
                             pref_avatar_url: payload.pref_avatar_url,
-                            sizes: payload.sizes ?? null,
-                            avatar: payload.avatar ?? null,
+                          
                         } as OnboardingData;
                         return (
                             <FinalOnboardingLoad 
@@ -544,11 +554,11 @@ const Onboarding = () => {
                                             { color: '#ffffff', fontWeight: '900' }
                                         ]}
                                     >
-                                        {isSettingPreference 
+                                        {isSettingPreference || payload.styleProfileState?.isProcessing
                                             ? "Processing..." 
                                             : (Steps[currentStep].name === "styleProfile" && 
-                                               (payload.styleProfileState?.avatarStatus !== 'ready' && payload.styleProfileState?.avatarStatus !== 'completed') &&
-                                               payload.avatarPath === 'custom'
+                                               (payload.styleProfileState?.avatarStatus && payload.styleProfileState?.avatarStatus !== 'ready' && payload.styleProfileState?.avatarStatus !== 'completed') &&
+                                               payload.avatarPath === 'custom' &&   payload.styleProfileState?.isProcessing
                                               )
                                             ? "Processing..." 
                                             : "Next"}

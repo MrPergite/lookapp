@@ -74,7 +74,6 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
       processingStatus[index] === 'approved' && typeof image === 'string' && !image.startsWith('file:') && !image.startsWith('blob:')
     );
     const isValid = approvedUrlImages.length >= 3 && approvedUrlImages.length <= 5;
-
     dispatch({
       type: 'SET_PAYLOAD',
       payload: {
@@ -104,7 +103,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (avatarGenerationStartTime && avatarStatus === 'pending') {
+    if (avatarGenerationStartTime && avatarStatus && avatarStatus !== 'ready') {
       intervalId = setInterval(() => {
         const elapsedTime = Date.now() - avatarGenerationStartTime;
         const progress = Math.min((elapsedTime / 300000) * 100, 100); // 5-minute timer
@@ -128,7 +127,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
     // Instead of showing the modal, directly launch the camera
     try {
       let result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         quality: 0.7,
         aspect: [1, 1],
@@ -282,6 +281,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   };
 
   const handleFileSelectionFromLibrary = async () => {
+    console.log('handleFileSelectionFromLibrary');
     if (images.length >= 5) {
       Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.' });
       return;
@@ -429,7 +429,17 @@ console.log(result);
           return;
         }
       }
-      
+      dispatch({
+        type: 'SET_PAYLOAD',
+        payload: {
+            key: 'styleProfileState',
+            value: {
+                ...contextPayload.styleProfileState, // Preserve other styleProfileState fields
+                images: [], // Confirm selected image
+              
+            }
+        }
+    });
       // Success case: API returned a success response
       Toast.show({ type: 'success', text1: response.message || 'Personalized avatar creation started' });
       const newStyleProfileDataToSave = {
@@ -465,6 +475,16 @@ console.log(result);
         text2: error.message || 'An unexpected error occurred' 
       });
     } finally {
+      dispatch({
+        type: 'SET_PAYLOAD',
+        payload: {
+          key: 'styleProfileState',
+          value: {
+           ...contextPayload.styleProfileState,
+            isProcessing: false // Add the processing state
+          } 
+        }
+      });
       // In case of errors we're already resetting isApiProcessing in the catch block
     }
   };
