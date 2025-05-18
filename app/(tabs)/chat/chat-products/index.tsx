@@ -37,6 +37,7 @@ import { ImageLoader } from "@/components/SearchProgressSteps";
 import ProductDetailCard from "@/components/ProductDetailCard";
 import { useProdCardQueryMutation } from "./hooks/query";
 import { getSavedDetails } from "@/utils";
+import ImageUploadDialog from '@/app/components/ImageUploadDialog';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -52,7 +53,8 @@ const ChatScreenContent = () => {
     inputType,
     error,
     dispatch,
-    conversationGroups
+    conversationGroups,
+    activeConversationGroup
   } = useChatProducts();
 
 
@@ -92,6 +94,8 @@ const ChatScreenContent = () => {
   const [isProductQueryLoading, setIsProductQueryLoading] = useState(false);
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [latestAiMessage, setLatestAiMessage] = useState<string>("");
+  const [showImageUploadDialog, setShowImageUploadDialog] = useState(false);
+  const [socialImages, setSocialImages] = useState<string[]>([]);
   // Main API functions that handle both authenticated and public requests
   const searchPartQuery = useCallback(async (data: any, retries = 1) => {
     try {
@@ -358,7 +362,7 @@ const ChatScreenContent = () => {
     setFetchProduct(product);
     // Implement product navigation/details view
   };
-  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage,conversationGroups]);
+  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage, conversationGroups]);
 
   const handleImageUpload = () => {
     ImagePicker.launchImageLibraryAsync({
@@ -406,6 +410,70 @@ const ChatScreenContent = () => {
     );
     setFollowUpProduct(null);
   };
+
+  const handleImageSelected = async (index: number) => {
+    try {
+      const activeGrp = conversationGroups.find(c => c.id === activeConversationGroup);
+      const imageUrl = activeGrp?.aiMessage[activeGrp.aiMessage.length - 1].social?.images[index].img_url;
+      dispatch(chatActions.setInputType("imgurl+txt"));
+      if (imageUrl) {
+        let response;
+        if (isAuthenticated) {
+          response = await callProtectedEndpoint('findProducts', {
+            method: 'POST',
+            data: {
+              img_url: imageUrl,
+              personalization: false
+            }
+          });
+        } else {
+          response = await callPublicEndpoint('findProductsPublic', {
+            method: 'POST',
+            data: {
+              img_url: imageUrl,
+              personalization: false
+            }
+          });
+        }
+        console.log("response from findProducts", response);
+        if (response.status === 200) {
+          dispatch(chatActions.addProducts(response.data.products, response.data.sessionId, response.data.aiResponse));
+        } else {
+          dispatch(chatActions.addAiMessage("Sorry, I couldn't find any products matching your request. Please try again with a different search."));
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting social media links:", error);
+      dispatch(chatActions.addAiMessage("Sorry, I couldn't find any products matching your request. Please try again with a different search."));
+    }
+  };
+
+  const handleSocialUrlSubmit = async (url: string) => {
+    try {
+      dispatch(chatActions.addUserMessage(url));
+      dispatch(chatActions.addAiMessage("Please select the image where you are looking for a fashion item", "social"));
+      dispatch(chatActions.setSocialImages([], true));
+      setShowImageUploadDialog(false);
+      const response = await callProtectedEndpoint('extractSocials', {
+        method: 'POST',
+        data: {
+          url: url
+        }
+      });
+      console.log("response from extractSocials", response);
+      if (Array.isArray(response.media) && response.media.length > 0) {
+        dispatch(chatActions.setSocialImages(response.media, false));
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to extract social media links',
+        });
+      }
+    } catch (error) {
+      console.error("Error extracting social media links:", error);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -447,6 +515,9 @@ const ChatScreenContent = () => {
                     onFollowUpPress={handleFollowUpPress}
                     followUpProduct={followUpProduct}
                     scrollViewRef={scrollViewRef}
+                    showImageSelection={socialImages.length > 0}
+                    imageSelectionUrls={socialImages}
+                    onImageSelected={handleImageSelected}
                   />
                 ) : (
                   <></>
@@ -505,6 +576,7 @@ const ChatScreenContent = () => {
                   )}
                   onSend={handleSendMessage}
                   onImageSelect={handleImageUpload}
+                  onSocialSelect={() => setShowImageUploadDialog(true)}
                   source="chat"
                 />
               </View>
@@ -520,7 +592,9 @@ const ChatScreenContent = () => {
                     onChangeText={setSearchText}
                     multiline
                   />
-                  <MessageSendButton searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
+                  <MessageSendButton
+                    onSocialSelect={() => setShowImageUploadDialog(true)}
+                    searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
                 </View>
                 {/* <View style={styles.actionBar}>
                   <View style={styles.leftButtons}>
@@ -539,6 +613,13 @@ const ChatScreenContent = () => {
         </TouchableWithoutFeedback>
 
       </LinearGradient>
+
+      <ImageUploadDialog
+        isVisible={showImageUploadDialog}
+        onClose={() => setShowImageUploadDialog(false)}
+        defaultTab="social"
+        onSocialUrlSubmit={handleSocialUrlSubmit}
+      />
     </KeyboardAvoidingView>
   );
 };

@@ -26,6 +26,8 @@ import { responsiveFontSize } from '@/utils';
 import { styles } from './styles';
 import GradientText from '@/components/GradientText';
 import { Image } from 'expo-image';
+import ImageSelectionSection from './ImageSelectionSection';
+import MediaViewer from './MediaViewer';
 const PRODUCTS_PER_GROUP = 4; // Max products to show per query group
 
 const DEVICE_HEIGHT = Dimensions.get('window').height;
@@ -68,6 +70,10 @@ interface ProductSearchResultsProps {
   scrollViewRef?: React.RefObject<ScrollView>;
   conversationGroups: ConversationGroup[];
   inputType: 'text' | 'img+txt' | 'imgurl+txt';
+  showImageSelection?: boolean;
+  imageSelectionUrls?: string[];
+  onImageSelected?: (index: number) => void;
+  loadingSocialImages?: boolean;
 }
 
 
@@ -83,7 +89,11 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
   followUpProduct,
   scrollViewRef,
   conversationGroups,
-  inputType
+  inputType,
+  showImageSelection = false,
+  imageSelectionUrls = [],
+  onImageSelected,
+  loadingSocialImages = false,
 }) => {
   // const isPartQueryLoading = true;
   // const isProductQueryLoading = true;
@@ -369,6 +379,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     if (message.role === 'user') {
       return (
         <View
+          key={`message-${index}`}
           style={styles.messageContainer}
           onLayout={(event) => {
             // If this is the latest user message in the active group, save its height
@@ -406,13 +417,22 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
         </View>
       )
     }
+    console.log("message", message);
     return (
       <View style={styles.aiMessageContainer}>
         <View className='h-12 rounded-full overflow-hidden flex items-center justify-center '>
-          <Image source={require('@/assets/images/logo.png')} style={[styles.avatarContainer, {  height: 56, marginRight: 0 }]} contentFit="cover" />
+          <Image source={require('@/assets/images/logo.png')} style={[styles.avatarContainer, { height: 56, marginRight: 0 }]} contentFit="cover" />
         </View>
         <View style={styles.aiMessage}>
-          <Text className='text-sm leading-relaxed'>{message.text}</Text>
+          {
+            message.messageType === 'social' ? (
+              <View className='flex-row items-center justify-center'>
+                <MediaViewer post={{ images: message.social?.images || [] }} onImageClick={onImageSelected} selectedImageIndex={0} hasFetchedUrl={!message.social?.fetchingMedia} />
+              </View>
+            ) : <Text className='text-sm leading-relaxed'>{message.text}</Text>
+
+          }
+
         </View>
       </View>
     )
@@ -460,7 +480,11 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
               {renderAIMessageWithTypewriter()}
             </View>
           )
-          : group.aiMessage && renderMessageAvatar(group.aiMessage, index)}
+          : group.aiMessage.length > 0 && <>
+            {group.aiMessage.map((message) => (
+              renderMessageAvatar(message, index)
+            ))}
+          </>}
         {/* AI response */}
         {/* {group.aiMessage && } */}
 
