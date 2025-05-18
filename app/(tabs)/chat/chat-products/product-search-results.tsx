@@ -418,6 +418,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
         </View>
       )
     }
+    console.log("message", message);
     return (
       <View style={styles.aiMessageContainer}>
         <View className='h-12 rounded-full overflow-hidden flex items-center justify-center '>
