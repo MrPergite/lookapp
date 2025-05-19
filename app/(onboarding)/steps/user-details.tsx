@@ -28,6 +28,7 @@ function UserDetails() {
 
     // Modal visibility states (these remain local since they're UI state, not data)
     const [isClothingSizePickerVisible, setClothingSizePickerVisible] = useState(false);
+    const [isShoeSizePickerVisible, setIsShoeSizePickerVisible] = useState(false);
     const [isShoeSizeUnitPickerVisible, setShoeSizeUnitPickerVisible] = useState(false);
     const [isCountryPickerVisible, setCountryPickerVisible] = useState(false);
 
@@ -105,6 +106,23 @@ function UserDetails() {
         { label: 'XXL', value: 'XXL' },
     ];
 
+    // Sample Shoe Size Options - A_MODIFY_USER: Adjust these as needed
+    const shoeSizeOptions = [
+        { label: '6', value: '6' },
+        { label: '6.5', value: '6.5' },
+        { label: '7', value: '7' },
+        { label: '7.5', value: '7.5' },
+        { label: '8', value: '8' },
+        { label: '8.5', value: '8.5' },
+        { label: '9', value: '9' },
+        { label: '9.5', value: '9.5' },
+        { label: '10', value: '10' },
+        { label: '10.5', value: '10.5' },
+        { label: '11', value: '11' },
+        { label: '11.5', value: '11.5' },
+        { label: '12', value: '12' },
+    ];
+
     const shoeSizeUnitOptions = [
         { label: 'US', value: 'US' },
         { label: 'UK', value: 'UK' },
@@ -120,6 +138,14 @@ function UserDetails() {
             dispatch({
                 type: "SET_PAYLOAD",
                 payload: { key: "clothing_size", value: clothingSizeOptions[0].value }
+            });
+        }
+
+        // Initialize shoe size if null
+        if (payload.shoe_size === null && shoeSizeOptions.length > 0) {
+            dispatch({
+                type: "SET_PAYLOAD",
+                payload: { key: "shoe_size", value: shoeSizeOptions[0].value }
             });
         }
 
@@ -191,15 +217,15 @@ function UserDetails() {
             return (
                 <TouchableOpacity
                     onPress={() => setVisible(true)}
-                    className='flex flex-row mt-2 h-12 items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm w-full bg-white shadow-none'
+                    style={[styles.input, { paddingVertical: 0 }]}
                 >
                     <Picker
                         selectedValue={value}
                         onValueChange={(itemValue) => {
                             onValueChange(itemValue);
-                            setVisible(false);
                         }}
                         style={styles.picker}
+                        dropdownIconColor={theme.colors.secondary.black}
                     >
                         {items.map((item) => (
                             <Picker.Item key={item.value} label={item.label} value={item.value} />
@@ -213,7 +239,7 @@ function UserDetails() {
             <>
                 <Pressable
                     onPress={() => setVisible(true)}
-                    className='flex flex-row mt-2 h-12 items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm w-full bg-white shadow-none'
+                    style={[styles.input, styles.pickerWrapper]}
                 >
                     <Text style={styles.pickerText}>
                         {value
@@ -294,30 +320,16 @@ function UserDetails() {
                     </View>
 
                     <View className='gap-4' style={styles.shoeSizeContainer}>
-                        <View style={[{ flex: 2 }]}>
-                            <TextBox
-                                labelStyle={styles.label}
-                                style={[{
-                                    borderColor: theme.colors.secondary.mediumLightGray,
-                                    borderWidth: 1,
-                                    borderRadius: 10,
-                                    padding: theme.spacing.md,
-                                    color: '#374151',
-                                    fontFamily: 'default-semibold',
-                                    fontWeight: '500'
-                                }, styles.input]}
-                                label="Shoe Size"
-                                placeholderTextColor="#374151"
-                                className='h-12'
-                                value={shoeSize}
-                                onChangeText={handleShoeSizeChange}
-                                keyboardType="numeric"
-                                error={null}
-                                ref={shoeSizeInputRef}
-                                returnKeyType="done"
-                                onSubmitEditing={handleShoeSizeSubmit}
-                                placeholder='Enter Shoe Size'
-                            />
+                        <View style={[{ flex: 2 }, styles.inputContainer]}>
+                            <Text style={styles.label}>Shoe Size</Text>
+                            {renderPicker(
+                                shoeSize,
+                                handleShoeSizeChange,
+                                shoeSizeOptions,
+                                isShoeSizePickerVisible,
+                                setIsShoeSizePickerVisible,
+                                'Select Shoe Size'
+                            )}
                         </View>
                         <View style={[styles.inputContainer, { flex: 1 }]}>
                             <Text style={styles.label}>Unit</Text>

@@ -1,33 +1,35 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import useAppTheme from '@/hooks/useTheme';
 import * as Haptics from "expo-haptics";
+import { ChevronLeft } from 'lucide-react-native';
 
 interface BackButtonProps {
-  routeName: string;
+  customStyle?: StyleProp<ViewStyle>;
 }
 
-const BackButton: React.FC<BackButtonProps> = ({ routeName }) => {
+const BackButton: React.FC<BackButtonProps> = ({ customStyle = {} }) => {
   const router = useRouter();
   const appTheme = useAppTheme();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    console.log('back button pressed', router.canGoBack());
     router.back();
   };
 
   return (
-    <TouchableOpacity 
-      style={styles.backButton} 
+    <TouchableOpacity
+      style={[styles.backButton, customStyle]}
       onPress={handlePress}
-      activeOpacity={0.7}
+      activeOpacity={1}
     >
-      <Ionicons 
-        name="chevron-back" 
-        size={28} 
-        color={appTheme.colors.secondary.black} 
+      <ChevronLeft
+        onPress={handlePress}
+        size={28}
+        color={appTheme.colors.secondary.black}
       />
     </TouchableOpacity>
   );

@@ -23,7 +23,7 @@ const ColorTileSelector = ({
 }: ColorTileSelectorProps) => {
   const scrollRef = useRef<ScrollView>(null);
 
-  console.log("variants", variants);
+  console.log("variants", selectedVariant,variants);
   
   return (
     variants.length > 0 ? (
@@ -45,6 +45,7 @@ const ColorTileSelector = ({
                 scale: selectedVariant === variant.product_id ? 1.05 : 1 
               }}
               transition={{ type: 'timing', duration: 200 }}
+              className={`${selectedVariant === variant.product_id ? 'border-purple-500' : 'border-gray-200'}`}
             >
               <TouchableOpacity
                 onPress={() => {

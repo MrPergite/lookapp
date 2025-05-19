@@ -46,7 +46,7 @@ const PreLoginScreen: React.FC<PreLoginScreenProps> = ({
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={styles.container}>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.container}>
                 {/* Profile Icon */}
                 <LinearGradient colors={['#f3e8ff', '#fce7f3']} style={styles.profileIconInner}>
                     <User size={24} color={theme.colors.primary.purple} />

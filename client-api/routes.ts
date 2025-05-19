@@ -9,6 +9,8 @@ export const routes = {
         getProductDetails: '/api/product-details/get-product-details',
         prodCardQueryPublic: '/api/products/prodCardQueryPublic',
         findProductsPublic: '/api/users/findProductsPublic',
+        getPromptChips: '/api/users/generatePromptChipsPublic',
+        getDiscoveryOutfits: '/api/users/discovery'
     },
 
     // Protected endpoints that require authentication
@@ -36,6 +38,8 @@ export const routes = {
         digitalWardrobeItems: '/api/users/digitalWardrobeItems',
         extractSocials: '/api/users/extractSocials',
         findProducts: '/api/users/findProducts',
+        getPromptChipsAuth: '/api/users/generatePromptChips'
+      
     }
         // createPersonalizedAvatar: '/api/users/createPersonalizedAvatar',
     

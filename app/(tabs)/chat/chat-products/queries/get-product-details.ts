@@ -9,14 +9,18 @@ export const useGetProductDetails = () => {
     const [productItem, setProductItem] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isError, setError] = useState<boolean>(false);
-    const [productVariants, setProductVariants] = useState<ProductDetailsResponse["colors"][] | null>(null);
+    const [productVariants, setProductVariants] = useState<ProductDetailsResponse["colors"] | null>(null);
     const { mutate: getProductDetails } = useProtectedMutation("getProductDetails", {
         onSuccess: (data: ProductDetailsResponse, payload: any) => {
             // Update local state for immediate UI feedback
-            console.log("data", data);
-            setProductDetails({ ...data.colors[0], ...productItem });
-            setProductVariants(data.colors);
-            // setProductVariants(data?.colors);
+            if (data.colors) {
+                console.log("data", data);
+                setProductDetails({ ...data.colors[0] });
+                setProductVariants(data.colors);
+            }
+            else {
+                setProductDetails({ ...data });
+            }
             setIsLoading(false);
         },
         onError: (error, payload: any) => {
@@ -34,13 +38,23 @@ export const useGetProductDetails = () => {
         setIsLoading(true);
         setError(false);
         setProductItem({ ...product });
-        getProductDetails({ product_id: product.id });
+        getProductDetails({ product_id: product.product_id || product.id });
     }
 
-    const getPartialProductDetails = (product: Product) => {
+    const getPartialProductDetails = (product: Product, selectedIndex: number, selectedVariant: string) => {
         setIsLoading(true);
         setError(false);
-        getProductDetails({ product_id: product.product_id, partial: "true" });
+        console.log("product", product);
+        console.log("selectedIndex", selectedIndex);
+        console.log("selectedVariant", selectedVariant);
+        getProductDetails(
+            {
+                ...(product.product_id
+                    ? { product_id: selectedVariant }
+                    : { product_link: selectedVariant }),
+                ...(selectedIndex > 0 && { partial: "true" }), // Only add 'partial=true' if selectedIndex > 0
+            }
+        );
     }
 
     const closeProductDetails = () => {

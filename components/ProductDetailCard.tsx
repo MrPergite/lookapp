@@ -53,7 +53,7 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
     const [activeIndex, setActiveIndex] = useState(0);
     const [inputText, setInputText] = useState('');
     const inputRef = useRef<TextInput>(null);
-    
+
     // Focus on text input when modal becomes visible
     useEffect(() => {
         if (isVisible) {
@@ -61,11 +61,11 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 300); // Wait for modal animation to complete
-            
+
             return () => clearTimeout(timer);
         }
     }, [isVisible]);
-    
+
     if (!isVisible) return null;
 
     const handleDotPress = (index: number) => {
@@ -113,7 +113,7 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
                         onStartShouldSetResponder={() => true}
                         onTouchEnd={(e) => handleModalPress(e)}
                     >
-                        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                        <ScrollView keyboardShouldPersistTaps="handled" style={styles.scrollView} showsVerticalScrollIndicator={false}>
                             {/* Image section with overlay text */}
                             <View style={styles.imageContainer}>
                                 <Image
@@ -144,15 +144,16 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
                                             placeholderTextColor="#6B7280"
                                             value={inputText}
                                             onChangeText={setInputText}
+                                            onSubmitEditing={handleSendQuestion}
                                             className='flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1'
                                         />
-                                        <TouchableOpacity
+                                        <Pressable
                                             disabled={inputText.length === 0}
-                                            style={[styles.sendButton, { opacity: inputText.length === 0 ? 0.5 : 1 }]}
                                             onPress={handleSendQuestion}
+                                            style={[styles.sendButton, { opacity: inputText.length === 0 ? 0.5 : 1 }]}
                                         >
-                                            <Send disabled={inputText.length === 0} size={20} color="white" />
-                                        </TouchableOpacity>
+                                            <Send onPress={handleSendQuestion} disabled={inputText.length === 0} size={20} color="white" />
+                                        </Pressable>
                                     </View>
                                 </View>
                             </View>

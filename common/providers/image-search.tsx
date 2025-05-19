@@ -28,7 +28,14 @@ export type ImageContextType = {
 const ImageContext = createContext<ImageContextType | {}>({});
 
 export const useImageContext = () => {
-    return useContext(ImageContext);
+    const context = useContext(ImageContext);
+    if (Object.keys(context).length === 0 && context.constructor === Object) {
+        // This check helps determine if the context is the initial empty object.
+        // Depending on desired behavior, you could throw an error or return default/mock values.
+        // For now, we'll throw an error, as using the context outside a provider is usually a bug.
+        throw new Error("useImageContext must be used within an ImageProvider");
+    }
+    return context as ImageContextType; // Assert the type here
 };
 
 

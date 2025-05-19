@@ -165,25 +165,45 @@ const Onboarding = () => {
 
     const isCurrentStepComplete = useMemo(() => {
         const currentStepConfig = Steps[currentStep];
+        const currentStepName = currentStepConfig.name;
+
+        // Specific condition to enable "Next" button for styleProfile:
+        // custom path, an avatar_creation_status exists on user metadata, and no actual custom avatars are stored yet.
+        if (
+            currentStepName === "styleProfile" &&
+            payload.avatarPath === 'custom' &&
+            user?.publicMetadata?.avatar_creation_status && user?.publicMetadata?.avatar_creation_status !== 'ready'
+        ) {
+            console.log("isCurrentStepComplete: Enabling Next for styleProfile (custom path, avatar_creation_status exists, no clerk custom avatars).");
+            return true; // Override: Step is considered complete for button enablement in this specific scenario.
+        }
+
+        // Original general logic for required fields
         if (!currentStepConfig.requiredFields || currentStepConfig.requiredFields.length === 0) {
             return true;
         }
+
         return currentStepConfig.requiredFields.every(field => {
             const value = payload[field as keyof typeof payload];
-            if (field === "styleProfileState" && currentStepConfig.name === "styleProfile") {
-                const currentAvatarStatus = user?.publicMetadata?.avatar_creation_status
-                if ( currentAvatarStatus &&  currentAvatarStatus!== 'ready' ) {
-                    // If avatar is ready, this specific field requirement is met for enabling Next button.
+            
+            // Original conditional logic for 'styleProfileState' for the 'styleProfile' step
+            if (field === "styleProfileState" && currentStepName === "styleProfile") {
+                const styleState = value as StyleProfileDataType | null | undefined;
+                if (styleState?.avatarStatus === 'ready') {
+                    // If avatar is ready (e.g., selected from DisplayCustomAvatars, or a premade one has been fully processed by context),
+                    // this part of the step is considered "complete" for navigation enablement.
                     return true; 
                 } else {
-                    return false
+                    // If avatar is NOT ready, then styleProfileState (the object itself) needs to be present for the step to operate.
+                    // The child component (StyleProfile/DisplayCustomAvatars) will handle if it can *actually* proceed based on internal state.
+                    return value !== null && value !== undefined;
                 }
             }
             
-            // Default check for other fields or other steps
+            // Default check for all other fields or other steps
             return value !== null && value !== undefined && value !== '';
         });
-    }, [currentStep, payload]);
+    }, [currentStep, payload, user]); // Added user to dependency array
 
     const handleNextParent = (pathFromAvatarChoice?: 'custom' | 'premade') => {
         const currentStepConfig = Steps[currentStep];
@@ -196,6 +216,7 @@ const Onboarding = () => {
                 Toast.show({ type: 'error', text1: 'Selection Error', text2: 'Please make a selection to continue.' });
                 return;
             }
+            // If 'premade' is chosen, next step is 'select-avatar'. If 'custom', it's 'styleProfile'.
             const nextStepAfterAvatarChoice = chosenPath === 'custom' ? "styleProfile" : "select-avatar";
             nextStepIndex = Steps.findIndex(step => step.name === nextStepAfterAvatarChoice);
         } else if (currentStepConfig.name === "gender") {
@@ -203,21 +224,29 @@ const Onboarding = () => {
         } else if (currentStepConfig.name === "digitalWardrobe") {
             nextStepIndex = Steps.findIndex(step => step.name === "avatarPathChoice");
         } else if (currentStepConfig.name === "styleProfile") {
+            // After styleProfile (custom avatar flow), go to user-details
+            nextStepIndex = Steps.findIndex(step => step.name === "user-details");
+        } else if (currentStepConfig.name === "select-avatar") {
+            // After select-avatar (premade avatar flow), go to user-details
             nextStepIndex = Steps.findIndex(step => step.name === "user-details");
         } else if (currentStepConfig.name === "user-details") {
-            if (payload.avatarPath === 'premade') {
-                nextStepIndex = Steps.findIndex(step => step.name === "select-avatar");
-            } else {
-                handleSaveOnboarding();
-                return;
-            }
+            // This was the old logic: if (payload.avatarPath === 'premade') { nextStepIndex = Steps.findIndex(step => step.name === "select-avatar"); }
+            // Now, after user-details, if it's not the end, it would typically be the final save/completion.
+            // Or, if select-avatar was skipped for custom path, this might be an endpoint.
+            // For now, assume user-details is the last *interactive* data input step before potential finalization.
+            // If it's truly the end of specific data gathering before final save:
+            handleSaveOnboarding();
+            return;
+            // If there was another step after user-details in *all* flows, handle it here.
+            // Example: if (currentStep < Steps.length - 1) nextStepIndex = currentStep + 1;
         } else {
             if (currentStep < Steps.length - 1) {
                 nextStepIndex = currentStep + 1;
-                if (Steps[nextStepIndex]?.name === 'styleProfile' && payload.avatarPath === 'premade') {
-                    const selectAvatarIndex = Steps.findIndex(step => step.name === "select-avatar");
-                    if (selectAvatarIndex !== -1) nextStepIndex = selectAvatarIndex;
-                }
+                // This specific skip logic might need re-evaluation based on the new flow.
+                // if (Steps[nextStepIndex]?.name === 'styleProfile' && payload.avatarPath === 'premade') {
+                //     const selectAvatarIndex = Steps.findIndex(step => step.name === "select-avatar");
+                //     if (selectAvatarIndex !== -1) nextStepIndex = selectAvatarIndex;
+                // }
             } else {
                 handleSaveOnboarding();
                 return;
@@ -297,9 +326,8 @@ const Onboarding = () => {
             case "styleProfile":
                 const customAvatars = user?.publicMetadata?.custom_avatar_urls as string[] || [];
                 const chosenAvatarPath = payload.avatarPath;
-
-                if (chosenAvatarPath === 'custom' && customAvatars.length > 0 && isUserLoaded) {
-                    return <DisplayCustomAvatars onNext={() => handleNextParent()} onBack={handleBack} />;
+                if ((chosenAvatarPath === 'custom' && customAvatars.length > 0 && isUserLoaded) || user?.publicMetadata?.avatar_creation_status) {
+                    return <DisplayCustomAvatars  onNext={() => handleNextParent()} onBack={handleBack} />
                 } else if (isUserLoaded || chosenAvatarPath !== 'custom') {
                     return <StyleProfile ref={styleProfileRef} onNext={() => handleNextParent()} onBack={handleBack} />;
                 } else {
@@ -478,18 +506,27 @@ const Onboarding = () => {
 
                                         const currentOnboardingStepName = Steps[currentStep].name;
                                         const styleState = payload.styleProfileState;
+                                        const clerkCustomAvatars = user?.publicMetadata?.custom_avatar_urls as string[] || [];
 
                                         if (currentOnboardingStepName === "styleProfile") {
-                                            // Check for new avatar creation first (applies if user chose custom path and status isn't ready/completed)
-                                            const isNewAvatarBeingCreated = 
-                                                payload.avatarPath === 'custom' && 
-                                                styleState?.avatarStatus !== 'ready'
-                                            
-                                            if (isNewAvatarBeingCreated) {
-                                                // Avatar creation is in progress, allow navigation to next step
+                                            if (
+                                                payload.avatarPath === 'custom' &&
+                                                user?.publicMetadata?.avatar_creation_status  && clerkCustomAvatars.length === 0 && !styleProfileRef.current
+                                            ) {
+                                                // User is on StyleProfile upload screen, custom path, avatar not ready, and NO avatars exist yet.
+                                                // Pressing Next should just go to the next screen without API calls.
+                                                console.log("Onboarding: StyleProfile - Custom path, avatar not ready, no custom avatars. Proceeding without API call.");
                                                 withHaptick(() => handleNextParent())();
-                                            } else if (styleState?.usingExisting && styleState?.images?.[0]) {
-                                                // User selected an existing custom avatar from DisplayCustomAvatars, and no new one is actively processing.
+                                            } else if (payload.avatarPath === 'custom' && user?.publicMetadata?.avatar_creation_status !== 'ready' && !styleProfileRef.current) {
+                                                // Custom path, avatar is not ready, but either: 
+                                                // 1. customAvatars *do* exist (so user might be on DisplayCustomAvatars with a processing status from elsewhere)
+                                                // 2. Or, StyleProfile component itself has started processing (styleState.isProcessing might be true)
+                                                // In these cases, allow proceeding as the avatar generation is likely happening or expected to be handled by DisplayCustomAvatars/StyleProfile context updates.
+                                                console.log("Onboarding: StyleProfile - Custom path, avatar not ready (processing or has existing). Proceeding.");
+                                                withHaptick(() => handleNextParent())();
+                                            } else if (styleState?.usingExisting && styleState?.images?.[0] &&  user?.publicMetadata?.avatar_creation_status  === 'ready') {
+                                                // User selected an existing custom avatar from DisplayCustomAvatars.
+                                                console.log("Onboarding: StyleProfile - Using existing custom avatar. Setting preference.");
                                                 setIsSettingPreference(true);
                                                 const preferredAvatarUrl = styleState.images[0];
                                                 try {
@@ -497,27 +534,19 @@ const Onboarding = () => {
                                                         method: 'POST',
                                                         data: { pref_avatar_url: preferredAvatarUrl }
                                                     });
-                                                    // Dispatch update to context on success
                                                     dispatch({
                                                         type: 'SET_PAYLOAD',
-                                                        payload: {
-                                                            key: 'pref_avatar_url',
-                                                            value: preferredAvatarUrl
-                                                        }
+                                                        payload: { key: 'pref_avatar_url', value: preferredAvatarUrl }
                                                     });
-                                                    // Also update styleProfileState to reflect completion of this specific action pathway
-                                                    // This ensures that if the user comes back, it doesn't re-trigger setPreferredAvatarUrl unnecessarily
-                                                    // if usingExisting was true but avatarStatus was still e.g. 'completed' from a generic avatar load.
                                                     dispatch({
                                                         type: 'SET_PAYLOAD',
                                                         payload: {
                                                             key: 'styleProfileState',
                                                             value: {
-                                                                ...styleState, // Preserve other styleProfileState fields
-                                                                images: [preferredAvatarUrl], // Confirm selected image
-                                                                avatarStatus: 'ready', // Mark as ready/set
-                                                                isProcessing: false, // No longer processing this specific action
-                                                                // usingExisting: true // This should already be true
+                                                                ...styleState,
+                                                                images: [preferredAvatarUrl],
+                                                                avatarStatus: 'ready',
+                                                                isProcessing: false,
                                                             }
                                                         }
                                                     });
@@ -534,10 +563,17 @@ const Onboarding = () => {
                                                     setIsSettingPreference(false);
                                                 }
                                             } else if (styleProfileRef.current) {
-                                                // User is on StyleProfile (upload screen) to create a new avatar
+                                                // Likely on StyleProfile (upload) screen and needs to submit images for new avatar creation.
+                                                // This case hits if: 
+                                                // - payload.avatarPath is 'custom' AND 
+                                                //   - styleState.avatarStatus IS 'ready' (but maybe wants to create a new one) OR
+                                                //   - clerkCustomAvatars.length > 0 (but they chose to create new via StyleProfile)
+                                                //   - styleState is null/undefined initially
+                                                console.log("Onboarding: StyleProfile - Submitting via styleProfileRef.");
                                                 withHaptick(() => styleProfileRef.current?.submitStep())();
                                             } else {
-                                                // Fallback: should ideally not be reached if DisplayCustomAvatars/StyleProfile logic is correct for context updates
+                                                // Fallback for styleProfile step if no other condition met.
+                                                console.log("Onboarding: StyleProfile - Fallback. Proceeding.");
                                                 withHaptick(() => handleNextParent())(); 
                                             }
                                         } else {

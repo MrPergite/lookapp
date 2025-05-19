@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Dimensions,
   Keyboard,
+  Linking,
 } from "react-native";
 import { useSharedValue, withTiming } from "react-native-reanimated";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -25,6 +26,10 @@ import Toast from "react-native-toast-message";
 import BackButton from "./components/BackButton";
 import * as SecureStore from 'expo-secure-store';
 import { CircleCheck, CircleX } from "lucide-react-native";
+import CodeVerification from "@/components/auth/CodeVerification";
+import PhoneInput from '@/components/auth/phone-input/PhoneInput';
+import { useUserCountry } from "../(onboarding)/queries";
+import { useUserDetails } from "@/common/providers/user-details";
 
 const initialValues = {
   email: "",
@@ -51,8 +56,16 @@ const SignUpScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState("");
+  const { userCountry } = useUserDetails();
+  const [countryCode, setCountryCode] = useState('+1');
 
   const router = useRouter();
+
+  useEffect(() => {
+    if (userCountry.calling_code) {
+      setCountryCode(`+${userCountry.calling_code}`);
+    }
+  }, [userCountry]);
 
   // Check and handle existing session
   useEffect(() => {
@@ -118,17 +131,23 @@ const SignUpScreen = () => {
       console.log("Starting signup process...");
       console.log("Creating account for email:", credentials.email);
 
-      const { email, password, firstName, lastName } = credentials;
-      const signUpResult = await signUp.create({
+      const { email, password, firstName, lastName, phone } = credentials;
+      const signUpPayload: any = {
         emailAddress: email,
         password
-      });
+      };
+      if (phone) {
+        signUpPayload.phoneNumber = countryCode + phone;
+      }
+      const signUpResult = await signUp.create(signUpPayload);
 
       console.log("Signup result:", signUpResult);
 
-      // Prepare email verification
-      await signUpResult.prepareEmailAddressVerification({ strategy: "email_code" });
-      console.log("Email verification prepared");
+      if (phone) {
+        await signUpResult.preparePhoneNumberVerification({ strategy: "phone_code" });
+      } else {
+        await signUpResult.prepareEmailAddressVerification({ strategy: "email_code" });
+      }
 
       setPendingVerification(true);
     } catch (err) {
@@ -184,7 +203,7 @@ const SignUpScreen = () => {
   };
 
   // Handle submission of verification form
-  const onVerifyPress = async () => {
+  const onVerifyPress = async (code: string) => {
     if (!isLoaded) return;
     setIsLoading(true);
 
@@ -192,9 +211,21 @@ const SignUpScreen = () => {
       console.log("Starting verification process...");
       console.log("Email being verified:", credentials.email);
 
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      });
+      let signUpAttempt: any = null;
+
+      if (credentials.phone) {
+        signUpAttempt = await signUp.attemptPhoneNumberVerification({
+          code,
+        });
+      } else {
+        signUpAttempt = await signUp.attemptEmailAddressVerification({
+          code,
+        });
+      }
+
+      if (!signUpAttempt) {
+        throw new Error("Sign up attempt failed");
+      }
 
       await signUpAttempt.update({
         firstName: credentials.firstName,
@@ -241,7 +272,11 @@ const SignUpScreen = () => {
         throw new Error("signUp is not initialized");
       }
       console.log("Resending verification code to:", credentials.email);
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      if (credentials.phone) {
+        await signUp.preparePhoneNumberVerification({ strategy: "phone_code" });
+      } else {
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      }
       setPendingVerification(true);
       Toast.show({ type: "success", text1: "Code sent successfully" });
     } catch (err) {
@@ -252,92 +287,23 @@ const SignUpScreen = () => {
 
   if (pendingVerification) {
     return (
-      <LinearGradient
-        colors={[theme.colors.primary.lavender, theme.colors.primary.white]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.container}
-      >
-        <BackButton routeName="/(authn)/signin" />
-
-        <View style={styles.verificationContainer}>
-          <Image
-            source={require('@/assets/images/verification.png')}
-            style={styles.verificationImage}
-            resizeMode="contain"
-          />
-
-          <ThemedText type='subtitle' style={styles.verificationTitle}>Please check your mail</ThemedText>
-          <Text style={styles.verificationSubtext}>
-            We've sent a code to <Text style={styles.emailHighlight}>{credentials.email}</Text>
-          </Text>
-
-          <View style={styles.codeContainer}>
-            <TextBox
-              label={""}
-              error={errorMessage?.combine ? errorMessage.combine : null}
-              value={code}
-              placeholder="Enter your verification code"
-              onChangeText={handleCodeChange}
-              keyboardType='numeric'
-              style={styles.codeInput}
-              onSubmitEditing={onVerifyPress}
-              returnKeyType="done"
-              maxLength={6}
-            />
-
-            {errorMessage.combine && (
-              <Animated.Text
-                entering={FadeIn}
-                exiting={FadeOut}
-                style={styles.errorMessage}
-              >
-                {errorMessage.combine}
-              </Animated.Text>
-            )}
-
-            <TouchableOpacity
-              style={[styles.verifyButton, !code && styles.buttonDisabled]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onVerifyPress();
-              }}
-              disabled={isLoading || !code}
-            >
-              <LinearGradient
-                colors={[theme.colors.primary.purple, '#8C52FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
-              >
-                <Text style={styles.buttonText}>
-                  {isLoading ? "Verifying..." : "Verify Code"}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                resendCode();
-              }}
-              disabled={isLoading}
-            >
-              <Text style={styles.cancelButton}>Resend Code</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => resetToDefaults()}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
+      <CodeVerification
+        type={credentials.phone ? "phone" : "email"}
+        destination={credentials.phone || credentials.email}
+        onSubmit={onVerifyPress}
+        onResend={resendCode}
+        isLoading={isLoading}
+        errorMessage={errorMessage?.combine}
+      />
     );
   }
+
+  const handleTermsPress = () => {
+    Linking.openURL('https://www.lookai.me/terms-of-service');
+  };
+  const handlePrivacyPress = () => {
+    Linking.openURL('https://www.lookai.me/privacypolicy');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -405,6 +371,16 @@ const SignUpScreen = () => {
               placeholder="Enter your email"
               value={credentials.email}
               onChangeText={(val: string) => onTextChange("email", val.toLowerCase())}
+              error={errorMessage?.combine ? errorMessage.combine : null}
+              style={styles.input}
+            />
+
+            <PhoneInput
+              value={credentials.phone}
+              onChange={val => onTextChange('phone', val)}
+              countryCode={countryCode}
+              onCountryCodeChange={setCountryCode}
+              placeholder="Enter your phone number (optional)"
               error={errorMessage?.combine ? errorMessage.combine : null}
               style={styles.input}
             />
@@ -496,7 +472,7 @@ const SignUpScreen = () => {
 
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
-              By signing up, you agree to our <Text style={styles.textHighlight}>Terms of Service</Text> and <Text style={styles.textHighlight}>Privacy Policy</Text>
+              By signing up, you agree to our <Text onPress={handleTermsPress} style={styles.textHighlight}>Terms of Service</Text> and <Text onPress={handlePrivacyPress} style={styles.textHighlight}>Privacy Policy</Text>
             </Text>
           </View>
         </ScrollView>

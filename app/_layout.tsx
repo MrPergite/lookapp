@@ -1,7 +1,7 @@
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { tokenCache } from '@clerk/clerk-expo/token-cache'
-import { Slot, SplashScreen, Stack } from "expo-router";
+import { Slot, SplashScreen, Tabs, Stack } from "expo-router";
 import Toast, { BaseToast, ErrorToast, ToastConfig } from "react-native-toast-message";
 import { OnBoardingContext, OnBoardingProvider } from "./(onboarding)/context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import React from "react";
 import Constants from 'expo-constants';
 import { ImageProvider } from "@/common/providers/image-search";
 import { ScreenHistoryProvider } from "@/common/providers/screen-history";
+import { UserDetailsProvider } from "@/common/providers/user-details";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -103,20 +104,19 @@ const toastConfig: ToastConfig = {
 };
 
 
-
 export default function RootLayout() {
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={DefaultTheme}>
-          <ImageProvider>
-            <ScreenHistoryProvider>
-              <OnBoardingProvider>
-                <Slot />
-              </OnBoardingProvider>
-            </ScreenHistoryProvider>
-          </ImageProvider>
+            <ImageProvider>
+              <ScreenHistoryProvider>
+                <OnBoardingProvider>
+                  <Slot />
+                </OnBoardingProvider>
+              </ScreenHistoryProvider>
+            </ImageProvider>
           <Toast
             position='bottom'
             bottomOffset={65}

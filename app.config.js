@@ -6,8 +6,8 @@ const appConfig = {
     slug: "lookapp",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    // scheme: "myapp",
+    icon: "./assets/images/logo.png",
+    scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     runtimeVersion: "0.0.1",
@@ -35,6 +35,7 @@ const appConfig = {
     },
     plugins: [
       "expo-router",
+      
       [
         "expo-splash-screen",
         {

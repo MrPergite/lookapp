@@ -1,5 +1,5 @@
 import { useSignIn } from "@clerk/clerk-expo";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -23,20 +23,41 @@ import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import BackButton from "./components/BackButton";
+import { isClerkAPIResponseError } from "@clerk/clerk-expo";
+import CodeVerification from '@/components/auth/CodeVerification';
+import PhoneInput from '@/components/auth/phone-input/PhoneInput';
+import { useUserDetails } from "@/common/providers/user-details";
 
 export default function SignInScreen() {
   const { signIn, setActive } = useSignIn();
   const [credentials, setCredentials] = useState({
     email: "",
+    phone: "",
     password: "",
   });
+  const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
   const [errorMessage, setErrorMessage] = useState<
     Record<string, string | null>
-  >({ email: null, password: null, combine: null });
+  >({ email: null, phone: null, password: null, combine: null });
   const shake = useSharedValue(0);
   const router = useRouter();
   const signInref = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verifError, setVerifError] = useState<string | null>(null);
+  const [verifLoading, setVerifLoading] = useState(false);
+  const [verifSession, setVerifSession] = useState<any>(null);
+  const [verifDestination, setVerifDestination] = useState<string>("");
+  const [emailAddressId, setEmailAddressId] = useState<string | null>(null);
+  const [phoneNumberId, setPhoneNumberId] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState('+1');
+  const { userCountry } = useUserDetails();
+
+  useEffect(() => {
+    if (userCountry.calling_code) {
+      setCountryCode(`+${userCountry.calling_code}`);
+    }
+  }, [userCountry]);
 
   if (!signIn || !setActive) {
     return <></>;
@@ -44,20 +65,33 @@ export default function SignInScreen() {
 
   const handleSignIn = async () => {
     setIsLoading(true);
-    const toastMsg = {
-      type: 'success',
-      text1: 'Signed In'
-    };
-    
+    setErrorMessage({ email: null, phone: null, password: null, combine: null });
     try {
-      const { email, password } = credentials;
-      const result = await signIn.create({ identifier: email, password });
-      await setActive({ session: result.createdSessionId });
-      Toast.show(toastMsg);
+      let result;
+      if (loginType === 'email') {
+        result = await signIn.create({ identifier: credentials.email, password: credentials.password });
+      } else {
+        const fullPhone = countryCode + credentials.phone;
+        result = await signIn.create({ identifier: fullPhone, password: credentials.password });
+      }
+      if (result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
+        Toast.show({ type: 'success', text1: 'Signed In' });
+      }
     } catch (error: any) {
+      let message = "Sign-in failed";
+      if (isClerkAPIResponseError && isClerkAPIResponseError(error)) {
+        if (error.errors && error.errors.length > 0) {
+          message = error.errors[0].longMessage || error.errors[0].message || message;
+        } else if (error.message) {
+          message = error.message;
+        }
+      } else if (error && error.message) {
+        message = error.message;
+      }
       setErrorMessage({
         ...errorMessage,
-        combine: error.errors[0]?.message || "Sign-in failed",
+        combine: message,
       });
       shake.value = withTiming(
         10,
@@ -68,6 +102,73 @@ export default function SignInScreen() {
       setIsLoading(false);
     }
   };
+
+  const handleCodeSubmit = async (code: string) => {
+    setVerifLoading(true);
+    setVerifError(null);
+    try {
+      let attempt;
+      if (loginType === 'email') {
+        attempt = await signIn.attemptFirstFactor({ strategy: 'email_code', code });
+      } else {
+        attempt = await signIn.attemptFirstFactor({ strategy: 'phone_code', code });
+      }
+      if (attempt.status === 'complete' && attempt.createdSessionId) {
+        await setActive({ session: attempt.createdSessionId });
+        Toast.show({ type: 'success', text1: 'Signed In' });
+        setPendingVerification(false);
+      } else {
+        setVerifError('Verification failed. Please try again.');
+      }
+    } catch (err: any) {
+      let message = 'Verification failed. Please try again.';
+      if (isClerkAPIResponseError && isClerkAPIResponseError(err)) {
+        if (err.errors && err.errors.length > 0) {
+          message = err.errors[0].longMessage || err.errors[0].message || message;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } else if (err && err.message) {
+        message = err.message;
+      }
+      setVerifError(message);
+    } finally {
+      setVerifLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!signIn) return;
+    setVerifLoading(true);
+    setVerifError(null);
+    try {
+      if (loginType === 'email' && emailAddressId) {
+        await signIn.prepareFirstFactor({ strategy: 'email_code', emailAddressId });
+      } else if (loginType === 'phone' && phoneNumberId) {
+        await signIn.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId });
+      }
+      Toast.show({ type: 'success', text1: 'Code resent' });
+    } catch (err: any) {
+      setVerifError('Failed to resend code.');
+    } finally {
+      setVerifLoading(false);
+    }
+  };
+
+  if (pendingVerification) {
+    //TODO: disabled for now To Be added later if otp based login is required
+    return (
+      <CodeVerification
+        type={loginType}
+        destination={verifDestination}
+        onSubmit={handleCodeSubmit}
+        onResend={handleResend}
+        isLoading={verifLoading}
+        errorMessage={verifError}
+        onCancel={() => setPendingVerification(false)}
+      />
+    );
+  }
 
   const onTextChange = (key: string, value: string) => {
     setErrorMessage({ combine: null });
@@ -86,13 +187,12 @@ export default function SignInScreen() {
         style={styles.container}
       >
         <BackButton routeName="(tabs)" />
-        
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Image 
+            <Image
               source={require('@/assets/images/logo.png')}
               style={styles.logo}
               resizeMode="contain"
@@ -101,17 +201,43 @@ export default function SignInScreen() {
             <Text style={styles.subText}>Sign in to continue to your account</Text>
           </View>
 
+          <View style={{ width: "100%", flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+            <TouchableOpacity onPress={() => setLoginType('email')} style={{ borderBottomWidth: loginType === 'email' ? 2 : 0, borderColor: theme.colors.primary.purple, width: "50%" }}>
+              <Text className="p-2" style={{ textAlign: 'center', fontWeight: loginType === 'email' ? 'bold' : 'normal', color: loginType === 'email' ? theme.colors.primary.purple : theme.colors.secondary.darkGray, fontSize: 16, paddingHorizontal: 8 }}>Email address</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setLoginType('phone')} style={{ borderBottomWidth: loginType === 'phone' ? 2 : 0, borderColor: theme.colors.primary.purple, width: "50%" }}>
+              <Text className="p-2" style={{ textAlign: 'center', fontWeight: loginType === 'phone' ? 'bold' : 'normal', color: loginType === 'phone' ? theme.colors.primary.purple : theme.colors.secondary.darkGray, fontSize: 16, paddingHorizontal: 8 }}>Use phone</Text>
+            </TouchableOpacity>
+          </View>
+
           <Animated.View
-            style={[styles.formContainer, { transform: [{ translateX: shake }], width: Dimensions.get('window').width-48 }]}
+            style={[styles.formContainer, { transform: [{ translateX: shake }], width: Dimensions.get('window').width - 48 }]}
           >
-            <TextBox
-              label="Email"
-              placeholder="Enter your email"
-              value={credentials.email}
-              onChangeText={(val: string) => onTextChange("email", val.toLowerCase())}
-              error={errorMessage?.combine ? errorMessage.combine : null}
-              style={styles.input}
-            />
+            {loginType === 'email' ? (
+              <>
+                <TextBox
+                  label="Email"
+                  placeholder="Enter your email"
+                  value={credentials.email}
+                  onChangeText={(val: string) => onTextChange("email", val.toLowerCase())}
+                  error={errorMessage?.combine ? errorMessage.combine : null}
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+              </>
+            ) : (
+              <PhoneInput
+                value={credentials.phone}
+                onChange={val => onTextChange('phone', val)}
+                countryCode={countryCode}
+                onCountryCodeChange={setCountryCode}
+                placeholder="Enter your phone number"
+                error={errorMessage?.combine ? errorMessage.combine : null}
+                style={styles.input}
+              />
+            )}
 
             <TextBox
               label="Password"
@@ -122,10 +248,6 @@ export default function SignInScreen() {
               error={errorMessage?.combine ? errorMessage.combine : null}
               style={styles.input}
             />
-{/* 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity> */}
           </Animated.View>
 
           {errorMessage.combine && (
@@ -246,7 +368,7 @@ const styles = StyleSheet.create({
   actionsContainer: {
     alignItems: 'center',
     marginTop: 20,
-    width: Dimensions.get('window').width-48
+    width: Dimensions.get('window').width - 48
   },
   signInButton: {
     width: "100%",
