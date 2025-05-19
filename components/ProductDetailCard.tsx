@@ -113,7 +113,7 @@ const ProductDetailCard: React.FC<ProductDetailCardProps> = ({
                         onStartShouldSetResponder={() => true}
                         onTouchEnd={(e) => handleModalPress(e)}
                     >
-                        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                        <ScrollView keyboardShouldPersistTaps="handled" style={styles.scrollView} showsVerticalScrollIndicator={false}>
                             {/* Image section with overlay text */}
                             <View style={styles.imageContainer}>
                                 <Image

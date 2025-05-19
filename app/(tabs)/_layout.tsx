@@ -24,7 +24,6 @@ import ChatScreen from "./chat/chat-products";
 import Toast from "react-native-toast-message";
 import { TabHeader } from "@/components/TabHeader";
 import { Archive, Camera, MessageCircle, ShoppingCart, UserCircle } from "lucide-react-native";
-import Profile from "./profile/_layout";
 import VirtualTryOn from "./virtual-tryon";
 import ShoppingList from "./shopping-list";
 import DigitalWardrobe from "./digital-wardrobe";
@@ -136,14 +135,7 @@ export default function RootLayout() {
                        
                     }}
                 />
-                <Tab.Screen
-                    name="profile"
-                    component={Profile}
-                    options={{
-                        title: "Profile"
-
-                    }}
-                />
+            
             </Tab.Navigator>
             {/* <StatusBar style="light" /> */}
         </>

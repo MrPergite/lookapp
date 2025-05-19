@@ -45,11 +45,11 @@ export default function SearchInput({
   darkMode = true,
   inputMode = 'text',
   inputValue = '',
-  setInputValue = () => {},
-  onSearch = () => {},
+  setInputValue = () => { },
+  onSearch = () => { },
   promptChips = [],
   hasFetchedUrl = false,
-  setSearchText = () => {},
+  setSearchText = () => { },
 }: SearchInputProps) {
   const {
     textareaRef,
@@ -102,7 +102,7 @@ export default function SearchInput({
     const diff = Math.abs(currentY - lastScrollY.current);
     if (diff > scrollThreshold && renderSuggestions && !animateSuggestionsClose) {
       //setShowSuggestionsInHook(false); // This would trigger the useEffect above to start close animation
-       setAnimateSuggestionsClose(true); // More direct way to close on scroll
+      setAnimateSuggestionsClose(true); // More direct way to close on scroll
     }
     lastScrollY.current = currentY;
   };
@@ -126,7 +126,7 @@ export default function SearchInput({
   //   setUploadType('social');
   //   setIsUploadDialogOpen(true);
   // };
-  
+
   // Assuming styles.container.padding is a number (e.g., 16)
   // Or define separate vertical/horizontal paddings if styles.container.padding is an object
   const containerPadding = styles.container.padding || 0;
@@ -147,41 +147,38 @@ export default function SearchInput({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-      >
-        <ScrollView
-          style={[styles.scrollViewStyle, { zIndex: 1 }]}
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-        >
-          <View
-            style={[styles.card, darkMode && styles.cardDark]}
-            onLayout={(event) => {
-              setCardHeight(event.nativeEvent.layout.height);
-            }}
-          >
-            <TextArea
-              darkMode={darkMode}
-              inputValue={inputValue}
-              textareaRef={textareaRef}
-              handleInputChange={handleInputChange}
-              handleKeyDown={handleKeyDown}
-              handleFocus={handleFocus}
-              handleBlur={handleBlur}
-              handleSearch={onSearch}
-              inputMode={inputMode}
-              getPlaceholderText={getPlaceholderText}
-              uploadedImage={null}
-              isSecondHand={false}
-            />
 
-            <View style={styles.controlsRow}>
-              {/* <TouchableOpacity
+      <ScrollView
+        style={[styles.scrollViewStyle, { zIndex: 1 }]}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        
+      >
+        <View
+          style={[styles.card, darkMode && styles.cardDark]}
+          onLayout={(event) => {
+            setCardHeight(event.nativeEvent.layout.height);
+          }}
+        >
+          <TextArea
+            darkMode={darkMode}
+            inputValue={inputValue}
+            textareaRef={textareaRef}
+            handleInputChange={handleInputChange}
+            handleKeyDown={handleKeyDown}
+            handleFocus={handleFocus}
+            handleBlur={handleBlur}
+            handleSearch={onSearch}
+            inputMode={inputMode}
+            getPlaceholderText={getPlaceholderText}
+            uploadedImage={null}
+            isSecondHand={false}
+          />
+
+          <View style={styles.controlsRow}>
+            {/* <TouchableOpacity
                 style={styles.iconButton}
                 onPress={handleInstagramClick}
                 activeOpacity={0.7}
@@ -189,46 +186,49 @@ export default function SearchInput({
                 <Instagram size={24} color={darkMode ? '#FFF' : '#000'} />
               </TouchableOpacity> */}
 
-              <View style={styles.centerControl}>
-                {!isSignedIn && (
-                  <GenderSelector
-                    selectedGender={selectedGender}
-                    setSelectedGender={setSelectedGender}
-                    darkMode={true}
-                  />
-                )}
-              </View>
-
-              <TouchableOpacity onPress={() => setIsWardrobeOpen(true)}>
-                {/* <AboutEcoAIDialog darkMode={darkMode} /> */}
-              </TouchableOpacity>
+            <View style={styles.centerControl}>
+              {!isSignedIn && (
+                <GenderSelector
+                  selectedGender={selectedGender}
+                  setSelectedGender={setSelectedGender}
+                  darkMode={true}
+                />
+              )}
             </View>
-          </View>
-        </ScrollView>
 
-        {renderSuggestions && (
-          <View style={[
+            <TouchableOpacity onPress={() => setIsWardrobeOpen(true)}>
+              {/* <AboutEcoAIDialog darkMode={darkMode} /> */}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      {renderSuggestions && (
+        <View
+          style={[
             styles.suggestionsWrapper,
             {
-              top: cardHeight + containerPadding + 8, 
-              left: containerPadding, 
-              right: containerPadding, 
-              zIndex: 9999 
+              top: cardHeight + containerPadding + 8,
+              left: containerPadding,
+              right: containerPadding,
+              zIndex: 9999
             }
           ]}>
-            <SuggestedSearches
-              isVisible={renderSuggestions && !animateSuggestionsClose}
-              startCloseAnimation={animateSuggestionsClose}
-              onCloseAnimationComplete={handleCloseAnimationComplete}
-              suggestions={promptChips}
-              hasFetchedUrl={hasFetchedUrl}
-              onSelect={handleSuggestionSelected}
-              inputRef={textareaRef}
-            />
-          </View>
-        )}
+          <SuggestedSearches
+            isVisible={renderSuggestions && !animateSuggestionsClose}
+            startCloseAnimation={animateSuggestionsClose}
+            onCloseAnimationComplete={handleCloseAnimationComplete}
+            suggestions={promptChips}
+            hasFetchedUrl={hasFetchedUrl}
+            onSelect={handleSuggestionSelected}
+            inputRef={textareaRef}
+          />
+        </View>
 
-        {/* <Modal
+      )
+      }
+
+      {/* <Modal
             visible={isUploadDialogOpen}
             transparent
             animationType="slide"
@@ -241,7 +241,7 @@ export default function SearchInput({
             />
           </Modal> */}
 
-        {/* <Modal
+      {/* <Modal
             visible={isWardrobeOpen}
             transparent
             animationType="slide"
@@ -256,8 +256,7 @@ export default function SearchInput({
               }}
             />
           </Modal> */}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaView >
   );
 }
 
@@ -316,7 +315,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 25,
     elevation: 10, // Give suggestions wrapper its own elevation, higher than card
-                    // This is important if it needs to overlay the card itself in some scenarios
-                    // And crucial for Android stacking.
+    // This is important if it needs to overlay the card itself in some scenarios
+    // And crucial for Android stacking.
   },
 });

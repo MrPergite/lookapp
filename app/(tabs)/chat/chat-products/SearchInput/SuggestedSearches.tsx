@@ -87,6 +87,7 @@ export const SuggestedSearches: React.FC<SuggestedSearchesProps> = ({
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         { !hasFetchedUrl && (

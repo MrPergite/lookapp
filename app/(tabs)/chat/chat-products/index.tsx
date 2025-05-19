@@ -214,13 +214,13 @@ const ChatScreenContent = () => {
         // Make the API call using existing helper functions
         // Assuming POST request as in the original context, with no body for prompt chips
         const response = await (isAuthenticated
-          ? callProtectedEndpoint(endpoint, { method: 'POST',data:{} })
-          : callPublicEndpoint(endpoint, { method: 'POST',data:{} }));
+          ? callProtectedEndpoint(endpoint, { method: 'POST', data: {} })
+          : callPublicEndpoint(endpoint, { method: 'POST', data: {} }));
 
         // Process the response
         // Assuming response is an array of objects like { search_query: "string" }
         // And setPromptChips is a state setter function defined in the component
-        console.log("response",response)
+        console.log("response", response)
         if (response && Array.isArray(response)) {
           const searchQueries = response.map((item: any) => item.search_query);
           setPromptChips(searchQueries);
@@ -242,54 +242,54 @@ const ChatScreenContent = () => {
     fetchPromptChips();
   }, []);
   useEffect(() => {
-  const fetchDiscoveryOutfits = async () => {
-    if (isFetchingRef.current) return;
+    const fetchDiscoveryOutfits = async () => {
+      if (isFetchingRef.current) return;
 
-    isFetchingRef.current = true;
-    setIsDiscoveryOutfitsLoading(true);
-    setDiscoveryOutfits([]);
-    setPageNumber(0);
+      isFetchingRef.current = true;
+      setIsDiscoveryOutfitsLoading(true);
+      setDiscoveryOutfits([]);
+      setPageNumber(0);
 
-    try {
-      const params = {
-        pageNumber: 0,
-        pageSize,
-        gender: "male/female",
-      };
+      try {
+        const params = {
+          pageNumber: 0,
+          pageSize,
+          gender: "male/female",
+        };
 
-      const data = await getDiscoveryOutfits(callPublicEndpoint, params);
-    
-      setDiscoveryOutfits(data.discoveryOutfits);
-      setTotalItems(data.totalItems);
-      setHasMore(data.discoveryOutfits.length < data.totalItems);
+        const data = await getDiscoveryOutfits(callPublicEndpoint, params);
 
-    } catch (error: any) {
-      if (isMounted && error.name !== 'AbortError') {
-        console.error('Error fetching initial discovery outfits:', error);
-        Toast.show({
-          type: "error",
-          text1: "Search Error",
-          text2: 'Failed to load your discovery outfits',
-        });
-        setDiscoveryOutfits([]);
-        setTotalItems(0);
-        setHasMore(false);
+        setDiscoveryOutfits(data.discoveryOutfits);
+        setTotalItems(data.totalItems);
+        setHasMore(data.discoveryOutfits.length < data.totalItems);
+
+      } catch (error: any) {
+        if (isMounted && error.name !== 'AbortError') {
+          console.error('Error fetching initial discovery outfits:', error);
+          Toast.show({
+            type: "error",
+            text1: "Search Error",
+            text2: 'Failed to load your discovery outfits',
+          });
+          setDiscoveryOutfits([]);
+          setTotalItems(0);
+          setHasMore(false);
+        }
+      } finally {
+
+        setIsDiscoveryOutfitsLoading(false);
+
+        isFetchingRef.current = false;
       }
-    } finally {
+    };
 
-      setIsDiscoveryOutfitsLoading(false);
+    fetchDiscoveryOutfits();
 
-      isFetchingRef.current = false;
-    }
-  };
-
-  fetchDiscoveryOutfits();
-
-  return () => {
-    isMounted = false;
-    controller.abort();
-  };
-}, [pageSize])
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [pageSize])
 
   // Transform products from API response to our Product format
   const transformProducts = useCallback((apiProducts: any[]): Product[] => {
@@ -432,7 +432,8 @@ const ChatScreenContent = () => {
 
   // Function to handle sending a message
   const handleSendMessage = async () => {
-    
+    console.log("Handle Send Message", searchText);
+
     if (!searchText.trim() || searchMutation.isPending) return;
 
     const userMessage = searchText.trim();
@@ -466,7 +467,7 @@ const ChatScreenContent = () => {
     setFetchProduct(product);
     // Implement product navigation/details view
   };
-  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage,conversationGroups]);
+  const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage, conversationGroups]);
 
   const handleImageUpload = () => {
     ImagePicker.launchImageLibraryAsync({
@@ -548,41 +549,48 @@ const ChatScreenContent = () => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={[{ flex: 1 }, styles.keyboardAvoidingContainer]}>
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={[{ flex: 1 }, styles.keyboardAvoidingContainer]}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
       <LinearGradient
         colors={['#FFFFFF', '#FFFFFF'] as const}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={[styles.container]}
       >
-        
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
 
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <SafeAreaView style={styles.safeArea}>
-       
             <View style={styles.chatContainer}>
-              <ScrollView style={{width: '100%'}} contentContainerStyle={{ alignItems: 'stretch' }}>
+              {!conversationGroups.length && 
+              <ScrollView
+              
+                style={{ width: '100%' }}
+                contentContainerStyle={{ alignItems: 'stretch' }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                >
                 <Header darkMode={true} />
                 <View style={[styles.container, { zIndex: 100, width: '100%' }]}>
                   <SearchInput
-                        darkMode={true}
-                        inputMode={'text'}
-                        // setInputMode={setInputMode}
-                        inputValue={promptValue}
-                        setInputValue={setPromptValue}
-                        // onCameraClick={() => setIsUploadDialogOpen(true)}
-                        setSearchText={setSearchText}
-                        onSearch={handleSendMessage}
-                        promptChips={promptChips}
-                        hasFetchedUrl={hasFetchedUrl.current}
-                      />
+                    darkMode={true}
+                    inputMode={'text'}
+                    // setInputMode={setInputMode}
+                    inputValue={searchText}
+                    setInputValue={setPromptValue}
+                    // onCameraClick={() => setIsUploadDialogOpen(true)}
+                    setSearchText={setSearchText}
+                    onSearch={handleSendMessage}
+                    promptChips={promptChips}
+                    hasFetchedUrl={hasFetchedUrl.current}
+                  />
                 </View>
                 {/* Wrapper for DiscoverySection with new styling and conditional rendering */}
-                <View style={{  zIndex: 90 }}>
-                <DiscoverySection  discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
+                <View style={{ zIndex: 90 }}>
+                  <DiscoverySection discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
                 </View>
               </ScrollView>
+              }
 
               <View style={[styles.fullscreenContainer]}>
                 {conversationGroups.length ? (
@@ -614,32 +622,6 @@ const ChatScreenContent = () => {
                   />
                 ) : (
                   <></>
-                //   <View style={styles.chatFooter}>
-                //   {imageUris.length > 0 &&
-                //     <ImagePreview onRemoveImage={handleRemoveImage} imageUris={imageUris} />}
-                //   <View style={styles.searchInput}>
-                //     <TextInput
-                //       style={styles.messageInput}
-                //       placeholder="Search for any fashion item..."
-                //       placeholderTextColor={theme.colors.secondary.mediumDarkGray}
-                //       value={searchText}
-                //       onChangeText={setSearchText}
-                //       multiline
-                //     />
-                //     <MessageSendButton searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
-                //   </View>
-                //   {/* <View style={styles.actionBar}>
-                //     <View style={styles.leftButtons}>
-                //       <TouchableOpacity onPress={handleImageUpload} style={styles.actionButtonPill}>
-                //         <Image size={16} color="#000" />
-                //         <Text className="text-sm text-red">Visual search</Text>
-                //       </TouchableOpacity>
-                //     </View>
-                //   </View> */}
-                //   <Text style={styles.disclaimerText}>
-                //     Look AI can make mistakes. shop at your own risk.
-                //   </Text>
-                // </View>
                 )}
               </View>
               {fetchProduct &&
@@ -684,9 +666,9 @@ const ChatScreenContent = () => {
 
             </View>
             {/* Input box at the bottom */}
-           
 
-         
+
+
           </SafeAreaView>
 
         </TouchableWithoutFeedback>
@@ -717,8 +699,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.md,
-    // height: "100%",
-    // position: "relative",
   },
   card: {
     backgroundColor: theme.colors.primary.white,
@@ -825,6 +805,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
     height: Dimensions.get('window').height - 200,
+    flex: 1,
   },
   messageContainer: {
     padding: theme.spacing.md,
@@ -944,6 +925,7 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingContainer: {
     width: "100%",
+    flex: 1,
   },
   sendButtonContainer: {
     width: 32,
