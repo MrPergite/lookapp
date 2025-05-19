@@ -45,7 +45,6 @@ const appConfig = {
           backgroundColor: "#ffffff",
         },
       ],
-      // ["@react-native-masked-view/masked-view"],
       [
         "expo-router",
         {
