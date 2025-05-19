@@ -12,6 +12,7 @@ import React from "react";
 import Constants from 'expo-constants';
 import { ImageProvider } from "@/common/providers/image-search";
 import { ScreenHistoryProvider } from "@/common/providers/screen-history";
+import { UserDetailsProvider } from "@/common/providers/user-details";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -113,7 +114,7 @@ export default function RootLayout() {
           <ImageProvider>
             <ScreenHistoryProvider>
               <OnBoardingProvider>
-                <Slot />
+                  <Slot />
               </OnBoardingProvider>
             </ScreenHistoryProvider>
           </ImageProvider>

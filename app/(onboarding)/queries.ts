@@ -7,13 +7,14 @@ import { countries } from "countries-list"
  * Fetches the current user's IP-based location data
  * @returns The user's country name
  */
-export const fetchUserCountry = async (): Promise<string> => {
+export const fetchUserCountry = async (): Promise<Record<string, any>> => {
     try {
         const response = await axios.get('https://ipwho.is/');
-        return response.data.country;
+        console.log(response.data);
+        return response.data;
     } catch (error) {
         console.error('Error fetching user country:', error);
-        return '';
+        return {};
     }
 };
 
@@ -48,7 +49,7 @@ const getCountryData = async (): Promise<CountryData> => {
         ]);
 
         return {
-            userCountry,
+            userCountry: userCountry.country,
             countries
         } as const;
     } catch (error) {
