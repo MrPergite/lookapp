@@ -30,7 +30,7 @@ const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onN
     // For testing the animation if context value is initially null
     const [mockStartTime] = useState(() => Date.now()); 
     const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime || mockStartTime; 
-    const _isProcessingNewAvatar = avatarStatus !== 'ready' && payload.avatarPath === 'custom'
+    const _isProcessingNewAvatar = avatarStatus && avatarStatus !== 'ready' && payload.avatarPath === 'custom'
     // State for progress bar
     const [avatarCreationProgress, setAvatarCreationProgress] = useState(0);
     const animatedProgressWidth = useRef(new Animated.Value(0)).current;

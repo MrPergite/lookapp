@@ -35,10 +35,10 @@ const PhotoRecommendations = () => {
             duration: 300,
           }}
         >
-          <ChevronDownIcon 
+        <ChevronDownIcon 
             size={20} 
             color={theme.colors.primary.purple} 
-          />
+        />
         </MotiView>
       </Pressable>
 
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   listItem: {
     fontSize: 12,
-    color: 'rgba(75 85 99  / 1)',
+   color: 'rgba(75 85 99  / 1)',
     lineHeight: 16,
     textAlign: 'left',
     fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',

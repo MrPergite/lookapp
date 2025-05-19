@@ -7,7 +7,7 @@ const appConfig = {
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    // scheme: "myapp",
+    scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     runtimeVersion: "0.0.1",

@@ -429,21 +429,11 @@ console.log(result);
           return;
         }
       }
-      dispatch({
-        type: 'SET_PAYLOAD',
-        payload: {
-            key: 'styleProfileState',
-            value: {
-                ...contextPayload.styleProfileState, // Preserve other styleProfileState fields
-                images: [], // Confirm selected image
-              
-            }
-        }
-    });
+      
       // Success case: API returned a success response
       Toast.show({ type: 'success', text1: response.message || 'Personalized avatar creation started' });
       const newStyleProfileDataToSave = {
-        images: approvedUrlImages,
+        images: [],
         processingStatus,
         rejectionReasons,
         progressValue,
@@ -481,7 +471,7 @@ console.log(result);
           key: 'styleProfileState',
           value: {
            ...contextPayload.styleProfileState,
-            isProcessing: false // Add the processing state
+            isProcessing: false
           } 
         }
       });
