@@ -8,6 +8,8 @@ export const routes = {
         postReaction: '/api/reaction/cardReactionPublic',
         getProductDetails: '/api/product-details/get-product-details',
         prodCardQueryPublic: '/api/products/prodCardQueryPublic',
+        getPromptChips: '/api/users/generatePromptChipsPublic',
+        getDiscoveryOutfits: '/api/users/discovery'
     },
 
     // Protected endpoints that require authentication
@@ -32,7 +34,9 @@ export const routes = {
         createPersonalizedAvatar: '/api/users/createPersonalizedAvatar',
         setPreferredAvatarUrl: '/api/users/setPreferredAvatarUrl',
         registerDigitalWardrobe: '/api/users/registerDigitalWardrobe',
-        digitalWardrobeItems: '/api/users/digitalWardrobeItems'
+        digitalWardrobeItems: '/api/users/digitalWardrobeItems',
+        getPromptChipsAuth: '/api/users/generatePromptChips'
+      
     }
         // createPersonalizedAvatar: '/api/users/createPersonalizedAvatar',
     

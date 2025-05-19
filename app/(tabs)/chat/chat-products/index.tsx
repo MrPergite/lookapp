@@ -37,6 +37,10 @@ import { ImageLoader } from "@/components/SearchProgressSteps";
 import ProductDetailCard from "@/components/ProductDetailCard";
 import { useProdCardQueryMutation } from "./hooks/query";
 import { getSavedDetails } from "@/utils";
+import Header from "./header";
+import SearchInput from "./SearchInput";
+import { getDiscoveryOutfits } from "./queries/getDiscoveryOutfits";
+import DiscoverySection from "./discovery/discovery-section";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -92,6 +96,17 @@ const ChatScreenContent = () => {
   const [isProductQueryLoading, setIsProductQueryLoading] = useState(false);
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [latestAiMessage, setLatestAiMessage] = useState<string>("");
+  const [promptChips, setPromptChips] = useState<string[]>([]);
+  const hasFetchedUrl = useRef(false);
+  const isFetchingRef = useRef(false);
+  const [isDiscoveryOutfitsLoading, setIsDiscoveryOutfitsLoading] = useState(false);
+  const [discoveryOutfits, setDiscoveryOutfits] = useState<any[]>([]);
+  const [pageNumber, setPageNumber] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [promptValue, setPromptValue] = useState<string>("");
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   // Main API functions that handle both authenticated and public requests
   const searchPartQuery = useCallback(async (data: any, retries = 1) => {
     try {
@@ -183,6 +198,98 @@ const ChatScreenContent = () => {
       dispatch(chatActions.setError(null));
     }
   }, [error, dispatch]);
+  let isMounted = true;
+  const controller = new AbortController();
+  useEffect(() => {
+    const fetchPromptChips = async () => {
+      // Determine endpoint based on authentication status
+      // Assuming 'generatePromptChips' and 'generatePromptChipsPublic' are the correct endpoint names
+      const endpoint = isAuthenticated ? 'getPromptChipsAuth' : 'getPromptChips';
+
+      // Prevent concurrent API calls, assuming hasFetchedUrl is a useRef(false) defined in the component
+      if (hasFetchedUrl.current) return;
+      hasFetchedUrl.current = true;
+
+      try {
+        // Make the API call using existing helper functions
+        // Assuming POST request as in the original context, with no body for prompt chips
+        const response = await (isAuthenticated
+          ? callProtectedEndpoint(endpoint, { method: 'POST',data:{} })
+          : callPublicEndpoint(endpoint, { method: 'POST',data:{} }));
+
+        // Process the response
+        // Assuming response is an array of objects like { search_query: "string" }
+        // And setPromptChips is a state setter function defined in the component
+        console.log("response",response)
+        if (response && Array.isArray(response)) {
+          const searchQueries = response.map((item: any) => item.search_query);
+          setPromptChips(searchQueries);
+        } else {
+          console.warn('Failed to fetch prompt chips or unexpected response structure:', response);
+          setPromptChips([]); // Set to empty array on failure or bad structure
+        }
+        // Analytics for success (e.g., trackEvent from original code) would be here if a similar mechanism exists
+      } catch (error) {
+        console.error('Error fetching prompt chips:', error);
+        setPromptChips([]); // Set to empty array on error
+        // Analytics for failure (e.g., trackEvent from original code) would be here if a similar mechanism exists
+      } finally {
+        // Reset flag whether successful or not
+        hasFetchedUrl.current = false;
+      }
+    };
+
+    fetchPromptChips();
+  }, []);
+  useEffect(() => {
+  const fetchDiscoveryOutfits = async () => {
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    setIsDiscoveryOutfitsLoading(true);
+    setDiscoveryOutfits([]);
+    setPageNumber(0);
+
+    try {
+      const params = {
+        pageNumber: 0,
+        pageSize,
+        gender: "male/female",
+      };
+
+      const data = await getDiscoveryOutfits(callPublicEndpoint, params);
+    
+      setDiscoveryOutfits(data.discoveryOutfits);
+      setTotalItems(data.totalItems);
+      setHasMore(data.discoveryOutfits.length < data.totalItems);
+
+    } catch (error: any) {
+      if (isMounted && error.name !== 'AbortError') {
+        console.error('Error fetching initial discovery outfits:', error);
+        Toast.show({
+          type: "error",
+          text1: "Search Error",
+          text2: 'Failed to load your discovery outfits',
+        });
+        setDiscoveryOutfits([]);
+        setTotalItems(0);
+        setHasMore(false);
+      }
+    } finally {
+
+      setIsDiscoveryOutfitsLoading(false);
+
+      isFetchingRef.current = false;
+    }
+  };
+
+  fetchDiscoveryOutfits();
+
+  return () => {
+    isMounted = false;
+    controller.abort();
+  };
+}, [pageSize])
 
   // Transform products from API response to our Product format
   const transformProducts = useCallback((apiProducts: any[]): Product[] => {
@@ -325,6 +432,7 @@ const ChatScreenContent = () => {
 
   // Function to handle sending a message
   const handleSendMessage = async () => {
+    
     if (!searchText.trim() || searchMutation.isPending) return;
 
     const userMessage = searchText.trim();
@@ -406,6 +514,38 @@ const ChatScreenContent = () => {
     );
     setFollowUpProduct(null);
   };
+  const loadMoreItems = useCallback(async () => {
+    if (isLoadingMore || !hasMore || isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+    setIsLoadingMore(true);
+    const nextPage = pageNumber + 1;
+
+    try {
+      const params = {
+        pageNumber: nextPage,
+        pageSize,
+        gender: "male/female",
+      };
+
+      const nextPageData = await getDiscoveryOutfits(callPublicEndpoint, params)
+      setDiscoveryOutfits(prevItems => [...prevItems, ...nextPageData.discoveryOutfits]);
+      setPageNumber(nextPage);
+      setHasMore(discoveryOutfits.length + nextPageData.discoveryOutfits.length < totalItems);
+
+    } catch (error) {
+      console.error('Error fetching more discovery outfits:', error);
+      Toast.show({
+        type: "error",
+        text1: "Search Error",
+        text2: 'Failed to load more discovery outfits',
+      });
+    } finally {
+      setIsLoadingMore(false);
+      isFetchingRef.current = false;
+    }
+  }, [isLoadingMore, hasMore, pageNumber, pageSize, discoveryOutfits.length, totalItems]);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -416,14 +556,38 @@ const ChatScreenContent = () => {
         end={{ x: 0.5, y: 1 }}
         style={[styles.container]}
       >
+        
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
 
           <SafeAreaView style={styles.safeArea}>
+       
             <View style={styles.chatContainer}>
+              <ScrollView style={{width: '100%'}} contentContainerStyle={{ alignItems: 'stretch' }}>
+                <Header darkMode={true} />
+                <View style={[styles.container, { zIndex: 100, width: '100%' }]}>
+                  <SearchInput
+                        darkMode={true}
+                        inputMode={'text'}
+                        // setInputMode={setInputMode}
+                        inputValue={promptValue}
+                        setInputValue={setPromptValue}
+                        // onCameraClick={() => setIsUploadDialogOpen(true)}
+                        setSearchText={setSearchText}
+                        onSearch={handleSendMessage}
+                        promptChips={promptChips}
+                        hasFetchedUrl={hasFetchedUrl.current}
+                      />
+                </View>
+                {/* Wrapper for DiscoverySection with new styling and conditional rendering */}
+                <View style={{  zIndex: 90 }}>
+                <DiscoverySection  discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
+                </View>
+              </ScrollView>
+
               <View style={[styles.fullscreenContainer]}>
                 {conversationGroups.length ? (
                   <ProductSearchResultsMemo
-                    inputType={inputType}
+                    inputType={inputType as any}
                     latestAiMessage={latestAiMessage}
                     products={products}
                     chatHistory={chatHistory}
@@ -450,6 +614,32 @@ const ChatScreenContent = () => {
                   />
                 ) : (
                   <></>
+                //   <View style={styles.chatFooter}>
+                //   {imageUris.length > 0 &&
+                //     <ImagePreview onRemoveImage={handleRemoveImage} imageUris={imageUris} />}
+                //   <View style={styles.searchInput}>
+                //     <TextInput
+                //       style={styles.messageInput}
+                //       placeholder="Search for any fashion item..."
+                //       placeholderTextColor={theme.colors.secondary.mediumDarkGray}
+                //       value={searchText}
+                //       onChangeText={setSearchText}
+                //       multiline
+                //     />
+                //     <MessageSendButton searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
+                //   </View>
+                //   {/* <View style={styles.actionBar}>
+                //     <View style={styles.leftButtons}>
+                //       <TouchableOpacity onPress={handleImageUpload} style={styles.actionButtonPill}>
+                //         <Image size={16} color="#000" />
+                //         <Text className="text-sm text-red">Visual search</Text>
+                //       </TouchableOpacity>
+                //     </View>
+                //   </View> */}
+                //   <Text style={styles.disclaimerText}>
+                //     Look AI can make mistakes. shop at your own risk.
+                //   </Text>
+                // </View>
                 )}
               </View>
               {fetchProduct &&
@@ -494,46 +684,9 @@ const ChatScreenContent = () => {
 
             </View>
             {/* Input box at the bottom */}
+           
 
-            {conversationGroups.length ?
-              <View style={[{ position: 'absolute', bottom: -20, left: 0, right: 0, zIndex: 1000 }]}>
-                <MessageInput
-                  searchText={searchText}
-                  setSearchText={setSearchText}
-                  showImagePreview={imageUris.length > 0} renderImagePreview={() => (
-                    <ImagePreview imageUris={imageUris} onRemoveImage={handleRemoveImage} />
-                  )}
-                  onSend={handleSendMessage}
-                  onImageSelect={handleImageUpload}
-                  source="chat"
-                />
-              </View>
-              : <View style={styles.chatFooter}>
-                {imageUris.length > 0 &&
-                  <ImagePreview onRemoveImage={handleRemoveImage} imageUris={imageUris} />}
-                <View style={styles.searchInput}>
-                  <TextInput
-                    style={styles.messageInput}
-                    placeholder="Search for any fashion item..."
-                    placeholderTextColor={theme.colors.secondary.mediumDarkGray}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    multiline
-                  />
-                  <MessageSendButton searchText={searchText} disabled={searchText.trim().length === 0} onSend={handleSendMessage} onImageSelect={handleImageUpload} />
-                </View>
-                {/* <View style={styles.actionBar}>
-                  <View style={styles.leftButtons}>
-                    <TouchableOpacity onPress={handleImageUpload} style={styles.actionButtonPill}>
-                      <Image size={16} color="#000" />
-                      <Text className="text-sm text-red">Visual search</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View> */}
-                <Text style={styles.disclaimerText}>
-                  Look AI can make mistakes. shop at your own risk.
-                </Text>
-              </View>}
+         
           </SafeAreaView>
 
         </TouchableWithoutFeedback>
@@ -557,12 +710,14 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    height: '100%',
   },
   safeArea: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.md,
+    // height: "100%",
     // position: "relative",
   },
   card: {
@@ -612,9 +767,10 @@ const styles = StyleSheet.create({
   suggestionsContainer: {
     flexDirection: "row",
     marginTop: theme.spacing.lg,
-    maxHeight: 100,
-    position: "absolute",
+    // maxHeight: 100,
+    position: "relative",
     bottom: 0,
+    zIndex: 9999999999999,
   },
   suggestionItem: {
     backgroundColor: theme.colors.secondary.veryLightGray,
@@ -660,14 +816,14 @@ const styles = StyleSheet.create({
   },
 
   scrollView: {
-    flexGrow: 1,
+    // flexGrow: 1,
   },
   // Chat styles
   chatContainer: {
     marginVertical: theme.spacing.md,
     width: '100%',
     flexDirection: 'column',
-    alignItems: 'flex-end',
+    alignItems: 'stretch',
     height: Dimensions.get('window').height - 200,
   },
   messageContainer: {
@@ -704,8 +860,7 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "transparent",
     borderRadius: theme.spacing.xl - 8,
-    overflow: "hidden",
-    // position: "relative",
+    position: "relative",
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -810,3 +965,4 @@ export default ChatScreen;
 
 // Export ChatScreenContent for testing purposes if needed
 export { ChatScreenContent };
+
