@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { applyHeaderStyles } from '../utils';
+import { applyHeaders } from '../utils';
 import { NextRequest, NextResponse } from 'next/server';
 import https from 'https';
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const agent = new https.Agent({ rejectUnauthorized: false }); // dev certs
 
     // Forward headers
-    const forwardedHeaders = await applyHeaderStyles(req); // req is NextRequest here
+    const forwardedHeaders = await applyHeaders(req); // req is NextRequest here
     const axiosHeaders: Record<string, string> = {};
 
     // Convert Headers object (from NextRequest) to a plain object for Axios
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
           axiosHeaders[key] = value;
         });
     } else if (typeof forwardedHeaders === 'object' && forwardedHeaders !== null) {
-        // If applyHeaderStyles returns a plain object already
+        // If applyHeaders returns a plain object already
         for (const key in forwardedHeaders) {
             if (Object.prototype.hasOwnProperty.call(forwardedHeaders, key)) {
                 const value = (forwardedHeaders as Record<string, any>)[key];

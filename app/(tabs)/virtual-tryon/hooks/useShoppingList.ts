@@ -7,9 +7,9 @@ import { Alert } from 'react-native';
 
 export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
     const { getToken } = useAuth();
-    const { fetch, mutate, isLoading: isLoadingShoppingList, error: errorShoppingList, data, variables, refetch } = useShoppingAPI();
-    const [items, setItems] = useState([]); // State to store shopping list items
     const [isLoading, setIsLoading] = useState(true); // Loading state
+    const { fetch, mutate, isLoading: isLoadingShoppingList, error: errorShoppingList, data, variables, refetch } = useShoppingAPI(setIsLoading);
+    const [items, setItems] = useState([]); // State to store shopping list items
     const [error, setError] = useState<string | null>(null); // Error state
 
 
@@ -20,7 +20,7 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
                 return
             }
             setIsLoading(true);
-            refetch.refetchShoppingList();
+            refetch.refetchShoppingList()
         }, [])
     );
 
@@ -41,6 +41,8 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
             setIsLoading(false);
         }
     }, [data.removeFromShoppingListData]);
+
+    console.log("Shopping List Loader :", isLoading, isLoadingShoppingList);
 
     // Fetch shopping list when the user is signed in
     useEffect(() => {

@@ -89,9 +89,15 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
   }, [isVisible]);
 
   const fetchSelectedVariant = (selectedIndex: number) => {
-    const selectedVariant = productVariants?.[selectedIndex];
-    getPartialProductDetails(selectedVariant);
+    const selectedProduct = productVariants?.[selectedIndex];
+    getPartialProductDetails(selectedProduct, selectedIndex, selectedVariant);
   }
+
+  useEffect(() => {
+    if (selectedVariant) {
+      fetchSelectedVariant(selectedIndex);
+    }
+  }, [selectedVariant]);
 
   // Add rotation animation for the loader
   useEffect(() => {
@@ -429,7 +435,7 @@ const ProductDetailsModal: React.FC<ProductDetailsProps> = ({
                     selectedVariant={selectedVariant}
                     onSelectVariant={setSelectedVariant}
                     variants={productVariants?.filter((item, index) => index !== 0) || []}
-                    selectIndex={fetchSelectedVariant}
+                    selectIndex={setSelectedIndex}
                   />
                 </View>
                 {showLoginModal && (

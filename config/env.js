@@ -9,7 +9,7 @@ const ENV = process.env.ENV || "production";
 const envPath = path.resolve(__dirname, "../config", `.env.${ENV}`);
 const envConfig = require("dotenv").config({ path: envPath });
 
-console.log("Running on Environment: ", envPath);
+console.log("Running on Environment: ", ENV);
 
 // Export the env values
 module.exports = { ...envConfig.parsed, ENV: `.env.${ENV}` };

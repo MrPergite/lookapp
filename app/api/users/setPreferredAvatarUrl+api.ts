@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import { applyHeaderStyles } from '../utils'; // Assuming this utility correctly extracts/forwards headers
+import { applyHeaders } from '../utils'; // Assuming this utility correctly extracts/forwards headers
 import { NextRequest, NextResponse } from 'next/server';
 import https from 'https';
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Prepare headers for Axios, similar to createPersonalizedAvatar+api.ts
-    const forwardedHeaders = await applyHeaderStyles(req); // req is NextRequest here
+    const forwardedHeaders = await applyHeaders(req); // req is NextRequest here
     const axiosHeaders: Record<string, string> = {};
 
     // Convert Headers object (from NextRequest) to a plain object for Axios
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
           axiosHeaders[key] = value;
         });
     } else if (typeof forwardedHeaders === 'object' && forwardedHeaders !== null) {
-        // If applyHeaderStyles returns a plain object already
+        // If applyHeaders returns a plain object already
         for (const key in forwardedHeaders) {
             if (Object.prototype.hasOwnProperty.call(forwardedHeaders, key)) {
                 const value = (forwardedHeaders as Record<string, any>)[key];

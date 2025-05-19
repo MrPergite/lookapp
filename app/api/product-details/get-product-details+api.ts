@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Parse the request body
     const body = await request.json();
     console.log("Request body in get-product-details API:", body);
-    
+
     // Validate required fields
     if (!body.product_id) {
       return Response.json(
@@ -28,11 +28,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Forward the request to the external API
     const response = await axios.post(
       `${process.env.EXPO_PUBLIC_API_BASE_URL}/users/productInfo`,
-      { product_id: body.product_id },
+      { product_id: body.product_id, ...(body.partial === "true" && { partial: body.partial }) },
       {
         headers: {
           'Content-Type': 'application/json',
@@ -40,24 +40,24 @@ export async function POST(request: NextRequest) {
         }
       }
     );
-    
+
     // Return the response from the external API
     return Response.json(response.data);
-    
+
   } catch (error: any) {
     console.error('Product details API error:', error.response || error);
-    
+
     // If the external API returned an error, forward its status code and message
     if (error.response) {
       return Response.json(
-        { 
+        {
           error: "Failed to fetch product details",
           details: error.response.data
         },
         { status: error.response.status || 500 }
       );
     }
-    
+
     // Generic error response
     return Response.json(
       { error: "Failed to fetch product details" },

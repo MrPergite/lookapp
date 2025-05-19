@@ -2,6 +2,7 @@ import { Redirect, router, Stack, useNavigation } from 'expo-router'
 import { useAuth } from '@clerk/clerk-expo'
 import { useScreenHistoryContext } from '@/common/providers/screen-history';
 import { useEffect } from 'react';
+import { UserDetailsProvider } from '@/common/providers/user-details';
 
 export default function AuthRoutesLayout() {
     const { isSignedIn } = useAuth();
@@ -21,5 +22,9 @@ export default function AuthRoutesLayout() {
         }
     }, [isSignedIn, screenHistory, removeScreenFromHistory]);
 
-    return <Stack screenOptions={{ headerShown: false }} />
+    return (
+        <UserDetailsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+        </UserDetailsProvider>
+    )
 }

@@ -7,7 +7,7 @@ import { useApi } from '@/client-api';
 
 const baseUrl = Constants.expoConfig?.extra?.origin || "http://localhost:8081";
 
-function useShoppingAPI() {
+function useShoppingAPI(setIsLoading: React.Dispatch<React.SetStateAction<boolean>>) {
     const { getToken, isSignedIn } = useAuth();
     const { callProtectedEndpoint } = useApi();
     const { data: shoppingList, error: shoppingListError, isLoading: shoppingListLoading, refetch: refetchShoppingList } = useQuery({
@@ -21,6 +21,7 @@ function useShoppingAPI() {
                         Authorization: `Bearer ${token}`
                     }
                 });
+                setIsLoading(false);
                 return response.data;
             } catch (error) {
                 console.error('Error fetching shopping list:', error);

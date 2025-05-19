@@ -1,5 +1,5 @@
 import axios from "axios";
-import { applyHeaderStyles } from "../utils";
+import { applyHeaders } from "../utils";
 import { NextResponse } from 'next/server';
 import https from 'https';
 
@@ -29,7 +29,7 @@ console.log("process.env.EXPO_PUBLIC_API_BASE_URL", process.env.EXPO_PUBLIC_API_
         }, {
             httpsAgent: agent,
             headers: {
-                ...(await applyHeaderStyles(req)),
+                ...(await applyHeaders(req)),
                 'Content-Type': 'application/json',
             },
         });
