@@ -1,7 +1,7 @@
 import { Product } from "../context";
 
 export const getSaveToShoppingListPayload = ({ products, productId, fetchedProductInfo }: { products: Product[], productId: string, fetchedProductInfo: boolean }) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find(p => p.id === productId || p.product_id === productId);
 
     if (!product) {
         console.error("Product not found for id:", productId);

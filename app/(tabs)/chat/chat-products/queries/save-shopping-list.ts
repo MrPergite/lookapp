@@ -78,7 +78,7 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
             });
         }
     });
-    const saveShoppingItem = ({ products, productId, fetchedProductInfo = true }: { products: Product[], productId: string, fetchedProductInfo: boolean }) => {
+    const saveShoppingItem = ({ products, productId, fetchedProductInfo = true,source="chat" }: { products: Product[], productId: string, fetchedProductInfo: boolean,source?: string }) => {
         if (!isSignedIn) {
             openLoginModal();
             return;
@@ -99,7 +99,7 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
             ...prev,
             [productId]: false
         }));
-        saveToShoppingList(getSaveToShoppingListPayload({ products: allProducts, productId, fetchedProductInfo }));
+        saveToShoppingList(getSaveToShoppingListPayload({ products: source==='discovery'?products : allProducts , productId, fetchedProductInfo }));
     }
     return {
         savedProducts,
