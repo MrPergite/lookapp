@@ -209,7 +209,7 @@ function TabSection({ activeTab, setActiveTab,
         className={`fixed top-4 bottom-0 left-0 right-0 bg-gray-50/95 rounded-t-3xl relative ${isMyOutfitsExpanded ? "z-50" : "z-10"}`}
         animate={{
           transform: [{ translateY: isMyOutfitsExpanded ? -80 : 0 }],
-          height: isMyOutfitsExpanded ? screenHeight * 1 : screenHeight * 0.4,
+          height: isMyOutfitsExpanded ? screenHeight * 1 : screenHeight * 0.38,
         }}
         transition={{
           type: "spring",
@@ -218,7 +218,8 @@ function TabSection({ activeTab, setActiveTab,
         }}
         style={{
           height: isMyOutfitsExpanded ? screenHeight : "auto",
-          maxHeight: isMyOutfitsExpanded ? screenHeight : 220
+          maxHeight: isMyOutfitsExpanded ? screenHeight : 220,
+          paddingBottom: 0
         }}>
         <View style={styles.container}>
           {/* Updated tab container UI */}
@@ -324,7 +325,7 @@ function TabSection({ activeTab, setActiveTab,
               <>
                 {activeTab === "shopping-list" &&
                   <View>
-                    <View className='mt-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none px-4 h-full' >
+                    <View className='mt-1 ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none px-4 h-full' >
                       {isLoading ? (
                         <View className="px-4 pb-20 overflow-hidden">
                           <View className="overflow-x-auto p-2">
@@ -344,8 +345,8 @@ function TabSection({ activeTab, setActiveTab,
                           {products.length === 0 ? (
                             <EmptyState />
                           ) : (
-                            <View className="overflow-x-auto p-2">
-                              <MotiScrollView contentContainerStyle={{ gap: 20 }} style={styles.productListContainer} horizontal className="flex flex-row gap-12 ">
+                            <View className="overflow-x-auto p-1">
+                              <MotiScrollView contentContainerStyle={{ gap: 16 }} style={styles.productListContainer} horizontal className="flex flex-row gap-12 ">
                                 {products.map((product) => (
                                   <View key={product.id} >
                                     <ProductCard
@@ -369,12 +370,12 @@ function TabSection({ activeTab, setActiveTab,
 
 
                 {activeTab === "my-outfits" && <View
-                  className="mt-4 focus-visible:outline-none px-4 h-[calc(100vh-200px)] overflow-y-auto pb-20"
+                  className="mt-2 focus-visible:outline-none px-4 h-[calc(100vh-210px)] overflow-y-auto pb-12"
                 >
                   {savedOutfits.length === 0 ? (
                     <EmptyOutfits />
                   ) : (
-                    <View className="flex flex-row items-center justify-center flex-wrap gap-4 p-4">
+                    <View className="flex flex-row items-center justify-center flex-wrap gap-3 p-2">
                       {savedOutfits.map((outfit) => (
                         <Pressable
                           key={outfit.id}
@@ -384,7 +385,7 @@ function TabSection({ activeTab, setActiveTab,
                           }}>
                           <MotiView
                             key={outfit.id}
-                            className="flex flex-col w-[150px]"
+                            className="flex flex-col w-[145px]"
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.2 }}
                           >
@@ -398,7 +399,7 @@ function TabSection({ activeTab, setActiveTab,
                                 transition={100}
                                 style={{
                                   width: "100%",
-                                  height: 280,
+                                  height: 220,
                                 }}
                               />
                               <TouchableOpacity
@@ -408,7 +409,7 @@ function TabSection({ activeTab, setActiveTab,
                                 <X color='white' size={responsiveFontSize(16)} className="w-4 h-4" />
                               </TouchableOpacity>
                             </View>
-                            <View className="mt-2 px-1">
+                            <View className="mt-1 px-1">
                               <Text className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate text-center">
                                 {outfit.outfit_name}
                               </Text>
@@ -469,8 +470,8 @@ function TabSection({ activeTab, setActiveTab,
                     {PRODUCTS.length === 0 ? (
                       <EmptyState />
                     ) : (
-                      <View className="overflow-x-auto pl-2 pt-2 pb-2">
-                        <MotiScrollView contentContainerStyle={{ gap: 20 }} style={styles.productListContainer} horizontal className="flex flex-row gap-12 ">
+                      <View className="overflow-x-auto pl-1 pt-1 pb-2">
+                        <MotiScrollView contentContainerStyle={{ gap: 16 }} style={styles.productListContainer} horizontal className="flex flex-row gap-12 ">
                           {PRODUCTS.map((product) => (
                             <View key={product.id} >
                               <ProductCard
@@ -506,25 +507,25 @@ const styles = StyleSheet.create({
   container: {
     position: 'fixed',
     width: '100%',
-    paddingBottom: 16,
-    marginTop: 16,
+    paddingBottom: 0,
+    marginTop: 6,
   },
   categoryHeaderContainer: {
     borderBottomWidth: 1,
     borderBottomColor: '#f1f1f1',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   categoryContainer: {
-    paddingVertical: 16,
+    paddingVertical: 6,
     paddingHorizontal: 8,
   },
   categoryButton: {
     marginHorizontal: 12,
-    paddingBottom: 6,
+    paddingBottom: 2,
     position: 'relative',
   },
   categoryText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#9CA3AF',
   },
@@ -546,17 +547,17 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   previewModeContainer: {
-    paddingVertical: 16,
+    paddingVertical: 6,
     paddingHorizontal: 20,
     alignItems: 'center',
     position: 'relative',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   previewModeText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.colors.primary.purple as string,
-    paddingBottom: 6,
+    paddingBottom: 2,
   },
   previewModeIndicator: {
     position: 'absolute',
@@ -605,19 +606,19 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   emptyOutfitsContainer: {
-    width: 64,                     // w-16
-    height: 64,                    // h-16
+    width: 56,                     // Reduced from 64
+    height: 56,                    // Reduced from 64
     borderRadius: 9999,           // rounded-full
     backgroundColor: '#e9d5ff',   // Tailwind's purple-100
     justifyContent: 'center',     // items-center
     alignItems: 'center',         // justify-center
-    marginBottom: 8,
+    marginBottom: 6,              // Reduced from 8
   },
   emptyOutfitsIcon: {
 
   },
   productListContainer: {
-    gap: 20,                    // gap-4 (4 * 4 = 16 px)
+    gap: 16,                    // Reduced from 20
     width: '100%',
   },
 });
