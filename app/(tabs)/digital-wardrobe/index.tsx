@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,13 +18,7 @@ import Toast from 'react-native-toast-message';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import SimpleHeader from '../virtual-tryon/SimpleHeader';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring,
-  withTiming,
-  Easing
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 interface WardrobeItem {
@@ -61,52 +55,8 @@ const DigitalWardrobeScreen: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   
-  // Animation values for smooth category transitions
-  const animatedOpacity = useSharedValue(1);
-  const animatedTranslateY = useSharedValue(0);
-
   const isFetchingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
-
-  // Animated styles for content transitions
-  const contentAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: animatedOpacity.value,
-      transform: [{ translateY: animatedTranslateY.value }],
-    };
-  });
-  
-  // Handle category change with animation
-  const handleCategoryChange = useCallback((category: string) => {
-    if (category === activeFilter) return;
-    
-    // Play haptic feedback
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    // Animate content out
-    animatedOpacity.value = withTiming(0.6, { duration: 150 });
-    animatedTranslateY.value = withTiming(10, { duration: 150 }, () => {
-      // Update filter after animation out
-      setActiveFilter(category);
-      
-      // Animate content back in after category change
-      animatedOpacity.value = withTiming(1, { duration: 250 });
-      animatedTranslateY.value = withTiming(0, { duration: 250 });
-    });
-  }, [activeFilter]);
-  
-  // Scroll category into view when selected
-  useEffect(() => {
-    const filterIndex = FILTERS.findIndex(f => f.key === activeFilter);
-    if (filterIndex > -1 && scrollViewRef.current) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          x: filterIndex * 100, // Approximate width of each category
-          animated: true
-        });
-      }, 100);
-    }
-  }, [activeFilter]);
 
   const fetchWardrobeItems = async (pageNumber: number, category: string) => {
     if (!isSignedIn) return { items: [], totalItems: 0 };
@@ -187,6 +137,35 @@ const DigitalWardrobeScreen: React.FC = () => {
       isFetchingRef.current = false;
     }
   }, [isLoadingMore, hasMore, isSignedIn, page, activeFilter, items.length]);
+
+  // Simple category change handler with haptic feedback
+  const handleCategoryChange = useCallback((category: string) => {
+    if (category === activeFilter) return;
+    
+    // Play haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveFilter(category);
+  }, [activeFilter]);
+
+  // Basic scroll behavior effect
+  useEffect(() => {
+    try {
+      const timer = setTimeout(() => {
+        if (scrollViewRef.current) {
+          const index = FILTERS.findIndex(f => f.key === activeFilter);
+          if (index >= 0) {
+            scrollViewRef.current.scrollTo({
+              x: Math.max(0, index * 90),
+              animated: true
+            });
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.log('Scroll error:', error);
+    }
+  }, [activeFilter]);
 
   const WardrobeItemCard: React.FC<{ item: WardrobeItem }> = ({ item }) => {
     return (
@@ -402,17 +381,14 @@ const DigitalWardrobeScreen: React.FC = () => {
                     </Text>
                     
                     {isActive && (
-                      <Animated.View 
-                        style={styles.activeIndicator}
-                        entering={withTiming(200)}
-                      >
+                      <View style={styles.activeIndicator}>
                         <LinearGradient
                           colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
                           style={styles.gradientIndicator}
                         />
-                      </Animated.View>
+                      </View>
                     )}
                   </TouchableOpacity>
                 );
@@ -435,8 +411,8 @@ const DigitalWardrobeScreen: React.FC = () => {
             <SignedOutEmptyState />
           )
         ) : (
-          console.log('items111', items),
-          <Animated.View style={[{ flex: 1 }, contentAnimatedStyle]}>
+          // Remove complex animations from the content view
+          <View style={{ flex: 1 }}>
             <FlatList
               data={items}
               renderItem={renderItem}
@@ -448,7 +424,7 @@ const DigitalWardrobeScreen: React.FC = () => {
               onEndReachedThreshold={0.4}
               ListFooterComponent={ListFooter}
             />
-          </Animated.View>
+          </View>
         )}
 
         {isSignedIn && (
@@ -489,19 +465,6 @@ const styles = StyleSheet.create({
   activeCategoryText: {
     color: theme.colors.primary.purple as string,
     fontWeight: '600',
-  },
-  activeIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderRadius: 1.5,
-    overflow: 'hidden',
-  },
-  gradientIndicator: {
-    width: '100%',
-    height: '100%',
   },
   gridItem: {
     width: '48%',
@@ -619,5 +582,18 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#ffffff33',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  gradientIndicator: {
+    width: '100%',
+    height: '100%',
   },
 });
