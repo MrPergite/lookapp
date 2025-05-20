@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import theme from '@/styles/theme';
 import { Plus, Archive, Loader2, Search, Shirt, Camera, Tag } from 'lucide-react-native';
@@ -17,6 +18,14 @@ import Toast from 'react-native-toast-message';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import SimpleHeader from '../virtual-tryon/SimpleHeader';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withTiming,
+  Easing
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 interface WardrobeItem {
   id: string;
@@ -51,8 +60,53 @@ const DigitalWardrobeScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  
+  // Animation values for smooth category transitions
+  const animatedOpacity = useSharedValue(1);
+  const animatedTranslateY = useSharedValue(0);
 
   const isFetchingRef = useRef(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Animated styles for content transitions
+  const contentAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: animatedOpacity.value,
+      transform: [{ translateY: animatedTranslateY.value }],
+    };
+  });
+  
+  // Handle category change with animation
+  const handleCategoryChange = useCallback((category: string) => {
+    if (category === activeFilter) return;
+    
+    // Play haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Animate content out
+    animatedOpacity.value = withTiming(0.6, { duration: 150 });
+    animatedTranslateY.value = withTiming(10, { duration: 150 }, () => {
+      // Update filter after animation out
+      setActiveFilter(category);
+      
+      // Animate content back in after category change
+      animatedOpacity.value = withTiming(1, { duration: 250 });
+      animatedTranslateY.value = withTiming(0, { duration: 250 });
+    });
+  }, [activeFilter]);
+  
+  // Scroll category into view when selected
+  useEffect(() => {
+    const filterIndex = FILTERS.findIndex(f => f.key === activeFilter);
+    if (filterIndex > -1 && scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: filterIndex * 100, // Approximate width of each category
+          animated: true
+        });
+      }, 100);
+    }
+  }, [activeFilter]);
 
   const fetchWardrobeItems = async (pageNumber: number, category: string) => {
     if (!isSignedIn) return { items: [], totalItems: 0 };
@@ -320,82 +374,93 @@ const DigitalWardrobeScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-          <SimpleHeader title="Digital Wardrobe" />
-    <View style={styles.container}>
-      {isSignedIn && (
-        <View style={styles.filterBar}>
-          {FILTERS.map((f) => {
-            const isActive = activeFilter === f.key;
-
-            return (
-              <TouchableOpacity
-                key={f.key}
-                activeOpacity={0.8}
-                onPress={() => setActiveFilter(f.key)}
-                style={styles.chipTouchable}
-              >
-                {isActive ? (
-                  <LinearGradient
-                    colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[styles.filterChip, styles.filterChipActive]}
+    <View style={{flex: 1, backgroundColor: 'white', paddingTop: 50}}>
+      <View style={styles.container}>
+        {isSignedIn && (
+          <View style={styles.categoryHeaderContainer}>
+            <ScrollView 
+              ref={scrollViewRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryContainer}
+            >
+              {FILTERS.map((f) => {
+                const isActive = activeFilter === f.key;
+                
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    activeOpacity={0.7}
+                    onPress={() => handleCategoryChange(f.key)}
+                    style={styles.categoryButton}
                   >
-                    {f.key !== 'all' && (
-                      <Tag size={12} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={[
+                      styles.categoryText,
+                      isActive && styles.activeCategoryText,
+                    ]}>
+                      {f.label}
+                    </Text>
+                    
+                    {isActive && (
+                      <Animated.View 
+                        style={styles.activeIndicator}
+                        entering={withTiming(200)}
+                      >
+                        <LinearGradient
+                          colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.gradientIndicator}
+                        />
+                      </Animated.View>
                     )}
-                    <Text style={styles.filterTextActive}>{f.label}</Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.filterChipInactive}>
-                    <Text style={styles.filterText}>{f.label}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
-      {isLoading ? (
-        <View style={styles.loadingCenter}>
-          <ActivityIndicator size="large" color={theme.colors.primary.purple} />
-        </View>
-      ) : items.length === 0 ? (
-        isSignedIn ? (
-          <WardrobeEmptyState
-            onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
-            currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
-          />
+        {isLoading ? (
+          <View style={styles.loadingCenter}>
+            <ActivityIndicator size="large" color={theme.colors.primary.purple} />
+          </View>
+        ) : items.length === 0 ? (
+          isSignedIn ? (
+            <WardrobeEmptyState
+              onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
+              currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
+            />
+          ) : (
+            <SignedOutEmptyState />
+          )
         ) : (
-          <SignedOutEmptyState />
-        )
-      ) : (
-        console.log('items111', items),
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={(item, index) => item?.id || `item-${index}`}
-          numColumns={2}
-          columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.4}
-          ListFooterComponent={ListFooter}
-        />
-      )}
+          console.log('items111', items),
+          <Animated.View style={[{ flex: 1 }, contentAnimatedStyle]}>
+            <FlatList
+              data={items}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => item?.id || `item-${index}`}
+              numColumns={2}
+              columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={ListFooter}
+            />
+          </Animated.View>
+        )}
 
-      {isSignedIn && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => Toast.show({ text1: 'Add item coming soon' })}
-        >
-          <Plus size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
+        {isSignedIn && (
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => Toast.show({ text1: 'Add item coming soon' })}
+          >
+            <Plus size={28} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
-    </SafeAreaView>
   );
 };
 
@@ -403,47 +468,41 @@ export default DigitalWardrobeScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  filterBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 50,
+  categoryHeaderContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
   },
-  chipTouchable: {
-    marginRight: 8,
-    marginBottom: 8,
+  categoryContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
   },
-  filterChip: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 100,
+  categoryButton: {
+    marginHorizontal: 12,
+    paddingBottom: 6,
+    position: 'relative',
   },
-  filterChipInactive: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    minWidth: 100,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  categoryText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#9CA3AF',
   },
-  filterChipActive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+  activeCategoryText: {
+    color: theme.colors.primary.purple as string,
+    fontWeight: '600',
   },
-  filterText: { fontSize: 12, color: '#374151' },
-  filterTextActive: { fontSize: 12, color: '#fff' },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  gradientIndicator: {
+    width: '100%',
+    height: '100%',
+  },
   gridItem: {
     width: '48%',
   },
