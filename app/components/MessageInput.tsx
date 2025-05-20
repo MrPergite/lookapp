@@ -7,7 +7,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Camera, ArrowUp } from 'lucide-react-native';
+import { Camera, ArrowUp, Instagram } from 'lucide-react-native';
 import theme from '@/styles/theme';
 import Disclaimer from './Disclaimer';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 interface MessageInputProps {
   onSend: (message: string) => void;
   onImageSelect?: () => void;
+  onSocialSelect?: () => void;
   placeholder?: string;
   disabled?: boolean;
   renderImagePreview?: () => React.ReactNode;
@@ -25,7 +26,7 @@ interface MessageInputProps {
 }
 
 
-export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSelect, source = "home" }: Partial<MessageInputProps>) => {
+export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSelect, onSocialSelect, source = "home" }: Partial<MessageInputProps>) => {
 
   const SendBtn = ({ source }: { source: string }) => {
     if (source === "home") {
@@ -65,6 +66,14 @@ export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSe
       >
         <Camera size={20} color="#9ca3af" />
       </TouchableOpacity>
+
+      {onSocialSelect && <TouchableOpacity
+        style={styles.iconButton}
+        onPress={onSocialSelect}
+      >
+        <Instagram size={20} color="#9ca3af" />
+      </TouchableOpacity>}
+
       <SendBtn source={source} />
     </View>
   )
@@ -73,6 +82,7 @@ export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSe
 const MessageInput: React.FC<MessageInputProps> = ({
   onSend,
   onImageSelect,
+  onSocialSelect,
   placeholder = "Type a message...",
   disabled = false,
   renderImagePreview = () => null,
@@ -127,7 +137,6 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 24,
-    paddingVertical: 12,
     backgroundColor: 'transparent',
 
   },

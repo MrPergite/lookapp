@@ -26,6 +26,9 @@ import { responsiveFontSize } from '@/utils';
 import { styles } from './styles';
 import GradientText from '@/components/GradientText';
 import { Image } from 'expo-image';
+import ImageSelectionSection from './ImageSelectionSection';
+import MediaViewer from './MediaViewer';
+import Category from './Category';
 const PRODUCTS_PER_GROUP = 4; // Max products to show per query group
 
 const DEVICE_HEIGHT = Dimensions.get('window').height;
@@ -68,6 +71,10 @@ interface ProductSearchResultsProps {
   scrollViewRef?: React.RefObject<ScrollView>;
   conversationGroups: ConversationGroup[];
   inputType: 'text' | 'img+txt' | 'imgurl+txt';
+  showImageSelection?: boolean;
+  imageSelectionUrls?: string[];
+  onImageSelected?: (index: number) => void;
+  loadingSocialImages?: boolean;
 }
 
 
@@ -83,7 +90,11 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
   followUpProduct,
   scrollViewRef,
   conversationGroups,
-  inputType
+  inputType,
+  showImageSelection = false,
+  imageSelectionUrls = [],
+  onImageSelected,
+  loadingSocialImages = false,
 }) => {
   // const isPartQueryLoading = true;
   // const isProductQueryLoading = true;
@@ -365,10 +376,11 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     }
   }, [isProductQueryLoading, isPartQueryLoading, activeGroup?.products?.length]);
 
-  const renderMessageAvatar = (message: ChatMessage, index: number) => {
+  const renderMessageAvatar = (message: ChatMessage, index: number, groupId: string) => {
     if (message.role === 'user') {
       return (
         <View
+          key={`message-${index}`}
           style={styles.messageContainer}
           onLayout={(event) => {
             // If this is the latest user message in the active group, save its height
@@ -409,10 +421,38 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     return (
       <View style={styles.aiMessageContainer}>
         <View className='h-12 rounded-full overflow-hidden flex items-center justify-center '>
-          <Image source={require('@/assets/images/logo.png')} style={[styles.avatarContainer, {  height: 56, marginRight: 0 }]} contentFit="cover" />
+          <Image source={require('@/assets/images/logo.png')} style={[styles.avatarContainer, { height: 56, marginRight: 0 }]} contentFit="cover" />
         </View>
-        <View style={styles.aiMessage}>
-          <Text className='text-sm leading-relaxed'>{message.text}</Text>
+        <View className='flex-col gap-2' >
+            {
+              message.text.length > 0 && (
+                <View style={styles.aiMessage}>
+                  <Text className='text-sm leading-relaxed'>{message.text}</Text>
+                </View>
+              )
+            }
+          {
+            message.messageType === 'social' && (
+              <View className='flex-row items-center justify-center max-w-80'>
+                <MediaViewer post={{ images: message.social?.images || [] }} onImageClick={onImageSelected} selectedImageIndex={0} hasFetchedUrl={!message.social?.fetchingMedia} />
+              </View>
+            )
+          }
+          {
+            message.categories && message.categories.length > 0 && (
+              <ScrollView horizontal contentContainerClassName='flex-row gap-2'>
+                {message.categories.map((category) => (
+                  <Category
+                    key={`category-${category}`}
+                    name={category}
+                    onPress={() => {
+                      dispatch(chatActions.loadProductsByCategory(groupId, category));
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            )
+          }
         </View>
       </View>
     )
@@ -452,7 +492,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
     return (
       <View key={`group-${index}`} style={[styles.conversationGroup, { borderBottomColor: appTheme.colors.border }]}>
         {/* User message */}
-        {group.userMessage && renderMessageAvatar(group.userMessage, index)}
+        {group.userMessage && renderMessageAvatar(group.userMessage, index, group.id)}
 
         {showTypewriter && group.id === activeConversationGroup ?
           (
@@ -460,9 +500,15 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
               {renderAIMessageWithTypewriter()}
             </View>
           )
-          : group.aiMessage && renderMessageAvatar(group.aiMessage, index)}
+          : group.aiMessage.length > 0 && <>
+            {group.aiMessage.map((message) => (
+              renderMessageAvatar(message, index, group.id)
+            ))}
+          </>}
         {/* AI response */}
         {/* {group.aiMessage && } */}
+
+
 
         {/* Products for this conversation */}
         {group.aiMessage && group.uiProductsList.length > 0 && (
@@ -470,7 +516,7 @@ const ProductSearchResults: React.FC<ProductSearchResultsProps> = ({
             <View style={styles.productGrid}>
               {group.uiProductsList.map((item, pIndex) => (
                 <View
-                  key={`group-${index}-product-${item.id}`}
+                  key={`group-${index}-product-${item.image}`}
                   style={[pIndex % 2 === 0 ? styles.productItemLeft : styles.productItemRight, cardAnimatedStyle]}
                 >
                   <TouchableOpacity onPress={() => onFollowUpPress(item)}

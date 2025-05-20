@@ -37,6 +37,7 @@ import { ImageLoader } from "@/components/SearchProgressSteps";
 import ProductDetailCard from "@/components/ProductDetailCard";
 import { useProdCardQueryMutation } from "./hooks/query";
 import { getSavedDetails } from "@/utils";
+import ImageUploadDialog from '@/app/components/ImageUploadDialog';
 import Header from "./header";
 import SearchInput from "./SearchInput";
 import { getDiscoveryOutfits } from "./queries/getDiscoveryOutfits";
@@ -56,7 +57,8 @@ const ChatScreenContent = () => {
     inputType,
     error,
     dispatch,
-    conversationGroups
+    conversationGroups,
+    activeConversationGroup
   } = useChatProducts();
 
 
@@ -96,6 +98,8 @@ const ChatScreenContent = () => {
   const [isProductQueryLoading, setIsProductQueryLoading] = useState(false);
   const [imageUris, setImageUris] = useState<string[]>([]);
   const [latestAiMessage, setLatestAiMessage] = useState<string>("");
+  const [showImageUploadDialog, setShowImageUploadDialog] = useState(false);
+  const [socialImages, setSocialImages] = useState<string[]>([]);
   const [promptChips, setPromptChips] = useState<string[]>([]);
   const hasFetchedUrl = useRef(false);
   const isFetchingRef = useRef(false);
@@ -515,6 +519,73 @@ const ChatScreenContent = () => {
     );
     setFollowUpProduct(null);
   };
+
+  const handleImageSelected = async (index: number) => {
+    try {
+      const activeGrp = conversationGroups.find(c => c.id === activeConversationGroup);
+      const imageUrl = activeGrp?.aiMessage[activeGrp.aiMessage.length - 1].social?.images[index].img_url;
+      dispatch(chatActions.setInputType("imgurl+txt"));
+      setIsProductQueryLoading(true);
+      if (imageUrl) {
+        let response;
+        if (isAuthenticated) {
+          response = await callProtectedEndpoint('findProducts', {
+            method: 'POST',
+            data: {
+              img_url: imageUrl,
+              personalization: false
+            }
+          });
+        } else {
+          response = await callPublicEndpoint('findProductsPublic', {
+            method: 'POST',
+            data: {
+              img_url: imageUrl,
+              personalization: false
+            }
+          });
+        }
+        console.log("response from findProducts", response);
+        if (Array.isArray(response)) {
+          dispatch(chatActions.addAiMessage("We found the following categories in your image:", "text", response))
+          dispatch(chatActions.setProductsByCategory(response));
+        } else {
+          dispatch(chatActions.addAiMessage("Sorry, I couldn't find any products matching your request. Please try again with a different search."));
+        }
+      }
+    } catch (error) {
+      console.error("Error extracting social media links:", error);
+      dispatch(chatActions.addAiMessage("Sorry, I couldn't find any products matching your request. Please try again with a different search."));
+    } finally {
+      setIsProductQueryLoading(false);
+    }
+  };
+
+  const handleSocialUrlSubmit = async (url: string) => {
+    try {
+      dispatch(chatActions.addUserMessage(url));
+      dispatch(chatActions.addAiMessage("Please select the image where you are looking for a fashion item", "social"));
+      dispatch(chatActions.setSocialImages([], true));
+      setShowImageUploadDialog(false);
+      const response = await callProtectedEndpoint('extractSocials', {
+        method: 'POST',
+        data: {
+          url: url
+        }
+      });
+      console.log("response from extractSocials", response);
+      if (Array.isArray(response.media) && response.media.length > 0) {
+        dispatch(chatActions.setSocialImages(response.media, false));
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to extract social media links',
+        });
+      }
+    } catch (error) {
+      console.error("Error extracting social media links:", error);
+    }
+  };
   const loadMoreItems = useCallback(async () => {
     if (isLoadingMore || !hasMore || isFetchingRef.current) return;
 
@@ -562,38 +633,36 @@ const ChatScreenContent = () => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.chatContainer}>
-              {!conversationGroups.length && 
-              <ScrollView
-              
-                style={{ width: '100%' }}
-                contentContainerStyle={{ alignItems: 'stretch' }}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
+              {!conversationGroups.length &&
+                <ScrollView
+                  contentContainerStyle={{ alignItems: 'stretch' }}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
                 >
-                <Header darkMode={true} />
-                <View style={[styles.container, { zIndex: 100, width: '100%' }]}>
-                  <SearchInput
-                    darkMode={true}
-                    inputMode={'text'}
-                    // setInputMode={setInputMode}
-                    inputValue={searchText}
-                    setInputValue={setPromptValue}
-                    // onCameraClick={() => setIsUploadDialogOpen(true)}
-                    setSearchText={setSearchText}
-                    onSearch={handleSendMessage}
-                    promptChips={promptChips}
-                    hasFetchedUrl={hasFetchedUrl.current}
-                  />
-                </View>
-                {/* Wrapper for DiscoverySection with new styling and conditional rendering */}
-                <View style={{ zIndex: 90 }}>
-                  <DiscoverySection discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
-                </View>
-              </ScrollView>
+                  <Header darkMode={true} />
+                  <View style={[styles.container, { zIndex: 100}]}>
+                    <SearchInput
+                      darkMode={true}
+                      inputMode={'text'}
+                      // setInputMode={setInputMode}
+                      inputValue={searchText}
+                      setInputValue={setPromptValue}
+                      // onCameraClick={() => setIsUploadDialogOpen(true)}
+                      setSearchText={setSearchText}
+                      onSearch={handleSendMessage}
+                      promptChips={promptChips}
+                      hasFetchedUrl={hasFetchedUrl.current}
+                      handleInstagramClick={() => setShowImageUploadDialog(true)}
+                    />
+                  </View>
+                  {/* Wrapper for DiscoverySection with new styling and conditional rendering */}
+                    <DiscoverySection discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
+                </ScrollView>
               }
 
               <View style={[styles.fullscreenContainer]}>
                 {conversationGroups.length ? (
+                  <>
                   <ProductSearchResultsMemo
                     inputType={inputType as any}
                     latestAiMessage={latestAiMessage}
@@ -619,7 +688,23 @@ const ChatScreenContent = () => {
                     onFollowUpPress={handleFollowUpPress}
                     followUpProduct={followUpProduct}
                     scrollViewRef={scrollViewRef}
+                    showImageSelection={socialImages.length > 0}
+                    imageSelectionUrls={socialImages}
+                    onImageSelected={handleImageSelected}
                   />
+                  <MessageInput
+                    onSend={handleSendMessage}
+                    onImageSelect={handleImageUpload}
+                    placeholder="Type a message..."
+                    disabled={isLoading}
+                    renderImagePreview={() => (
+                      <ImagePreview imageUris={imageUris} onRemoveImage={handleRemoveImage} />
+                    )}
+                    showImagePreview={imageUris.length > 0}
+                    setSearchText={setSearchText}
+                    searchText={searchText}
+                  />
+                 </>
                 ) : (
                   <></>
                 )}
@@ -674,6 +759,13 @@ const ChatScreenContent = () => {
         </TouchableWithoutFeedback>
 
       </LinearGradient>
+
+      <ImageUploadDialog
+        isVisible={showImageUploadDialog}
+        onClose={() => setShowImageUploadDialog(false)}
+        defaultTab="social"
+        onSocialUrlSubmit={handleSocialUrlSubmit}
+      />
     </KeyboardAvoidingView>
   );
 };

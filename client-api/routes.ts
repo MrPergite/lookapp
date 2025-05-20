@@ -8,6 +8,7 @@ export const routes = {
         postReaction: '/api/reaction/cardReactionPublic',
         getProductDetails: '/api/product-details/get-product-details',
         prodCardQueryPublic: '/api/products/prodCardQueryPublic',
+        findProductsPublic: '/api/users/findProductsPublic',
         getPromptChips: '/api/users/generatePromptChipsPublic',
         getDiscoveryOutfits: '/api/users/discovery'
     },
@@ -35,6 +36,8 @@ export const routes = {
         setPreferredAvatarUrl: '/api/users/setPreferredAvatarUrl',
         registerDigitalWardrobe: '/api/users/registerDigitalWardrobe',
         digitalWardrobeItems: '/api/users/digitalWardrobeItems',
+        extractSocials: '/api/users/extractSocials',
+        findProducts: '/api/users/findProducts',
         getPromptChipsAuth: '/api/users/generatePromptChips'
       
     }

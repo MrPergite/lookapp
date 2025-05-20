@@ -74,3 +74,20 @@ export interface ProductReactionPayload {
     fetchedProductInfo: boolean;
   };
 }
+
+interface Product {
+  brand: string;
+  country_name: string;
+  id: string;
+  img_url: string;
+  isTopwear?: boolean;
+  price: string;
+  product_link: string;
+  title: string;
+}
+
+export interface TaggedProductGroup {
+  products: Product[];
+  tag_prob: number;
+  tags: string;
+}

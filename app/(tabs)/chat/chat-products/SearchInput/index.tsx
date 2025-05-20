@@ -26,6 +26,7 @@ import { AboutEcoAIDialog } from './AboutEcoDialog';
 import { GenderSelector } from './GenderSelect';
 import { useImageContext } from '../../../../../common/providers/image-search';
 import { useAuth } from '@clerk/clerk-react';
+import theme from '@/styles/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ interface SearchInputProps {
   promptChips: string[];
   hasFetchedUrl: boolean;
   setSearchText: (text: string) => void;
+  handleInstagramClick: () => void;
 }
 
 export default function SearchInput({
@@ -50,6 +52,7 @@ export default function SearchInput({
   promptChips = [],
   hasFetchedUrl = false,
   setSearchText = () => { },
+  handleInstagramClick = () => { },
 }: SearchInputProps) {
   const {
     textareaRef,
@@ -178,13 +181,8 @@ export default function SearchInput({
           />
 
           <View style={styles.controlsRow}>
-            {/* <TouchableOpacity
-                style={styles.iconButton}
-                onPress={handleInstagramClick}
-                activeOpacity={0.7}
-              >
-                <Instagram size={24} color={darkMode ? '#FFF' : '#000'} />
-              </TouchableOpacity> */}
+            
+                <Instagram onPress={handleInstagramClick} size={24} color={theme.colors.primary.purple} />
 
             <View style={styles.centerControl}>
               {!isSignedIn && (
@@ -261,10 +259,8 @@ export default function SearchInput({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  flex: { flex: 1 }, // Used by KeyboardAvoidingView and ScrollView
+  safeArea: { },
   scrollViewStyle: { // Added for clarity, was styles.flex before
-    flex: 1,
   },
   container: { // This is contentContainerStyle for ScrollView
     alignItems: 'center',
