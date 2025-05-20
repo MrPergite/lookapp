@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useShoppingList } from '@/app/(tabs)/virtual-tryon/hooks/useShoppingList';
 import { useAuth } from '@clerk/clerk-react';
 import { MessageCircle, ShoppingCart, ChevronUp, ChevronDown, Trash2, Bell, BarChart2, Tag, MessageSquare, User, Trash, Shirt, X, ExternalLink } from 'lucide-react-native';
@@ -166,32 +166,47 @@ export default function ShoppingList() {
 
   // Expanded product view component
   const ExpandedProductView = ({ item }: { item: Product }) => {
-    const discount = item.old_price && item.product_price ? 
-      Math.round(((parseFloat(item.old_price.replace(/[^0-9.]/g, "")) - parseFloat(item.product_price.replace(/[^0-9.]/g, ""))) / 
-      parseFloat(item.old_price.replace(/[^0-9.]/g, ""))) * 100) : null;
-    
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const hasMultipleImages = item.img_urls_list && item.img_urls_list.length > 1;
     
-    // Get images - use img_urls_list if available, otherwise fallback to single img_url
-    const images = hasMultipleImages 
-      ? item.img_urls_list 
-      : (item.img_url ? [item.img_url] : []);
-      
-    const handleImageSwipe = (direction: 'next' | 'prev') => {
-      if (!hasMultipleImages || images.length <= 1) return;
-      
-      if (direction === 'next') {
-        setCurrentImageIndex(prevIndex => 
-          prevIndex === images.length - 1 ? 0 : prevIndex + 1
-        );
-      } else {
-        setCurrentImageIndex(prevIndex => 
-          prevIndex === 0 ? images.length - 1 : prevIndex - 1
+    // Calculate discount with useMemo to avoid recalculation on every render
+    const discount = useMemo(() => {
+      if (item.old_price && item.product_price) {
+        return Math.round(
+          ((parseFloat(item.old_price.replace(/[^0-9.]/g, "")) - parseFloat(item.product_price.replace(/[^0-9.]/g, ""))) / 
+          parseFloat(item.old_price.replace(/[^0-9.]/g, ""))) * 100
         );
       }
-    };
-
+      return null;
+    }, [item.old_price, item.product_price]);
+    
+    // Process image lists with useMemo
+    const { images, hasMultipleImages } = useMemo(() => {
+      const hasMultipleImages = item.img_urls_list && item.img_urls_list.length > 1;
+      const images = hasMultipleImages 
+        ? item.img_urls_list 
+        : (item.img_url ? [item.img_url] : []);
+      
+      return { images, hasMultipleImages };
+    }, [item.img_url, item.img_urls_list]);
+    
+    // Reset current image index when item changes
+    useEffect(() => {
+      setCurrentImageIndex(0);
+    }, [item.id]);
+    
+    // Handle image navigation with useCallback
+    const handleImageSwipe = useCallback((direction: 'next' | 'prev') => {
+      if (!hasMultipleImages || images.length <= 1) return;
+      
+      setCurrentImageIndex(prevIndex => {
+        if (direction === 'next') {
+          return prevIndex === images.length - 1 ? 0 : prevIndex + 1;
+        } else {
+          return prevIndex === 0 ? images.length - 1 : prevIndex - 1;
+        }
+      });
+    }, [hasMultipleImages, images]);
+    
     return (
       <MotiView
         from={{ opacity: 0, scale: 0.9 }}
