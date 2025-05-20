@@ -1,17 +1,19 @@
-
-
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable, ScrollView, Dimensions, ActivityIndicator, FlatList } from 'react-native';
 import { MotiScrollView, MotiText, MotiView } from 'moti';
 import { responsiveFontSize } from '@/utils';
 import { MessageCircle, ShoppingCart, Sparkles, X } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import GradientText from '@/components/GradientText';
 import ProductCard from './ProductCard';
 import { PRODUCTS } from '@/constants';
 import DeleteOutfitDialog from '../DeleteOutfitDialog';
 import { Image } from 'expo-image';
+import { useApi } from '@/client-api';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import theme from '@/styles/theme';
 
 interface TabSectionProps {
   activeTab: string;
@@ -121,6 +123,28 @@ function TabSection({ activeTab, setActiveTab,
   isAvatarLoading,
   setIsExpanded, }: TabSectionProps) {
   const { isSignedIn } = useAuth();
+  const { user } = useUser();
+  const { callProtectedEndpoint } = useApi();
+  const [wardrobeItems, setWardrobeItems] = useState([]);
+  const [isLoadingWardrobe, setIsLoadingWardrobe] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (activeTab === 'my-wardrobe' && isSignedIn) {
+      setIsLoadingWardrobe(true);
+      callProtectedEndpoint('digitalWardrobeItems', {
+        method: 'POST',
+        data: {
+          pagination: { page_size: 20, page_number: 0 },
+          filter: { super_categories: null },
+        },
+      })
+        .then((res) => setWardrobeItems(res?.items || []))
+        .catch(() => setWardrobeItems([]))
+        .finally(() => setIsLoadingWardrobe(false));
+    }
+  }, [activeTab, isSignedIn]);
+
   const isMyOutfitsExpanded = activeTab === "my-outfits" && isExpanded;
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
@@ -141,6 +165,35 @@ function TabSection({ activeTab, setActiveTab,
 
   const { height: screenHeight } = Dimensions.get('window');
 
+  // Handle tab change with haptic feedback
+  const handleTabPress = (tab: string) => {
+    if (tab !== activeTab) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setActiveTab(tab);
+    }
+  };
+
+  // Scroll behavior for tabs
+  useEffect(() => {
+    try {
+      const timer = setTimeout(() => {
+        if (scrollViewRef.current) {
+          let index = 0;
+          if (activeTab === 'shopping-list') index = 0;
+          else if (activeTab === 'my-outfits') index = 1;
+          else if (activeTab === 'my-wardrobe') index = 2;
+          
+          scrollViewRef.current.scrollTo({
+            x: Math.max(0, index * 100),
+            animated: true
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.log('Scroll error:', error);
+    }
+  }, [activeTab]);
 
   return (
     <>
@@ -163,50 +216,108 @@ function TabSection({ activeTab, setActiveTab,
           damping: 20,
           stiffness: 100
         }}
-
         style={{
           height: isMyOutfitsExpanded ? screenHeight : "auto",
-          maxHeight: isMyOutfitsExpanded ? screenHeight  : 220
+          maxHeight: isMyOutfitsExpanded ? screenHeight : 220
         }}>
         <View style={styles.container}>
-          <View className='
-          items-center justify-center text-muted-foreground grid grid-cols-2 gap-2 bg-white/90 p-1.5 
-          rounded-2xl backdrop-blur-xl border border-gray-200/50
-          shadow-sm' style={styles.tabContainer}>
-            {
-              isSignedIn ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'shopping-list' && styles.activeTab]}
-                    onPress={() => setActiveTab('shopping-list')}
-                  >
-                    <Text
-                      className={`${activeTab !== 'shopping-list' && 'text-gray-500'}`}
-                      style={[styles.tabText, activeTab === 'shopping-list' && styles.activeTabText]}>
-                      Shopping List
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'my-outfits' && styles.activeTab]}
-                    onPress={() => setActiveTab('my-outfits')}
-                  >
-                    <Text
-                      className={`${activeTab !== 'my-outfits' && 'text-gray-500'}`}
-                      style={[styles.tabText, activeTab === 'my-outfits' && styles.activeTabText]}>
-                      My Outfits
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) :
-                <View style={[styles.tabButton, styles.activeTab]}>
-                  <Text style={[styles.tabText, styles.activeTabText]}>
-                    Preview Mode
+          {/* Updated tab container UI */}
+          {isSignedIn ? (
+            <View style={styles.categoryHeaderContainer}>
+              <ScrollView 
+                ref={scrollViewRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryContainer}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleTabPress('shopping-list')}
+                  style={styles.categoryButton}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    activeTab === 'shopping-list' && styles.activeCategoryText,
+                  ]}>
+                    Shopping List
                   </Text>
-                </View>
-            }
-          </View>
+                  
+                  {activeTab === 'shopping-list' && (
+                    <View style={styles.activeIndicator}>
+                      <LinearGradient
+                        colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.gradientIndicator}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
 
-
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleTabPress('my-outfits')}
+                  style={styles.categoryButton}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    activeTab === 'my-outfits' && styles.activeCategoryText,
+                  ]}>
+                    My Outfits
+                  </Text>
+                  
+                  {activeTab === 'my-outfits' && (
+                    <View style={styles.activeIndicator}>
+                      <LinearGradient
+                        colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.gradientIndicator}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleTabPress('my-wardrobe')}
+                  style={styles.categoryButton}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    activeTab === 'my-wardrobe' && styles.activeCategoryText,
+                  ]}>
+                    My Wardrobe
+                  </Text>
+                  
+                  {activeTab === 'my-wardrobe' && (
+                    <View style={styles.activeIndicator}>
+                      <LinearGradient
+                        colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.gradientIndicator}
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={styles.previewModeContainer}>
+              <Text style={styles.previewModeText}>
+                Preview Mode
+              </Text>
+              <View style={styles.previewModeIndicator}>
+                <LinearGradient
+                  colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.gradientIndicator}
+                />
+              </View>
+            </View>
+          )}
 
           {
             isSignedIn && (
@@ -308,6 +419,40 @@ function TabSection({ activeTab, setActiveTab,
                     </View>
                   )}
                 </View>}
+
+                {activeTab === "my-wardrobe" && (
+                  <View className="mt-4 focus-visible:outline-none px-4 h-[calc(100vh-200px)] overflow-y-auto pb-20 flex-1">
+                    {isLoadingWardrobe ? (
+                      <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#9333EA" /></View>
+                    ) : wardrobeItems.length === 0 ? (
+                      <Text className="text-lg text-gray-500 text-center mt-8">No wardrobe items found.</Text>
+                    ) : (
+                      <FlatList
+                        data={wardrobeItems}
+                        keyExtractor={item => item.id}
+                        numColumns={2}
+                        columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+                        contentContainerStyle={{ paddingBottom: 40 }}
+                        renderItem={({ item }) => (
+                          <View style={{ flex: 1, margin: 4, backgroundColor: '#f3f4f6', borderRadius: 12, overflow: 'hidden' }}>
+                            {item.product_img_url ? (
+                              <Image source={{ uri: item.product_img_url }} style={{ aspectRatio: 0.7, width: '100%' }} resizeMode="cover" />
+                            ) : (
+                              <View style={{ aspectRatio: 0.7, width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f3ff' }}>
+                                <Text>No image</Text>
+                              </View>
+                            )}
+                            <View style={{ padding: 8 }}>
+                              <Text style={{ fontWeight: '700', fontSize: 14 }}>{item.name || 'Unnamed'}</Text>
+                              <Text style={{ fontSize: 12, color: '#6B7280' }}>{item.brand}</Text>
+                              <Text style={{ fontSize: 12, color: '#6B7280' }}>{item.category}</Text>
+                            </View>
+                          </View>
+                        )}
+                      />
+                    )}
+                  </View>
+                )}
               </>
             )
           }
@@ -364,39 +509,63 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     marginTop: 16,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 100,
-    padding: 4,
-    marginHorizontal: 16,
+  categoryHeaderContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+    marginBottom: 8,
   },
-  tabButton: {
-    flex: 1,
+  categoryContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  categoryButton: {
+    marginHorizontal: 12,
+    paddingBottom: 6,
+    position: 'relative',
+  },
+  categoryText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#9CA3AF',
+  },
+  activeCategoryText: {
+    color: theme.colors.primary.purple as string,
+    fontWeight: '600',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  gradientIndicator: {
+    width: '100%',
+    height: '100%',
+  },
+  previewModeContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',             // inline-flex
-    paddingHorizontal: 12,            // px-3
-    paddingVertical: 6,               // py-1.5
-    borderRadius: 12,                 // rounded-xl
-    backgroundColor: 'transparent',
-    transitionDuration: '200ms',
+    position: 'relative',
+    marginBottom: 8,
   },
-  activeTab: {
-    backgroundColor: '#f5f3ff',       // bg-purple-50
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
+  previewModeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary.purple as string,
+    paddingBottom: 6,
   },
-  tabText: {
-    fontFamily: 'default-medium',
-    fontSize: responsiveFontSize(14),                     // text-sm
-    fontWeight: '500',               // font-medium
-  },
-  activeTabText: {
-    color: '#6b21a8',
-    fontFamily: 'default-semibold',
+  previewModeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 50,
+    right: 50,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
   },
   emptyStateContainer: {
     alignItems: 'center',

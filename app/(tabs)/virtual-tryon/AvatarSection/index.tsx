@@ -20,6 +20,7 @@ import { Image } from 'expo-image';
 import { redirectToSignIn, redirectToSignUp, withAuthScreenHistory } from "../utils";
 import { useScreenHistoryContext } from "@/common/providers/screen-history";
 import AvatarStatusPill from "../AvatarStatusPill";
+import theme from '@/styles/theme';
 
 // Get screen dimensions
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -150,19 +151,26 @@ const AvatarSection = ({
           <TouchableOpacity
             style={styles.fullscreenButton}
             onPress={() => setIsFullscreen(true)}
+            activeOpacity={0.8}
           >
-            <Maximize2 color="#000" size={18} />
+            <Maximize2 color={theme.colors.primary.purple as string} size={20} />
           </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleModelChange}
-              style={styles.avatarButton}
+          <TouchableOpacity
+            onPress={handleModelChange}
+            style={styles.avatarButton}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[theme.colors.primary.purple as string, '#ec4899']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientAvatarButton}
             >
-              <View style={styles.userIconContainer}>
-                <UserRound size={14} color="#333" />
-              </View>
-              <RefreshCw size={14} color="#555" />
-            </TouchableOpacity>
+              <UserRound size={16} color="#fff" style={{marginRight: 6}} />
+              <RefreshCw size={14} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
 
         {isLoadingPrefAvatar && isSignedIn ? (
@@ -181,14 +189,17 @@ const AvatarSection = ({
                   source={{ uri: tryonImages.output_images[0] }}
                   id="virtual-tryon-content-mobile"
                   contentFit="contain"
-
-                  {
-                  ...(isSignedIn ? {
+                  {...(isSignedIn ? {
                     contentPosition: 'bottom center'
                   } : {
                     contentPosition: "top"
-                  })
-                  }
+                  })}
+                />
+                
+                {/* Add subtle vignette overlay for depth */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.1)']}
+                  style={styles.vignetteOverlay}
                 />
               </View>
             ) : (
@@ -202,13 +213,17 @@ const AvatarSection = ({
                   source={{ uri: selectedAvatar.src }}
                   id="virtual-avatar-content-mobile"
                   contentFit="cover"
-                  {
-                  ...(isSignedIn ? {
+                  {...(isSignedIn ? {
                     contentPosition: 'bottom center'
                   } : {
                     contentPosition: "top center",
-                  })
-                  }
+                  })}
+                />
+                
+                {/* Add subtle vignette overlay for depth */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.1)']}
+                  style={styles.vignetteOverlay}
                 />
               </View>
             )}
@@ -217,7 +232,7 @@ const AvatarSection = ({
 
         {!isSignedIn && !tryonImages && (
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.8)']}
+            colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.9)']}
             style={styles.gradientOverlay}
           >
             <View style={styles.authContentContainer}>
@@ -225,21 +240,27 @@ const AvatarSection = ({
                 <Lock size={24} color="#fff" />
               </View>
               <Text style={styles.unlockTitle}>Unlock All Features</Text>
-              <Text
-                className="text-xs text-gray-200"
-                style={styles.unlockSubtitle}>
+              <Text style={styles.unlockSubtitle}>
                 Create an account to customize your avatar and try on your own outfits
               </Text>
+              
               <TouchableOpacity
                 style={styles.signUpButton}
                 onPress={() => redirectToSignUp(addScreenToHistory)}
+                activeOpacity={0.9}
               >
-                <Text style={styles.signUpButtonText}>Sign Up Free</Text>
+                <LinearGradient
+                  colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.signUpGradient}
+                >
+                  <Text style={styles.signUpButtonText}>Sign Up Free</Text>
+                </LinearGradient>
               </TouchableOpacity>
 
               <Text
                 onPress={() => redirectToSignIn(addScreenToHistory)}
-                className="text-xs text-white hover:text-gray-200 underline underline-offset-4"
                 style={styles.signInText}>Already have an account? Sign in</Text>
             </View>
           </LinearGradient>
@@ -247,29 +268,32 @@ const AvatarSection = ({
 
         {isAvatarLoading && (
           <View style={styles.loadingOverlay}>
-            <View style={styles.loadingContent}>
-              <View className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white" />
-              <MotiText
-                key={loadingMessageIndex}
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                style={styles.loadingTitle}
-                className="text-white mt-3 text-center font-medium"
-              >
-                {loadingMessages[loadingMessageIndex].title}
-              </MotiText>
-              <MotiText
-                key={`sub-${loadingMessageIndex}`}
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                style={styles.loadingSubtitle}
-                className="text-center"
-              >
-                {loadingMessages[loadingMessageIndex].subtitle}
-              </MotiText>
-            </View>
+            <LinearGradient
+              colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.8)']}
+              style={styles.loadingGradient}
+            >
+              <View style={styles.loadingContent}>
+                <View style={styles.loadingSpinnerActive} />
+                <MotiText
+                  key={loadingMessageIndex}
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  style={styles.loadingTitle}
+                >
+                  {loadingMessages[loadingMessageIndex].title}
+                </MotiText>
+                <MotiText
+                  key={`sub-${loadingMessageIndex}`}
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  style={styles.loadingSubtitle}
+                >
+                  {loadingMessages[loadingMessageIndex].subtitle}
+                </MotiText>
+              </View>
+            </LinearGradient>
           </View>
         )}
 
@@ -279,30 +303,40 @@ const AvatarSection = ({
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={onSaveOutfit}
+                activeOpacity={0.8}
               >
-                <BookmarkPlus size={16} color="#333" />
-                <Text style={styles.buttonText}>Save this outfit</Text>
+                <LinearGradient
+                  colors={[theme.colors.primary.purple as string, '#ec4899']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionButtonGradient}
+                >
+                  <BookmarkPlus size={16} color="#fff" style={{marginRight: 6}} />
+                  <Text style={styles.buttonText}>Save this outfit</Text>
+                </LinearGradient>
               </TouchableOpacity>
             )}
+            
             <TouchableOpacity
-              style={styles.actionButton}
+              style={styles.resetButton}
               onPress={handleResetAvatar}
+              activeOpacity={0.8}
             >
-              <RotateCw size={16} color="#333" />
-              <Text style={styles.buttonText}>Reset</Text>
+              <RotateCw size={16} color={theme.colors.primary.purple as string} style={{marginRight: 6}} />
+              <Text style={styles.resetButtonText}>Reset</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {!tryonImages && isSignedIn && !isAvatarLoading && (
-            <View style={styles.statusPillPositionContainer}>
-                <AvatarStatusPill 
-                    avatarStatus={avatarStatus}
-                    avatarCreationProgress={avatarCreationProgress}
-                    onShowMyAvatars={onShowMyAvatars}
-                    onRecreateAvatar={onRecreateAvatar}
-                />
-            </View>
+          <View style={styles.statusPillPositionContainer}>
+            <AvatarStatusPill 
+              avatarStatus={avatarStatus}
+              avatarCreationProgress={avatarCreationProgress}
+              onShowMyAvatars={onShowMyAvatars}
+              onRecreateAvatar={onRecreateAvatar}
+            />
+          </View>
         )}
       </View>
 
@@ -377,6 +411,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   topControls: {
     flexDirection: 'row',
@@ -384,41 +423,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     zIndex: 20,
     position: 'absolute',
-    top: 10,
+    top: 16,
     left: 0,
     right: 0,
   },
   fullscreenButton: {
-    width: 45,
-    height: 45,
+    width: 44,
+    height: 44,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarButton: {
+    overflow: 'hidden',
+    borderRadius: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  gradientAvatarButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(243, 243, 243, 0.9)',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  userIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   imageContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f9f9f9',
     overflow: 'hidden',
     borderRadius: responsiveFontSize(24),
+    position: 'relative',
   },
   avatarImage: {
     width: '100%',
@@ -429,6 +472,14 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: 'cover',
     alignSelf: 'center',
+  },
+  vignetteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: responsiveFontSize(24),
   },
   gradientOverlay: {
     position: 'absolute',
@@ -444,8 +495,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    bottom: 0,
+    bottom: 40,
     zIndex: 2,
+  },
+  lockIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  unlockTitle: {
+    fontSize: responsiveFontSize(20),
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  unlockSubtitle: {
+    fontSize: responsiveFontSize(14),
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  signUpButton: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  signUpGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signUpButtonText: {
+    color: '#fff',
+    fontSize: responsiveFontSize(16),
+    fontWeight: '600',
+  },
+  signInText: {
+    fontSize: responsiveFontSize(14),
+    color: '#fff',
+    textDecorationLine: 'underline',
   },
   loadingContainer: {
     position: 'absolute',
@@ -468,12 +561,21 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: theme.colors.primary.purple,
+    borderTopColor: 'transparent',
+  },
+  loadingSpinnerActive: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: '#fff',
     borderTopColor: 'transparent',
   },
   loadingText: {
     fontSize: responsiveFontSize(14),
     color: '#6b7280',
+    marginTop: 12,
   },
   loadingOverlay: {
     position: 'absolute',
@@ -481,92 +583,72 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  loadingGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingTitle: {
     color: 'white',
-    fontSize: responsiveFontSize(16),
-    fontWeight: '500',
-    marginTop: 12,
+    fontSize: responsiveFontSize(18),
+    fontWeight: '600',
+    marginTop: 16,
   },
   loadingSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(14),
+    textAlign: 'center',
+    marginTop: 6,
   },
   buttonContainer: {
     position: 'absolute',
-    bottom: 10,
-    flexDirection: 'row',
-    gap: 8,
-    zIndex: 10,
-    justifyContent: 'center',
-    width: '100%',
-    alignSelf: 'center',
+    bottom: 24,
+    left: 16,
+    right: 16,
+    flexDirection: 'column',
+    gap: 10,
   },
   actionButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 50,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    justifyContent: 'center',
+    paddingVertical: 12,
   },
-  buttonText: {
-    fontSize: responsiveFontSize(14),
-    color: '#333',
-    fontWeight: '500',
-  },
-  lockIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  resetButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-  },
-  unlockTitle: {
-    color: 'white',
-    fontSize: responsiveFontSize(18.72),
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  unlockSubtitle: {
-    color: 'white',
-    fontSize: responsiveFontSize(12),
-    textAlign: 'center',
-    lineHeight: responsiveFontSize(16),
-  },
-  signUpButton: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 50,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
-    height: 40,
-    marginTop: responsiveFontSize(16),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
-  signUpButtonText: {
-    color: '#000',
+  buttonText: {
+    color: '#fff',
     fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
-  signInText: {
-    color: 'white',
-    fontSize: responsiveFontSize(12),
-    textDecorationLine: 'underline',
+  resetButtonText: {
+    color: theme.colors.primary.purple as string,
+    fontSize: responsiveFontSize(14),
+    fontWeight: '600',
+  },
+  statusPillPositionContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
   },
   modalOverlay: {
     flex: 1,
@@ -646,14 +728,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     marginBottom: 16,
-  },
-  statusPillPositionContainer: {
-    position: 'absolute',
-    bottom: 20, 
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
   },
 });
 
