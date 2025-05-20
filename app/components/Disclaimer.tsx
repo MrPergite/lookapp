@@ -14,10 +14,8 @@ const Disclaimer: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
   text: {
     fontSize: 14,

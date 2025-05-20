@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode, Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { TaggedProductGroup } from './types';
 // Define types for chat messages
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'ai';
@@ -11,6 +12,7 @@ export interface ChatMessage {
     fetchingMedia: boolean;
   };
   messageType?: 'text' | 'image' | 'social';
+  categories?: string[] | null;
 }
 
 // Define types for product search results
@@ -27,7 +29,7 @@ export interface Product {
 
 export interface ConversationGroup {
   id: string;
-  userMessage: ChatMessage|null;
+  userMessage: ChatMessage | null;
   aiMessage: ChatMessage[];
   products: Product[];
   expanded: boolean;
@@ -36,6 +38,9 @@ export interface ConversationGroup {
     limit: number;
   };
   uiProductsList: Product[];
+  productsByCategory: {
+    [key: string]: Product[];
+  } | null;
 }
 // Context state type
 export interface ChatProductsState {
@@ -55,7 +60,7 @@ export interface ChatProductsState {
 // Action types
 type ActionType =
   | { type: 'ADD_USER_MESSAGE'; payload: { text: string; image?: string; messageType?: 'text' | 'image' | 'social' } }
-  | { type: 'ADD_AI_MESSAGE'; payload: { text: string } }
+  | { type: 'ADD_AI_MESSAGE'; payload: { text: string; messageType?: 'text' | 'image' | 'social'; categories?: TaggedProductGroup[] } }
   | { type: 'SET_PRODUCTS'; payload: { products: Product[]; sessionId: string } }
   | { type: 'ADD_PRODUCTS'; payload: { products: Product[]; sessionId: string; aiResponse: string } }
   | { type: 'SET_LOADING'; payload: { isLoading: boolean } }
@@ -69,7 +74,9 @@ type ActionType =
   | { type: 'REMOVE_USER_MESSAGE'; }
   | { type: 'REMOVE_AI_MESSAGE' }
   | { type: 'GET_MORE_PRODUCTS'; payload: { conversationId: string } }
-  | { type: 'SET_SOCIAL_IMAGES'; payload: { images: { img_url: string }[]; fetchingMedia: boolean } };
+  | { type: 'SET_SOCIAL_IMAGES'; payload: { images: { img_url: string }[]; fetchingMedia: boolean } }
+  | { type: 'SET_PRODUCTS_BY_CATEGORY'; payload: { productsByCategory: TaggedProductGroup[] } }
+  | { type: 'LOAD_PRODUCTS_BY_CATEGORY'; payload: { conversationId: string; category: string } };
 
 // Context type
 interface ChatProductsContextType extends ChatProductsState {
@@ -109,7 +116,8 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
             products: [],
             expanded: false,
             pagination: { page: 1, limit: 4 },
-            uiProductsList: []
+            uiProductsList: [],
+            productsByCategory: null
           }
         ],
         activeConversationGroup: newId
@@ -127,15 +135,20 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
     //   ]
     // };
 
-    case 'ADD_AI_MESSAGE':
+    case 'ADD_AI_MESSAGE': {
+      let categories = null;
+      if (action.payload.categories) {
+        categories = action.payload.categories.map(category => category.tags);
+      }
       return {
         ...state,
         conversationGroups: state.conversationGroups.map(group =>
           group.id === state.activeConversationGroup
-            ? { ...group, aiMessage: [...group.aiMessage || [], { role: 'ai', text: action.payload.text, timestamp: Date.now(), messageType: action.payload.messageType }] }
+            ? { ...group, aiMessage: [...group.aiMessage || [], { role: 'ai', text: action.payload.text, timestamp: Date.now(), messageType: action.payload.messageType, categories: categories }] }
             : group
         )
       };
+    }
 
     case 'SET_PRODUCTS':
       return {
@@ -187,6 +200,54 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
         )
       }
 
+    case 'SET_PRODUCTS_BY_CATEGORY':
+      const allProducts = action.payload.productsByCategory.flatMap(product => product.products);
+      const allProductsByCategory = allProducts.map(product => ({
+        id: product.id,
+        brand: product.brand,
+        name: product.title,
+        price: product.price,
+        image: product.img_url,
+        product_info: product,
+        url: product.product_link
+      }));
+
+      const productsByCategory = action.payload.productsByCategory.reduce((acc, product) => {
+        acc[product.tags] = product.products.map(product => ({
+          id: product.id,
+          brand: product.brand,
+          name: product.title,
+          price: product.price,
+          image: product.img_url,
+          product_info: product,
+          url: product.product_link
+        }));
+        return acc;
+      }, {} as { [key: string]: Product[] });
+      return {
+        ...state,
+        conversationGroups: state.conversationGroups.map(group =>
+          group.id === state.activeConversationGroup
+            ? {
+              ...group, productsByCategory: productsByCategory,
+              products: allProductsByCategory,
+            }
+            : group
+        )
+      }
+    case 'LOAD_PRODUCTS_BY_CATEGORY':
+      const currentGroup = state.conversationGroups.find(group => group.id === action.payload.conversationId);
+      if (!currentGroup || !currentGroup.productsByCategory) return state;
+      const productFromCategory = currentGroup?.productsByCategory?.[action.payload.category] as Product[];
+      const initialProductsByCategory = productFromCategory?.slice(0, 4);
+      return {
+        ...state,
+        conversationGroups: state.conversationGroups.map(group =>
+          group.id === action.payload.conversationId
+            ? { ...group, uiProductsList: initialProductsByCategory, products: productFromCategory }
+            : group
+        )
+      }
     case 'SET_LOADING':
       return {
         ...state,
@@ -302,9 +363,9 @@ export const chatActions = {
     payload: { conversationId }
   }),
 
-  addAiMessage: (text: string, messageType?: 'text' | 'image' | 'social') => ({
+  addAiMessage: (text: string, messageType?: 'text' | 'image' | 'social', categories?: TaggedProductGroup[]) => ({
     type: 'ADD_AI_MESSAGE' as const,
-    payload: { text, messageType }
+    payload: { text, messageType, categories }
   }),
 
   removeUserMessage: () => ({
@@ -318,6 +379,21 @@ export const chatActions = {
   setProducts: (products: Product[], sessionId: string) => ({
     type: 'SET_PRODUCTS' as const,
     payload: { products, sessionId }
+  }),
+
+  setProductsByCategory: (productsByCategory: TaggedProductGroup[]) => ({
+    type: 'SET_PRODUCTS_BY_CATEGORY' as const,
+    payload: { productsByCategory }
+  }),
+
+  loadProductsByCategory: (conversationId: string, category: string) => ({
+    type: 'LOAD_PRODUCTS_BY_CATEGORY' as const,
+    payload: { conversationId, category }
+  }),
+
+  addAiCategories: (categories: string[]) => ({
+    type: 'ADD_AI_CATEGORIES' as const,
+    payload: { categories }
   }),
 
   addProducts: (products: Product[], sessionId: string, aiResponse: string) => ({

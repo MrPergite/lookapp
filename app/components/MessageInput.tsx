@@ -67,12 +67,12 @@ export const MessageSendButton = ({ searchText = '', disabled, onSend, onImageSe
         <Camera size={20} color="#9ca3af" />
       </TouchableOpacity>
 
-      <TouchableOpacity
+      {onSocialSelect && <TouchableOpacity
         style={styles.iconButton}
         onPress={onSocialSelect}
       >
         <Instagram size={20} color="#9ca3af" />
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       <SendBtn source={source} />
     </View>
@@ -137,7 +137,6 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 24,
-    paddingVertical: 12,
     backgroundColor: 'transparent',
 
   },

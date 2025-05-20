@@ -15,7 +15,7 @@ export default function DiscoveryList({
 }) {
     console.log("discoveryOutfits",discoveryOutfits)
     return (
-        <View style={{ flex: 1 }}>
+        <View>
             <DiscoveryHeader darkMode={false} discoveryOutfit={discoveryOutfits} />
 
         <FlatList
