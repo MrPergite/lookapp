@@ -13,6 +13,7 @@ import Constants from 'expo-constants';
 import { ImageProvider } from "@/common/providers/image-search";
 import { ScreenHistoryProvider } from "@/common/providers/screen-history";
 import { UserDetailsProvider } from "@/common/providers/user-details";
+import LinearGradient from "react-native-linear-gradient";
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -101,6 +102,47 @@ const toastConfig: ToastConfig = {
       </TouchableOpacity>
     </View>
   ),
+  itemRemoved: ({ text1, props, ...rest }) => {
+    const onUndo = props?.onUndo || (() => {});
+    const removedItem = props?.itemName || '';
+    
+    return (
+      <View style={styles.slideToastContainer}>
+        <LinearGradient
+          colors={['#f5f5f5', '#ffffff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.slideToastContent}
+        >
+          <View style={styles.toastInfoContainer}>
+            <View style={styles.removeIconContainer}>
+              <X size={10} color="#FFFFFF" />
+            </View>
+            <Text style={styles.slideToastText}>{text1}</Text>
+            {removedItem ? <Text style={styles.itemNameText} numberOfLines={1}>{removedItem}</Text> : null}
+          </View>
+          
+          <View style={styles.toastActionContainer}>
+            <TouchableOpacity 
+              style={styles.undoButton} 
+              onPress={onUndo}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.undoButtonText}>UNDO</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.slideCloseButton}
+              onPress={() => Toast.hide()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <X size={14} color="#6C6C6C" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  },
 };
 
 
@@ -118,8 +160,10 @@ export default function RootLayout() {
               </ScreenHistoryProvider>
             </ImageProvider>
           <Toast
-            position='bottom'
-            bottomOffset={65}
+            position='top'
+            topOffset={50}
+            visibilityTime={4000}
+            autoHide={true}
             config={toastConfig}
           />
         </ThemeProvider>
@@ -206,5 +250,70 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     textAlign: 'center',
     height: "100%",
-  }
+  },
+  // New Slide Toast Styles
+  slideToastContainer: {
+    width: '90%', 
+    maxWidth: 400,
+    borderRadius: 8,
+    marginHorizontal: '5%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  slideToastContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    borderRadius: 8,
+  },
+  removeIconContainer: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#888888',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  slideToastText: {
+    color: '#333333',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  itemNameText: {
+    color: '#666666',
+    fontSize: 12,
+    fontWeight: '400',
+    marginLeft: 26,
+    marginTop: 2,
+    maxWidth: 180,
+  },
+  toastActionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  undoButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4, 
+    marginRight: 8,
+  },
+  undoButtonText: {
+    color: theme.colors.primary.purple,
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  slideCloseButton: {
+    padding: 2,
+  },
+  toastInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 });

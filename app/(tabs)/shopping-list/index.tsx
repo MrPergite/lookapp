@@ -12,6 +12,7 @@ import { MotiPressable, MotiView } from 'moti';
 import GradientText from '@/components/GradientText';
 import theme from '@/styles/theme';
 import { AnimatePresence } from 'moti';
+import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -33,6 +34,21 @@ interface Product {
   color?: string;
 }
 
+// Define category and sort filters
+const CATEGORY_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'clothing', label: 'Clothing' },
+  { key: 'accessories', label: 'Accessories' },
+  { key: 'footwear', label: 'Footwear' },
+  { key: 'beauty', label: 'Beauty' }
+];
+
+const SORT_FILTERS = [
+  { key: 'recent', label: 'Recently Added' },
+  { key: 'price_low', label: 'Price: Low-High' },
+  { key: 'price_high', label: 'Price: High-Low' }
+];
+
 export default function ShoppingList() {
   const { isSignedIn } = useAuth();
   const { items, removeItem, isLoading, error, isLoadingShoppingList } = useShoppingList(isSignedIn);
@@ -40,11 +56,135 @@ export default function ShoppingList() {
   const [activeTab, setActiveTab] = useState('shopping-list');
   const [isGoToChatPressed, setIsGoToChatPressed] = useState(false);
   const [expandedItem, setExpandedItem] = useState<Product | null>(null);
+  
+  // Add category and sort state
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeSort, setActiveSort] = useState('recent');
+  
+  // Refs for scroll behavior
+  const categoryScrollRef = useRef<ScrollView>(null);
+  const sortScrollRef = useRef<ScrollView>(null);
+
+  // Handlers for category and sort changes with haptic feedback
+  const handleCategoryChange = useCallback((category: string) => {
+    if (category === activeCategory) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveCategory(category);
+  }, [activeCategory]);
+
+  const handleSortChange = useCallback((sort: string) => {
+    if (sort === activeSort) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveSort(sort);
+  }, [activeSort]);
+
+  // Scroll behavior for categories
+  useEffect(() => {
+    try {
+      const timer = setTimeout(() => {
+        if (categoryScrollRef.current) {
+          const index = CATEGORY_FILTERS.findIndex(f => f.key === activeCategory);
+          if (index >= 0) {
+            categoryScrollRef.current.scrollTo({
+              x: Math.max(0, index * 90),
+              animated: true
+            });
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.log('Scroll error:', error);
+    }
+  }, [activeCategory]);
+
+  // Scroll behavior for sort options
+  useEffect(() => {
+    try {
+      const timer = setTimeout(() => {
+        if (sortScrollRef.current) {
+          const index = SORT_FILTERS.findIndex(f => f.key === activeSort);
+          if (index >= 0) {
+            sortScrollRef.current.scrollTo({
+              x: Math.max(0, index * 90),
+              animated: true
+            });
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } catch (error) {
+      console.log('Scroll error:', error);
+    }
+  }, [activeSort]);
+
+  // Filter items based on activeCategory
+  const filteredItems = useMemo(() => {
+    if (activeCategory === 'all') return items;
+    
+    return items.filter(item => {
+      // Match by category if it exists
+      if (item.category) {
+        const lowerCategory = item.category.toLowerCase();
+        switch (activeCategory) {
+          case 'clothing':
+            return lowerCategory.includes('clothing') || 
+                   lowerCategory.includes('top') || 
+                   lowerCategory.includes('bottom') ||
+                   lowerCategory.includes('shirt') ||
+                   lowerCategory.includes('dress');
+          case 'accessories':
+            return lowerCategory.includes('accessory') || 
+                   lowerCategory.includes('accessories') ||
+                   lowerCategory.includes('jewelry') ||
+                   lowerCategory.includes('bag') ||
+                   lowerCategory.includes('hat');
+          case 'footwear':
+            return lowerCategory.includes('footwear') || 
+                   lowerCategory.includes('shoe') ||
+                   lowerCategory.includes('boot') ||
+                   lowerCategory.includes('sneaker');
+          case 'beauty':
+            return lowerCategory.includes('beauty') || 
+                   lowerCategory.includes('makeup') ||
+                   lowerCategory.includes('cosmetic') ||
+                   lowerCategory.includes('skincare');
+          default:
+            return false;
+        }
+      }
+      return false;
+    });
+  }, [items, activeCategory]);
+
+  // Sort the filtered items based on activeSort
+  const sortedItems = useMemo(() => {
+    let sorted = [...filteredItems];
+    
+    switch (activeSort) {
+      case 'price_low':
+        return sorted.sort((a, b) => {
+          const priceA = a.product_price ? parseFloat(a.product_price.replace(/[^0-9.]/g, "")) : 0;
+          const priceB = b.product_price ? parseFloat(b.product_price.replace(/[^0-9.]/g, "")) : 0;
+          return priceA - priceB;
+        });
+      case 'price_high':
+        return sorted.sort((a, b) => {
+          const priceA = a.product_price ? parseFloat(a.product_price.replace(/[^0-9.]/g, "")) : 0;
+          const priceB = b.product_price ? parseFloat(b.product_price.replace(/[^0-9.]/g, "")) : 0;
+          return priceB - priceA;
+        });
+      case 'recent':
+      default:
+        // Assuming items are already in recently added order from the API
+        return sorted;
+    }
+  }, [filteredItems, activeSort]);
 
   const LoadingState = () => (
     <View style={styles.loadingCenter}>
       <ActivityIndicator size="large" color={theme.colors.primary.purple} />
-    </View>
+        </View>
   );
 
   if (error) {
@@ -144,13 +284,20 @@ export default function ShoppingList() {
           {/* Delete button */}
           <TouchableOpacity
             style={styles.deleteButton}
-            onPress={() => removeItem(item.id, item?.product_link || '')}
+            onPress={() => removeItem(item.id, item?.product_link || '', item.title)}
             disabled={isLoadingShoppingList.removeShoppingListLoading}
           >
             {isLoadingShoppingList.removeShoppingListLoading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Trash size={16} color="#fff" />
+              <LinearGradient
+                colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.deleteButtonGradient}
+              >
+                <Trash size={16} color="#fff" />
+              </LinearGradient>
             )}
           </TouchableOpacity>
         </LinearGradient>
@@ -254,8 +401,8 @@ export default function ShoppingList() {
                               index === currentImageIndex && styles.activeDot
                             ]} 
                           />
-                        ))}
-                      </View>
+        ))}
+      </View>
                       
                       <TouchableOpacity 
                         style={styles.imageNavButton}
@@ -376,8 +523,90 @@ export default function ShoppingList() {
         items.length === 0 && !isLoadingShoppingList.shoppingListLoading ? <EmptyState /> :
         isLoadingShoppingList.shoppingListLoading ? <LoadingState /> : (
           <View style={{ flex: 1 }}>
+            {/* Category row */}
+            <View style={styles.categoryHeaderContainer}>
+              <ScrollView 
+                ref={categoryScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryContainer}
+              >
+                {CATEGORY_FILTERS.map((category) => {
+                  const isActive = activeCategory === category.key;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={category.key}
+                      activeOpacity={0.7}
+                      onPress={() => handleCategoryChange(category.key)}
+                      style={styles.categoryButton}
+                    >
+                      <Text style={[
+                        styles.categoryText,
+                        isActive && styles.activeCategoryText,
+                      ]}>
+                        {category.label}
+                      </Text>
+                      
+                      {isActive && (
+                        <View style={styles.activeIndicator}>
+                          <LinearGradient
+                            colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.gradientIndicator}
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+            
+            {/* Sort row */}
+            <View style={styles.sortHeaderContainer}>
+              <ScrollView 
+                ref={sortScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sortContainer}
+              >
+                {SORT_FILTERS.map((sort) => {
+                  const isActive = activeSort === sort.key;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={sort.key}
+                      activeOpacity={0.7}
+                      onPress={() => handleSortChange(sort.key)}
+                      style={styles.sortButton}
+                    >
+                      <Text style={[
+                        styles.sortText,
+                        isActive && styles.activeSortText,
+                      ]}>
+                        {sort.label}
+                      </Text>
+                      
+                      {isActive && (
+                        <View style={styles.activeIndicator}>
+                          <LinearGradient
+                            colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.gradientIndicator}
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+          </ScrollView>
+            </View>
+
             <FlatList
-              data={items}
+              data={sortedItems}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}
               numColumns={2}
@@ -488,7 +717,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 71, 71, 0.8)',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonGradient: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -708,5 +943,68 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  // Category row styles
+  categoryHeaderContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+  },
+  categoryContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  categoryButton: {
+    marginHorizontal: 12,
+    paddingBottom: 6,
+    position: 'relative',
+  },
+  categoryText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#9CA3AF',
+  },
+  activeCategoryText: {
+    color: theme.colors.primary.purple as string,
+    fontWeight: '600',
+  },
+  
+  // Sort row styles
+  sortHeaderContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+    backgroundColor: '#FAFAFA',
+  },
+  sortContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  sortButton: {
+    marginHorizontal: 12,
+    paddingBottom: 6,
+    position: 'relative',
+  },
+  sortText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9CA3AF',
+  },
+  activeSortText: {
+    color: theme.colors.primary.purple as string,
+    fontWeight: '600',
+  },
+  
+  // Common indicator styles
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+  },
+  gradientIndicator: {
+    width: '100%',
+    height: '100%',
   },
 });

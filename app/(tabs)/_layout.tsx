@@ -27,6 +27,7 @@ import { Archive, Camera, MessageCircle, ShoppingCart, UserCircle } from "lucide
 import VirtualTryOn from "./virtual-tryon";
 import ShoppingList from "./shopping-list";
 import DigitalWardrobe from "./digital-wardrobe";
+import CustomTabBar from "@/components/ui/CustomTabBar";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -71,19 +72,8 @@ export default function RootLayout() {
     return (
         <>
             <Tab.Navigator
+                tabBar={props => <CustomTabBar {...props} />}
                 screenOptions={({ route, navigation }: { route: RouteProp<TabParamList, keyof TabParamList>; navigation: ScreenOptionsNavigationProp }) => ({
-                    tabBarIcon: ({ color, size }) => {
-                        const iconMap = {
-                            chat: <MessageCircle size={size} color={color} />,
-                            "virtual-tryon": <Camera size={size} color={color} />,
-                             profile: <UserCircle size={size} color={color} />,
-                            "shopping-list": <ShoppingCart size={size} color={color} />,
-                            "digital-wardrobe": <Archive size={size} color={color} />,
-                        } as const;
-                        const iconName = route.name as keyof typeof iconMap; // Type assertion
-                        const icon = iconMap[iconName];
-                        return icon;
-                    },
                     tabBarActiveTintColor: theme.colors.primary.purple,
                     tabBarInactiveTintColor: "gray",
                     headerShown: false,
@@ -115,7 +105,7 @@ export default function RootLayout() {
                         }
                         return {
                             title: "Try-On",
-                           
+                            headerShown: false
                         };
                     }}
                 />
@@ -124,7 +114,7 @@ export default function RootLayout() {
                     component={DigitalWardrobe}
                     options={{
                         title: "Digital Wardrobe",
-                       
+                        headerShown: false
                     }}
                 />
                 <Tab.Screen
@@ -132,7 +122,7 @@ export default function RootLayout() {
                     component={ShoppingList}
                     options={{
                         title: "Shopping List",
-                       
+                        headerShown: false
                     }}
                 />
             

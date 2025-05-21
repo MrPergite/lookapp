@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Text, View, SafeAreaView, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { Text, View, SafeAreaView, StyleSheet, TouchableOpacity, Dimensions, Switch, ScrollView } from 'react-native';
 import SimpleHeader from './SimpleHeader';
 import { responsiveFontSize } from '@/utils';
 import { AnimatePresence, MotiView } from 'moti';
@@ -21,6 +21,7 @@ import { Image } from 'expo-image';
 import { AvatarStatus } from './AvatarStatusPill';
 import CustomAvatarSelectionModal from './CustomAvatarSelectionModal';
 import RecreateAvatarModal from './RecreateAvatarModal';
+import CherModeScreen from './CherModeScreen';
 
 function VirtualTryOn({ route }: { route: any }) {
     const { avatar } = useImageContext() as ImageContextType;
@@ -69,6 +70,7 @@ function VirtualTryOn({ route }: { route: any }) {
     const [showCustomAvatarModal, setShowCustomAvatarModal] = useState(false);
     const [isSettingPrefAvatarFromModal, setIsSettingPrefAvatarFromModal] = useState(false);
     const [showRecreateAvatarModal, setShowRecreateAvatarModal] = useState(false);
+    const [isCherMode, setIsCherMode] = useState(false);
 
     // Refs to prevent concurrent API calls
     const hasFetchedCredits = useRef(false);
@@ -438,7 +440,7 @@ function VirtualTryOn({ route }: { route: any }) {
 
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
-        if (tab === 'my-outfits') {
+        if (tab === 'my-outfits' || tab === 'my-wardrobe') {
             setIsExpanded(true);
         } else {
             setIsExpanded(false);
@@ -509,9 +511,41 @@ function VirtualTryOn({ route }: { route: any }) {
     };
 
     return (
-        <SafeAreaView style={styles.areaContainer} className='w-full bg-white'>
+        <View style={[styles.areaContainer, {backgroundColor: 'white', flex: 1}]}>
+            {isCherMode ? (
+                // Render Cher Mode as a full screen
+                <CherModeScreen onToggleMode={() => setIsCherMode(false)} />
+            ) : (
+                // Normal UI
             <View style={styles.container} className='flex flex-col h-full'>
-                <SimpleHeader credits={credits} title="Virtual Try-On" subtitle="Beta" />
+                    <View style={{ position: 'relative', paddingTop: 50 }}>
+                        <View style={styles.cherModeToggleContainer}>
+                            <MotiView
+                                animate={{
+                                    translateX: isCherMode ? 10 : 0,
+                                    scale: isCherMode ? 1.05 : 1,
+                                }}
+                                transition={{
+                                    type: 'spring',
+                                    damping: 15,
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() => setIsCherMode(true)}
+                                    style={styles.cherModeButton}
+                                >
+                                    <Text style={styles.cherModeText}>Cher Mode</Text>
+                                    <Switch
+                                        value={isCherMode}
+                                        onValueChange={() => setIsCherMode(true)}
+                                        trackColor={{ false: '#d3d3d3', true: '#ffb6c1' }}
+                                        thumbColor={isCherMode ? '#ff69b4' : '#f4f3f4'}
+                                    />
+                                </TouchableOpacity>
+                            </MotiView>
+                        </View>
+                    </View>
+                    
                 <View className="flex-1 flex flex-col">
                     <View style={styles.imageContainer}>
                         <MotiView
@@ -592,7 +626,7 @@ function VirtualTryOn({ route }: { route: any }) {
                     setOutfitName={setOutfitName}
                     outfitName={outfitName}
                 />
-                {/* Save Outfit Dialog and Avatar Selector Dialog would be implemented similarly */}
+                    
                 <AnimatePresence>
                     {isFullscreen && (
                         <MotiView
@@ -625,7 +659,6 @@ function VirtualTryOn({ route }: { route: any }) {
                 </AnimatePresence>
 
                 {/* Render the CustomAvatarSelectionModal */}
-                {isSignedIn && (
                     <CustomAvatarSelectionModal
                         visible={showCustomAvatarModal}
                         onClose={() => setShowCustomAvatarModal(false)}
@@ -634,7 +667,6 @@ function VirtualTryOn({ route }: { route: any }) {
                         onSelectAvatar={handleSetPreferredAvatarFromModal}
                         isSubmittingPreference={isSettingPrefAvatarFromModal}
                     />
-                )}
 
                 {/* Render the RecreateAvatarModal */}
                 <RecreateAvatarModal 
@@ -643,8 +675,8 @@ function VirtualTryOn({ route }: { route: any }) {
                     onRecreationSuccess={handleRecreationSuccess}
                 />
             </View>
-
-        </SafeAreaView>
+            )}
+        </View>
     )
 }
 
@@ -739,7 +771,24 @@ const styles = StyleSheet.create({
     fullscreenImageContainer: {
         // width: Dimensions.get("window").width - 50,
         // height: Dimensions.get("window").height - 200,
-    }
+    },
+    cherModeToggleContainer: {
+        position: 'absolute',
+        top: 45,
+        right: 16,
+        zIndex: 10,
+        alignItems: 'flex-end',
+    },
+    cherModeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    cherModeText: {
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 2,
+        fontSize: 13,
+    },
 });
 
 export default VirtualTryOn;

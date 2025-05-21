@@ -156,11 +156,11 @@ const AvatarSection = ({
             <Maximize2 color={theme.colors.primary.purple as string} size={20} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleModelChange}
-            style={styles.avatarButton}
+            <TouchableOpacity
+              onPress={handleModelChange}
+              style={styles.avatarButton}
             activeOpacity={0.8}
-          >
+            >
             <LinearGradient
               colors={[theme.colors.primary.purple as string, '#ec4899']}
               start={{ x: 0, y: 0 }}
@@ -170,7 +170,7 @@ const AvatarSection = ({
               <UserRound size={16} color="#fff" style={{marginRight: 6}} />
               <RefreshCw size={14} color="#fff" />
             </LinearGradient>
-          </TouchableOpacity>
+            </TouchableOpacity>
         </View>
 
         {isLoadingPrefAvatar && isSignedIn ? (
@@ -254,8 +254,8 @@ const AvatarSection = ({
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.signUpGradient}
-                >
-                  <Text style={styles.signUpButtonText}>Sign Up Free</Text>
+              >
+                <Text style={styles.signUpButtonText}>Sign Up Free</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -272,27 +272,27 @@ const AvatarSection = ({
               colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.8)']}
               style={styles.loadingGradient}
             >
-              <View style={styles.loadingContent}>
+            <View style={styles.loadingContent}>
                 <View style={styles.loadingSpinnerActive} />
-                <MotiText
-                  key={loadingMessageIndex}
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  style={styles.loadingTitle}
-                >
-                  {loadingMessages[loadingMessageIndex].title}
-                </MotiText>
-                <MotiText
-                  key={`sub-${loadingMessageIndex}`}
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  style={styles.loadingSubtitle}
-                >
-                  {loadingMessages[loadingMessageIndex].subtitle}
-                </MotiText>
-              </View>
+              <MotiText
+                key={loadingMessageIndex}
+                from={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                style={styles.loadingTitle}
+              >
+                {loadingMessages[loadingMessageIndex].title}
+              </MotiText>
+              <MotiText
+                key={`sub-${loadingMessageIndex}`}
+                from={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                style={styles.loadingSubtitle}
+              >
+                {loadingMessages[loadingMessageIndex].subtitle}
+              </MotiText>
+            </View>
             </LinearGradient>
           </View>
         )}
@@ -310,9 +310,9 @@ const AvatarSection = ({
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.actionButtonGradient}
-                >
+              >
                   <BookmarkPlus size={16} color="#fff" style={{marginRight: 6}} />
-                  <Text style={styles.buttonText}>Save this outfit</Text>
+                <Text style={styles.buttonText}>Save this outfit</Text>
                 </LinearGradient>
               </TouchableOpacity>
             )}
@@ -329,14 +329,14 @@ const AvatarSection = ({
         )}
 
         {!tryonImages && isSignedIn && !isAvatarLoading && (
-          <View style={styles.statusPillPositionContainer}>
-            <AvatarStatusPill 
-              avatarStatus={avatarStatus}
-              avatarCreationProgress={avatarCreationProgress}
-              onShowMyAvatars={onShowMyAvatars}
-              onRecreateAvatar={onRecreateAvatar}
-            />
-          </View>
+            <View style={styles.statusPillPositionContainer}>
+                <AvatarStatusPill 
+                    avatarStatus={avatarStatus}
+                    avatarCreationProgress={avatarCreationProgress}
+                    onShowMyAvatars={onShowMyAvatars}
+                    onRecreateAvatar={onRecreateAvatar}
+                />
+            </View>
         )}
       </View>
 

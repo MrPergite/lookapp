@@ -9,7 +9,11 @@ import { View, StyleSheet, Text } from 'react-native';
 import { VirtualTryonCredits } from '../VirtualTryonCredits';
 
 
-function SimpleHeader({ credits, title, subtitle }: { credits?: number | null, title: string, subtitle?: string }) {
+function SimpleHeader({ credits, title, subtitle, hidden = false }: { credits?: number | null, title: string, subtitle?: string, hidden?: boolean }) {
+    if (hidden) {
+        return null;
+    }
+    
     return (
         <View
             className='flex items-center justify-between p-4 bg-white shadow-sm sticky top-0 z-10'

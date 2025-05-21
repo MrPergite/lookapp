@@ -18,16 +18,16 @@ interface ProductCardProps {
 
 const ProductCard = ({
   id,
-  product,
+    product,
   state,
-  isSelected,
-  onSelect,
-  isLoading,
-  isDisabled,
+    isSelected,
+    onSelect,
+    isLoading,
+    isDisabled,
 }: ProductCardProps) => {
   const isHorizontal = true;
 
-  return (
+    return (
     <MotiView
       animate={{ scale: isSelected ? 0.97 : 1 }}
       transition={{ type: 'timing', duration: 200 }}
@@ -55,7 +55,7 @@ const ProductCard = ({
             </View>
           ) : (
             <>
-              <Image
+                        <Image
                 source={{ uri: product?.img_url || product?.local_img || product?.resultImage }}
                 transition={400}
                 contentFit="cover"
@@ -70,7 +70,7 @@ const ProductCard = ({
                 <Text style={styles.productTitle} numberOfLines={1}>
                   {product?.title || product?.name || 'Product Name'}
                 </Text>
-                
+
                 {product?.brand && (
                   <Text style={styles.productBrand} numberOfLines={1}>
                     {product.brand}
@@ -81,20 +81,20 @@ const ProductCard = ({
               {/* Selected indicator */}
               {isSelected && (
                 <View style={styles.selectedIndicator}>
-                  <LinearGradient
+                        <LinearGradient
                     colors={[theme.colors.primary.purple as string, '#ec4899']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
                     style={styles.selectedGradient}
                   />
-                </View>
+                    </View>
               )}
             </>
-          )}
-        </View>
+                )}
+            </View>
       </TouchableOpacity>
     </MotiView>
-  );
+    );
 };
 
 const styles = StyleSheet.create({
@@ -115,21 +115,21 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: 120,
     height: 160,
-    position: 'relative',
-  },
+        position: 'relative',
+    },
   image: {
-    width: '100%',
+        width: '100%',
     height: '100%',
   },
   loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     backgroundColor: '#f9fafb',
-    alignItems: 'center',
-    justifyContent: 'center',
+        alignItems: 'center',
+        justifyContent: 'center',
   },
   gradientOverlay: {
     position: 'absolute',
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 10,
     paddingTop: 20,
-  },
+    },
   productTitle: {
     color: '#ffffff',
     fontSize: responsiveFontSize(14),
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   productBrand: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: responsiveFontSize(12),
+        fontSize: responsiveFontSize(12),
     fontWeight: '500',
   },
   selectedIndicator: {

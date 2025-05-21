@@ -120,8 +120,32 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
     };
 
     // Function to remove an item from the shopping list
-    const removeItem = async (id: string, link: string) => {
+    const removeItem = async (id: string, link: string, itemName?: string) => {
+        // Store the item being removed for potential undo
+        const removedItemId = id;
+        let removedItem = items.find((item: any) => item.id === id);
+        
         try {
+            // First update local state for immediate UI feedback
+            const previousItems = [...items];
+            setItems((prevItems) => prevItems.filter((item: any) => item.id !== id));
+            
+            // Show toast with undo option
+            Toast.show({
+                type: 'itemRemoved',
+                text1: 'Item removed from shopping list',
+                props: {
+                    itemName: itemName || removedItem?.title || removedItem?.name || '',
+                    onUndo: async () => {
+                        // Restore the item locally first
+                        setItems(previousItems);
+                        Toast.hide();
+                    }
+                },
+                visibilityTime: 4000,
+            });
+            
+            // Then process the server-side removal
             mutate.removeFromShoppingListMutation({ product_id: id });
 
         } catch (err: unknown) {

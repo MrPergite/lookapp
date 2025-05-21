@@ -54,7 +54,7 @@ const DigitalWardrobeScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
-  
+
   const isFetchingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -354,8 +354,8 @@ const DigitalWardrobeScreen: React.FC = () => {
 
   return (
     <View style={{flex: 1, backgroundColor: 'white', paddingTop: 50}}>
-      <View style={styles.container}>
-        {isSignedIn && (
+    <View style={styles.container}>
+      {isSignedIn && (
           <View style={styles.categoryHeaderContainer}>
             <ScrollView 
               ref={scrollViewRef}
@@ -363,12 +363,12 @@ const DigitalWardrobeScreen: React.FC = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryContainer}
             >
-              {FILTERS.map((f) => {
-                const isActive = activeFilter === f.key;
-                
-                return (
-                  <TouchableOpacity
-                    key={f.key}
+          {FILTERS.map((f) => {
+            const isActive = activeFilter === f.key;
+
+            return (
+              <TouchableOpacity
+                key={f.key}
                     activeOpacity={0.7}
                     onPress={() => handleCategoryChange(f.key)}
                     style={styles.categoryButton}
@@ -382,60 +382,60 @@ const DigitalWardrobeScreen: React.FC = () => {
                     
                     {isActive && (
                       <View style={styles.activeIndicator}>
-                        <LinearGradient
-                          colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
+                  <LinearGradient
+                    colors={[theme.colors.primary.purple as string, '#ec4899', '#6366f1']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
                           style={styles.gradientIndicator}
                         />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
             </ScrollView>
-          </View>
-        )}
+        </View>
+      )}
 
-        {isLoading ? (
-          <View style={styles.loadingCenter}>
-            <ActivityIndicator size="large" color={theme.colors.primary.purple} />
-          </View>
-        ) : items.length === 0 ? (
-          isSignedIn ? (
-            <WardrobeEmptyState
-              onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
-              currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
-            />
-          ) : (
-            <SignedOutEmptyState />
-          )
+      {isLoading ? (
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator size="large" color={theme.colors.primary.purple} />
+        </View>
+      ) : items.length === 0 ? (
+        isSignedIn ? (
+          <WardrobeEmptyState
+            onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
+            currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
+          />
         ) : (
+          <SignedOutEmptyState />
+        )
+      ) : (
           // Remove complex animations from the content view
           <View style={{ flex: 1 }}>
-            <FlatList
-              data={items}
-              renderItem={renderItem}
-              keyExtractor={(item, index) => item?.id || `item-${index}`}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.4}
-              ListFooterComponent={ListFooter}
-            />
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => item?.id || `item-${index}`}
+          numColumns={2}
+          columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={ListFooter}
+        />
           </View>
-        )}
+      )}
 
-        {isSignedIn && (
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => Toast.show({ text1: 'Add item coming soon' })}
-          >
-            <Plus size={28} color="#fff" />
-          </TouchableOpacity>
-        )}
-      </View>
+      {isSignedIn && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => Toast.show({ text1: 'Add item coming soon' })}
+        >
+          <Plus size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
+    </View>
     </View>
   );
 };
