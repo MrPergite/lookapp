@@ -94,10 +94,7 @@ export function useSearchInput({
     setShowSuggestions(inputValue.length === 0);
   };
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSearch();
-    }
+    handleSearch();
   };
 
   const handleBlur = () => {

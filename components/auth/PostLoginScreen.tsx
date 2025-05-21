@@ -49,27 +49,18 @@ const PostLoginScreen: React.FC<PostLoginScreenProps> = ({
     };
 
     return (
-        <LinearGradient
-            colors={['rgba(245, 243, 255, 0.5)', 'rgba(237, 233, 254, 0.3)', 'rgba(253, 242, 248, 0.5)']}
+        <View
             style={styles.container}>
 
-            <GradientText style={styles.userName} gradientColors={['#9333ea', '#ec4899']}>{userName}</GradientText>
+            <GradientText style={styles.userName} gradientColors={['#8B5CF6', '#EC4899', '#3B82F6']}>{userName}</GradientText>
 
             {/* LookPass Card */}
-            <LinearGradient
-                colors={['#f5f3ff', '#fdf2f8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+            <View
 
 
                 style={[styles.lookPassCard, { borderWidth: 1, borderColor: "#E9D5FF" }]}
             >
-                <LinearGradient
-                    colors={['rgba(245,243,255,0.8)', 'rgba(253,242,248,0.5)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={[styles.lookPassCard, { marginBottom: 0, padding: 0 }]}
-                >
+                
                     <View style={styles.lookPassContent}>
                         {/* Globe Icon */}
                         <View style={styles.globeContainer}>
@@ -88,8 +79,8 @@ const PostLoginScreen: React.FC<PostLoginScreenProps> = ({
                             Your LookPass contains everything Look AI has learned about your shopping preferences to personalize your experience.
                         </Text>
                     </View>
-                </LinearGradient>
-            </LinearGradient>
+            
+            </View>
 
             {/* Buttons */}
             <View style={styles.buttonsContainer}>
@@ -128,7 +119,7 @@ const PostLoginScreen: React.FC<PostLoginScreenProps> = ({
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </View>
-        </LinearGradient>
+        </View>
     );
 };
 
@@ -140,6 +131,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
         alignItems: 'center',
         height: '100%',
+        backgroundColor: theme.colors.primary.white
     },
     userName: {
         fontSize: responsiveFontSize(20),

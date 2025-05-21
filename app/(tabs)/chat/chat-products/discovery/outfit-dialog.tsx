@@ -109,6 +109,7 @@ export const ProductCard: React.FC<{
                         source={{ uri: item.image || item.img_url }}
                         style={styles.productImage}
                         contentFit="cover"
+                        resizeMode="cover"
                         onLoad={() => setImageLoaded(true)}
                         onError={() => { setImageError(true); setImageLoaded(true); }}
                     />
@@ -143,7 +144,7 @@ export const ProductCard: React.FC<{
                     >
                         <View style={styles.buyBtnView}>
                             <LinearGradient
-                                colors={['rgb(147, 51, 234)', 'rgb(232, 121, 249)', 'rgb(96, 165, 250)']}
+                               colors={['#8B5CF6', '#EC4899', '#3B82F6']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={StyleSheet.absoluteFill}
@@ -221,79 +222,76 @@ export const OutfitDialog = ({
         <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
             <View style={styles.modalOverlay}>
                 <View style={styles.dialogContainer}>
-                    <View style={styles.topRow}>
-                        <View style={styles.imagePane}>
-                           
+                    <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                        <View style={styles.topRow}>
+                            <View style={styles.imagePane}>
                                 <Image
                                     source={{ uri: displayImage }}
                                     style={styles.dialogImage}
                                     contentFit="cover"
-                                    
                                     onLoad={() => setImageLoaded(true)}
                                     onError={() => { setImageError(true); setImageLoaded(true); }}
                                 />
-                            
-                            <Pressable onPress={onClose} style={styles.closeBtn}>
-                                <Feather name="x" size={20} color="#FFF" />
-                            </Pressable>
-                            <LinearGradient
-                                colors={['transparent', 'rgba(0,0,0,0.7)']}
-                                style={styles.dialogTitleOverlay}
-                            >
-                                <Text style={styles.dialogTitle}>{outfitName}</Text>
-                            </LinearGradient>
-                        </View>
+                                <Pressable onPress={onClose} style={styles.closeBtn}>
+                                    <Feather name="x" size={20} color="#FFF" />
+                                </Pressable>
+                                <LinearGradient
+                                    colors={['transparent', 'rgba(0,0,0,0.7)']}
+                                    style={styles.dialogTitleOverlay}
+                                >
+                                    <Text style={styles.dialogTitle}>{outfitName}</Text>
+                                </LinearGradient>
+                            </View>
 
-                        <View style={styles.itemsPane}>
-                            <Text style={styles.itemsHeader}>Items in this outfit</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={{ paddingHorizontal: 12 }}
-                                contentContainerStyle={styles.itemsScrollViewContent}
-                            >
-                                {displayItems.map((it, idx) => {
-                                    // Warn if primary identifiers are missing, for data quality awareness
-                                    if (!it.product_id && !it.id) {
-                                      console.warn(`OutfitDialog: Item at index ${idx} is missing both product_id and id. This might affect functionality relying on these IDs.`);
-                                    }
-                                    // Construct a key that is unique even if product_id/id are repeated or missing for different items in the list.
-                                    const uniqueItemKey = `${it.product_id || it.id || 'no_id_provided'}-${idx}`;
+                            <View style={styles.itemsPane}>
+                                <Text style={styles.itemsHeader}>Items in this outfit</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={{ paddingHorizontal: 12 }}
+                                    contentContainerStyle={styles.itemsScrollViewContent}
+                                >
+                                    {displayItems.map((it, idx) => {
+                                        if (!it.product_id && !it.id) {
+                                            console.warn(`OutfitDialog: Item at index ${idx} is missing both product_id and id. This might affect functionality relying on these IDs.`);
+                                        }
+                                        const uniqueItemKey = `${it.product_id || it.id || 'no_id_provided'}-${idx}`;
 
-                                    return (
-                                        <ProductCard
-                                            key={uniqueItemKey}
-                                            item={it}
-                                            isThisItemAdding={addingItemId === (it.product_id || it.id)}
-                                            onRequestAuth={handleRequestAuth}
-                                            saveShoppingItemConfig={saveShoppingItemConfig}
-                                            onAddToWishlist={() => {}}
-                                            animationDelayIndex={idx}
-                                            isLastItem={idx === displayItems.length - 1}
-                                        />
-                                    );
-                                })}
-                            </ScrollView>
+                                        return (
+                                            <ProductCard
+                                                key={uniqueItemKey}
+                                                item={it}
+                                                isThisItemAdding={addingItemId === (it.product_id || it.id)}
+                                                onRequestAuth={handleRequestAuth}
+                                                saveShoppingItemConfig={saveShoppingItemConfig}
+                                                onAddToWishlist={() => {}}
+                                                animationDelayIndex={idx}
+                                                isLastItem={idx === displayItems.length - 1}
+                                            />
+                                        );
+                                    })}
+                                </ScrollView>
+                            </View>
                         </View>
-                    </View>
+                    </ScrollView>
                 </View>
             </View>
             {showAuthModalInDialog && (
                 <AuthModal
-                  isVisible={showAuthModalInDialog}
-                  onClose={() => setShowAuthModalInDialog(false)}
-                  onSignIn={() => {
-                    setShowAuthModalInDialog(false);
-                    onClose();
-                    router.push("/(authn)/signin");
-                  }}
-                  onSignUp={() => {
-                    setShowAuthModalInDialog(false);
-                    onClose();
-                    router.push("/(authn)/signup");
-                  }}
+                    isVisible={showAuthModalInDialog}
+                    onClose={() => setShowAuthModalInDialog(false)}
+                    onSignIn={() => {
+                        setShowAuthModalInDialog(false);
+                        onClose();
+                        router.push("/(authn)/signin");
+                    }}
+                    onSignUp={() => {
+                        setShowAuthModalInDialog(false);
+                        onClose();
+                        router.push("/(authn)/signup");
+                    }}
                 />
-              )}
+            )}
         </Modal>
     );
 };
@@ -306,15 +304,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     dialogContainer: {
-        width: SCREEN_WIDTH * 1,
+        maxWidth: SCREEN_WIDTH * 1,
         maxHeight: SCREEN_HEIGHT * 1,
-        height: SCREEN_HEIGHT *0.95,
+        height: SCREEN_HEIGHT *0.90,
         backgroundColor: '#FFF',
         borderRadius: 16,
         overflow: 'hidden',
     },
     topRow: { flexDirection: 'column', flex: 1 },
-    imagePane: { width: '100%', position: 'relative', aspectRatio: 4/5 },
+    imagePane: { 
+        width: '100%', 
+        position: 'relative', 
+        aspectRatio: 3/5, // Set a fixed height
+    },
     dialogImage: { flex: 1, width: '100%', height: '100%' },
     centered: { position: 'absolute', top: '50%', left: '50%' },
     closeBtn: { position: 'absolute', top: 16, right: 16, padding: 8, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 16 },
@@ -394,4 +396,11 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     buyText: { marginLeft: 6, color: '#FFF', fontSize: 12,lineHeight: 16,fontWeight: '600' },
+
+    // Add scrollViewContent style
+    scrollViewContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    }
 });

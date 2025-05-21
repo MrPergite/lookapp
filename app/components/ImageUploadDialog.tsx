@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Platform, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, StyleSheet, Platform, TouchableWithoutFeedback } from 'react-native';
 import { Link } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import theme from '@/styles/theme';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
+import MaskedView from '@react-native-masked-view/masked-view';
 
 interface ImageUploadDialogProps {
   isVisible: boolean;
@@ -35,7 +36,6 @@ const ImageUploadDialog = ({ isVisible, onClose, defaultTab = 'social', onSocial
     }
   };
 
-
   return (
     <Modal
       visible={isVisible}
@@ -45,44 +45,35 @@ const ImageUploadDialog = ({ isVisible, onClose, defaultTab = 'social', onSocial
       presentationStyle="overFullScreen"
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <TouchableWithoutFeedback >
-            <View className="bg-white w-[90%] max-w-[400px] rounded-2xl p-6">
-              <Text className="text-xl font-semibold mb-4 text-center">Upload or Search</Text>
-
-              {/* Tabs */}
-              {/* <View className="flex-row mb-6 border-b border-gray-200">
-            <TouchableOpacity
-              className={`flex-1 py-2 ${activeTab === 'social' ? 'border-b-2 border-purple-500' : ''}`}
-              onPress={() => setActiveTab('social')}
-            >
-              <Text className={`text-center ${activeTab === 'social' ? 'text-purple-500 font-medium' : 'text-gray-500'}`}>
-                Social Media
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`flex-1 py-2 ${activeTab === 'upload' ? 'border-b-2 border-purple-500' : ''}`}
-              onPress={() => setActiveTab('upload')}
-            >
-              <Text className={`text-center ${activeTab === 'upload' ? 'text-purple-500 font-medium' : 'text-gray-500'}`}>
-                Upload
-              </Text>
-            </TouchableOpacity>
-          </View> */}
-
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+         
+            <View style={styles.dialogContainer}>
+              <MaskedView
+          maskElement={
+            <Text style={styles.dialogTitle}> Search</Text>
+          }
+        >
+          <LinearGradient
+            colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ height: 24 }}
+          />
+        </MaskedView>
               {/* Social Tab Content */}
               {activeTab === 'social' && (
-                <View className="space-y-4 gap-4">
-                  <Text className="text-sm text-center text-gray-500 mb-6">
+                <View style={styles.socialTabContainer}>
+                  <Text style={styles.socialTabDescription}>
                     Paste an Instagram post URL, and we'll help you find the exact fashion items featured in it (Tiktok coming soon)
                   </Text>
 
-                  <View className="relative">
-                    <View className="absolute left-3 top-3">
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputIconContainer}>
                       <Link size={20} color={theme.colors.secondary.darkGray} />
                     </View>
                     <TextInput
-                      className={`border border-purple-200 rounded-lg pl-10 py-3 text-base ${error && 'border-red-500'}`}
+                      style={[styles.textInput, error && styles.textInputError]}
                       placeholder="Paste Instagram URL"
                       value={socialUrl}
                       onChangeText={(text) => {
@@ -92,7 +83,7 @@ const ImageUploadDialog = ({ isVisible, onClose, defaultTab = 'social', onSocial
                       autoCapitalize="none"
                       keyboardType="url"
                     />
-                    {error && <Text className="text-sm text-left text-red-500 bold mt-2">
+                    {error && <Text style={styles.errorText}>
                       Invalid URL
                     </Text>}
                   </View>
@@ -100,35 +91,32 @@ const ImageUploadDialog = ({ isVisible, onClose, defaultTab = 'social', onSocial
                   <TouchableOpacity
                     onPress={handleSocialUrlSubmit}
                     disabled={!socialUrl}
-                    className={`w-full rounded-lg overflow-hidden ${!socialUrl ? 'opacity-50' : ''}`}
+                    style={[styles.submitButton, !socialUrl && styles.submitButtonDisabled]}
                   >
                     <LinearGradient
-                      colors={[theme.colors.primary.purple, '#8C52FF']}
+                      colors={['#8B5CF6', '#EC4899', '#3B82F6']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
-                      className="py-3"
+                      style={styles.submitButtonGradient}
                     >
-                      <Text className="text-white text-center font-semibold p-4">Search with URL</Text>
+                      <Text style={styles.submitButtonText}>Search with URL</Text>
                     </LinearGradient>
                   </TouchableOpacity>
 
-                  <Text className="text-sm text-center text-gray-500 italic">
+                  <Text style={styles.infoText}>
                     If we're unable to locate the exact product in your image, we'll do our best to find the closest match for you.
                   </Text>
-
                 </View>
               )}
 
               {/* Upload Tab Content */}
               {activeTab === 'upload' && (
-                <View className="space-y-4">
-                  <Text className="text-sm text-center text-gray-500">
+                <View style={styles.uploadTabContainer}>
+                  <Text style={styles.uploadTabText}>
                     Upload functionality coming soon
                   </Text>
                 </View>
               )}
-
-
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -136,5 +124,98 @@ const ImageUploadDialog = ({ isVisible, onClose, defaultTab = 'social', onSocial
     </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dialogContainer: {
+    backgroundColor: 'white',
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: 600,
+    textAlign: 'center',
+  },
+  socialTabContainer: {
+  },
+  socialTabDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#6B7280',
+    marginBottom: 24,
+    lineHeight: 20,
+     fontWeight: 500,
+     marginTop: 24,
+  },
+  inputContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  inputIconContainer: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingLeft: 40,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  textInputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'left',
+    color: '#EF4444',
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  submitButton: {
+    width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  submitButtonDisabled: {
+    opacity: 0.5,
+  },
+  submitButtonGradient: {
+    paddingVertical: 10,
+  },
+  submitButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '600',
+   
+  },
+  infoText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#6B7280',
+    fontStyle: 'italic',
+    lineHeight: 20,
+    fontWeight: 600,
+  },
+  uploadTabContainer: {
+  },
+  uploadTabText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#6B7280',
+  },
+});
 
 export default ImageUploadDialog; 

@@ -20,10 +20,8 @@ const GenderSelect = ({ goToNextStep }: { goToNextStep: () => void }) => {
         return {
             bg: theme.colors.primary.white,
             icon: theme.colors.secondary.black,
-            text: theme.colors.secondary.black
+            text: 'rgba(75,85,99,1)'
         }
-
-
     }
     const [mStyles, fStyles] = [getStyles("male"), getStyles("female")]
     const handleSelect = async (value: string) => {
@@ -41,13 +39,13 @@ const GenderSelect = ({ goToNextStep }: { goToNextStep: () => void }) => {
             }} style={[styles.cardContainer, { backgroundColor: mStyles.bg }]}>
                 <User style={{ marginBottom: 10 }} color={mStyles.icon} size={24} />
                 <ThemedText type='default' style={[{
-                    color: mStyles.text, fontSize: 14, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+                   color: mStyles.text, fontSize: 16, lineHeight: 24, fontWeight:600,fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
                 }]} >Male</ThemedText>
             </Pressable>
             <Pressable onPress={() => withHaptick(handleSelect)("female")} style={[styles.cardContainer, { backgroundColor: fStyles.bg }]}>
                 <UserRound style={{ marginBottom: 10 }} color={fStyles.icon} size={24} />
                 <ThemedText type='default' style={[{
-                    color: fStyles.text, fontSize: 14, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
+                    color: fStyles.text, fontSize: 16, fontWeight:600,lineHeight: 24, fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
                 }]} >Female</ThemedText>
             </Pressable>
         </View>
@@ -67,11 +65,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         borderRadius: "10%",
-        // shadowColor: theme.colors.secondary.darkGray,
-        // shadowOffset: { width: 0, height: 4 },
-        // shadowOpacity: 0.3,
+        shadowColor: theme.colors.secondary.darkGray,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
         shadowRadius: 5,
-        // elevation: 4,
+        elevation: 4,
         width: 95,
         height: 100
     }

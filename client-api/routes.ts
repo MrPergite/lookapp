@@ -20,7 +20,7 @@ export const routes = {
         updateProfile: '/api/user/profile/update',
         getOnboardingInfo: '/api/users/onboarding',
         saveOnboardingInfo: '/api/users/onboarding',
-        searchProductsAuth: '/api/products/searchPublic',
+        searchProductsAuth: '/api/products/search',
         searchPart: '/api/products/searchPart',
         postReaction: '/api/reaction/cardReaction',
         saveShoppingList: '/api/shoppingList/shoppingListNew',

@@ -4,77 +4,97 @@ import GradientText from '@/components/GradientText';
 import { responsiveFontSize } from '@/utils';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react'
-import { View, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef } from 'react'
+import { View, StyleSheet, Text, Animated } from 'react-native';
 import { VirtualTryonCredits } from '../VirtualTryonCredits';
 
 
 function SimpleHeader({ credits, title, subtitle }: { credits?: number | null, title: string, subtitle?: string }) {
+    const slideAnim = useRef(new Animated.Value(-50)).current; // Initial position above the view
+
+    useEffect(() => {
+        // Reset animation to initial position
+        slideAnim.setValue(-50);
+        // Start animation
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true, // Ensure native driver is used
+        }).start();
+    }, [title, subtitle, slideAnim]); // Re-run animation if title, subtitle, or slideAnim instance changes
+
     return (
         <View
-            className='flex items-center justify-between p-4 bg-white shadow-sm sticky top-0 z-10'
             style={styles.container}>
-            <View className='w-10' />
+            <View style={styles.spacer} />
             {typeof credits === "number" && (
                 <VirtualTryonCredits
                     credits={credits}
                     id="virtual-tryon-credits-mobile"
                 />
             )}
-            <View className='flex-1 text-xl font-semibold text-center bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-transparent bg-clip-text'>
-                <View className="flex flex-row items-center justify-center w-full gap-2">
-                    <GradientText className='font-semibold' style={styles.gradientText} gradientColors={['#ec4899', '#a855f7', '#6366f1']} children={title}
-                    />
-                    {subtitle && <LinearGradient
-                        colors={['#8b5cf6', '#ec4899']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        className='inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full'
-                        style={styles.betaTextContainer}
-                    >
-                        <Text style={styles.betaText} className='text-white p-2 rounded-full'>{subtitle}</Text>
-                    </LinearGradient>}
+            <Animated.View style={[styles.animatedTitleContainer, { transform: [{ translateY: slideAnim }] }] }>
+                <View style={styles.titleContentContainer}>
+                    <GradientText style={styles.gradientText} gradientColors={['#8B5CF6', '#EC4899', '#3B82F6']} >{title}</GradientText>
+                    {subtitle && (
+                        <LinearGradient
+                            colors={['#8b5cf6', '#ec4899']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.betaTextContainer}
+                        >
+                            <Text style={styles.betaText}>{subtitle}</Text>
+                        </LinearGradient>
+                    )}
                 </View>
-            </View>
-            <View className='w-10' >
-
-            </View>
+            </Animated.View>
+            <View style={styles.spacer} />
         </View>
     )
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: 'white',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+        zIndex: 10,
+    },
+    spacer: {
+        width: 40, // Equivalent to w-10
+    },
+    animatedTitleContainer: {
+        flex: 1,
+        alignItems: 'center', // Center content horizontally
+        justifyContent: 'center', // Center content vertically
+    },
+    titleContentContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8, // Equivalent to gap-2
+    },
     gradientText: {
         fontSize: responsiveFontSize(20),
         fontFamily: 'default-semibold',
         lineHeight: responsiveFontSize(28),
     },
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16, // p-4
-        backgroundColor: 'white',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2, // shadow-sm
-        elevation: 2, // Android shadow
-        zIndex: 10,
-        position: 'sticky', // Not supported in RN
-        top: 0,
-    },
     betaTextContainer: {
         borderRadius: 9999,
-        paddingHorizontal: responsiveFontSize(2),
+        paddingHorizontal: responsiveFontSize(8),
         paddingVertical: responsiveFontSize(2),
     },
     betaText: {
         fontSize: responsiveFontSize(12),
         fontFamily: 'default-bold',
         color: 'white',
-        paddingHorizontal: responsiveFontSize(8),
-        paddingVertical: responsiveFontSize(2),
         lineHeight: responsiveFontSize(16),
     },
 });

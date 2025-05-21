@@ -56,15 +56,9 @@ export default function TextArea({
         ref={textareaRef}
         value={inputValue}
         onChangeText={handleInputChange}
-        onKeyPress={({ nativeEvent }) => {
-          handleKeyDown?.(nativeEvent);
-          if (nativeEvent.key === 'Enter') {
-            handleSearch();
-          }
-        }}
+        onSubmitEditing={handleSearch}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        multiline
         placeholder={getPlaceholderText()}
         placeholderTextColor={darkMode ? '#888' : '#888'}
         style={[

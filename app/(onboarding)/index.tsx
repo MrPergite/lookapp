@@ -118,6 +118,31 @@ const Onboarding = () => {
     const translateX = new Animated.Value(0);
     const styleProfileRef = useRef<StyleProfileRefHandles>(null);
     const [isSettingPreference, setIsSettingPreference] = useState(false);
+    
+    // Animation values for the Next button
+    const nextButtonScale = useRef(new Animated.Value(1)).current;
+
+    // Animation for button press
+    const handleNextButtonPressIn = () => {
+        Animated.spring(nextButtonScale, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            friction: 5,
+            tension: 50,
+        }).start();
+        
+        // Add haptic feedback when pressing the button
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    };
+
+    const handleNextButtonPressOut = () => {
+        Animated.spring(nextButtonScale, {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    };
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['onboardingData'],
@@ -142,7 +167,8 @@ const Onboarding = () => {
                 Toast.show({
                     type: 'error',
                     text1: 'Error',
-                    text2: 'Failed to load your profile data'
+                    text2: 'Failed to load your profile data',
+                    visibilityTime: 2000
                 });
                 return null;
             }
@@ -213,7 +239,7 @@ const Onboarding = () => {
             const chosenPath = pathFromAvatarChoice || payload.avatarPath;
             if (!chosenPath) {
                 console.error("Avatar path not determined for navigation from avatarPathChoice.");
-                Toast.show({ type: 'error', text1: 'Selection Error', text2: 'Please make a selection to continue.' });
+                Toast.show({ type: 'error', text1: 'Selection Error', text2: 'Please make a selection to continue.', visibilityTime: 2000 });
                 return;
             }
             // If 'premade' is chosen, next step is 'select-avatar'. If 'custom', it's 'styleProfile'.
@@ -395,6 +421,20 @@ const Onboarding = () => {
         return (currentLogicalStepNumber / totalStepsInFlow) * 100;
     }, [currentStep, payload.avatarPath, Steps]);
 
+    // Add animations for step transitions
+    const stepTransitionAnimation = {
+        from: { opacity: 0, translateX: 20 },
+        animate: { opacity: 1, translateX: 0 },
+        exit: { opacity: 0, translateX: -20 },
+        transition: { type: 'timing' as const, duration: 500 }
+    };
+
+    // Add animations for button press
+    const buttonPressAnimation = {
+        scale: nextButtonScale,
+        transition: { type: 'spring', stiffness: 100, damping: 10 }
+    };
+
     if (isLoading || !isUserLoaded && Steps[currentStep].name === "styleProfile" && payload.avatarPath === 'custom') {
         return (
             <View style={styles.container}>
@@ -404,11 +444,10 @@ const Onboarding = () => {
     }
 
     return (
-        <LinearGradient
-            colors={['#E9D5FF', '#FFFFFF']}
+        <View
+            
             style={styles.container}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
+           
         >
             <SafeAreaView style={styles.safeArea}>
                 {saveOnboardingData ? 
@@ -433,13 +472,7 @@ const Onboarding = () => {
                     <>
                         <MotiView
                             key={currentStep}
-                            from={{ opacity: 0, translateY: 20 }}
-                            animate={{ opacity: 1, translateY: 0 }}
-                            transition={{
-                                delay: 100, // milliseconds
-                                type: 'timing',
-                                duration: 300,
-                            }}
+                            {...stepTransitionAnimation}
                         >
                             <View style={styles.header}>
                                 <TouchableOpacity
@@ -464,148 +497,204 @@ const Onboarding = () => {
                             {isLoading && (
                                 <ThemedText style={styles.loadingText}>Loading your profile...</ThemedText>
                             )}
-                            <GradientText gradientColors={['#9333ea', '#ec4899']} className='text-2xl font-bold mb- text-transparent bg-clip-text' style={styles.title} >
+                            <GradientText   gradientColors={['#8B5CF6', '#EC4899', '#3B82F6']}
+ className='text-2xl font-bold mb- text-transparent bg-clip-text' style={styles.title} >
                                 {Steps[currentStep].title.text}
                             </GradientText>
                             <ThemedText type='default' className='text-base text-gray-1000' style={[styles.subTitle]} >{Steps[currentStep].title.subText}</ThemedText>
 
                             <MotiScrollView
                                 key={`scroll-${currentStep}`}
-                                // Apply a style that allows the child to truly flex if it's internally scrollable
-                                // Remove minHeight: '100%' from stepContainer when child is internally scrollable
                                 contentContainerStyle={[
                                     styles.stepContainer,
-                                    isCurrentStepInternallyScrollable && { minHeight: undefined, flexGrow: 1, alignSelf: 'stretch' }
+                                    isCurrentStepInternallyScrollable && { minHeight: '100%', flexGrow: 1, alignSelf: 'stretch' }
                                 ]}
-                                scrollEnabled={!isCurrentStepInternallyScrollable}
-                                bounces={!isCurrentStepInternallyScrollable} // Optional: disable bounce for non-scrolling parent
+                                scrollEnabled={true}
+                                bounces={true}
                                 {...motiScrollAnimationProps}
                             >
-                                {/* Ensure the rendered step itself can flex if it needs to take full height */}
-                                <View style={{ flex: isCurrentStepInternallyScrollable ? 1 : 0, width: '100%' }}>
+                                <View style={{
+                                    flex: 1, 
+                                    width: '100%',
+                                    paddingBottom: 200 
+                                }}>
                                     {renderStep()}
                                 </View>
                             </MotiScrollView>
 
                         </MotiView>
-                        {showNextButton && (
+                        {isAvatarStep && (
+                          <Animated.View 
+                            style={[
+                              styles.btnContainerWrapper,
+                              { transform: [{ scale: nextButtonScale }], bottom: 20 }
+                            ]}
+                          >
                             <LinearGradient
-                                colors={['#ec4899', '#8b5cf6']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
+                              colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={[styles.btnContainer]}
                             >
-                                <Pressable
-                                    style={[
-                                        authnStyles.ctaActionContainer,
-                                        styles.button,
-                                        !isCurrentStepComplete && styles.disabledButton
-                                    ]}
-                                    onPress={async () => {
-                                        if (!isCurrentStepComplete) return;
-
-                                        const currentOnboardingStepName = Steps[currentStep].name;
-                                        const styleState = payload.styleProfileState;
-                                        const clerkCustomAvatars = user?.publicMetadata?.custom_avatar_urls as string[] || [];
-
-                                        if (currentOnboardingStepName === "styleProfile") {
-                                            if (
-                                                payload.avatarPath === 'custom' &&
-                                                user?.publicMetadata?.avatar_creation_status  && clerkCustomAvatars.length === 0 && !styleProfileRef.current
-                                            ) {
-                                                // User is on StyleProfile upload screen, custom path, avatar not ready, and NO avatars exist yet.
-                                                // Pressing Next should just go to the next screen without API calls.
-                                                console.log("Onboarding: StyleProfile - Custom path, avatar not ready, no custom avatars. Proceeding without API call.");
-                                                withHaptick(() => handleNextParent())();
-                                            } else if (payload.avatarPath === 'custom' && user?.publicMetadata?.avatar_creation_status !== 'ready' && !styleProfileRef.current) {
-                                                // Custom path, avatar is not ready, but either: 
-                                                // 1. customAvatars *do* exist (so user might be on DisplayCustomAvatars with a processing status from elsewhere)
-                                                // 2. Or, StyleProfile component itself has started processing (styleState.isProcessing might be true)
-                                                // In these cases, allow proceeding as the avatar generation is likely happening or expected to be handled by DisplayCustomAvatars/StyleProfile context updates.
-                                                console.log("Onboarding: StyleProfile - Custom path, avatar not ready (processing or has existing). Proceeding.");
-                                                withHaptick(() => handleNextParent())();
-                                            } else if (styleState?.usingExisting && styleState?.images?.[0] &&  user?.publicMetadata?.avatar_creation_status  === 'ready') {
-                                                // User selected an existing custom avatar from DisplayCustomAvatars.
-                                                console.log("Onboarding: StyleProfile - Using existing custom avatar. Setting preference.");
-                                                setIsSettingPreference(true);
-                                                const preferredAvatarUrl = styleState.images[0];
-                                                try {
-                                                    await callProtectedEndpoint('setPreferredAvatarUrl', {
-                                                        method: 'POST',
-                                                        data: { pref_avatar_url: preferredAvatarUrl }
-                                                    });
-                                                    dispatch({
-                                                        type: 'SET_PAYLOAD',
-                                                        payload: { key: 'pref_avatar_url', value: preferredAvatarUrl }
-                                                    });
-                                                    dispatch({
-                                                        type: 'SET_PAYLOAD',
-                                                        payload: {
-                                                            key: 'styleProfileState',
-                                                            value: {
-                                                                ...styleState,
-                                                                images: [preferredAvatarUrl],
-                                                                avatarStatus: 'ready',
-                                                                isProcessing: false,
-                                                            }
-                                                        }
-                                                    });
-                                                    Toast.show({ type: 'success', text1: 'We have processed your avatar!' });
-                                                    withHaptick(() => handleNextParent())();
-                                                } catch (err: any) {
-                                                    console.error("Failed to set preferred avatar:", err);
-                                                    Toast.show({ 
-                                                        type: 'error', 
-                                                        text1: 'Failed to set preference', 
-                                                        text2: err.message || 'Please try again.' 
-                                                    });
-                                                } finally {
-                                                    setIsSettingPreference(false);
-                                                }
-                                            } else if (styleProfileRef.current) {
-                                                // Likely on StyleProfile (upload) screen and needs to submit images for new avatar creation.
-                                                // This case hits if: 
-                                                // - payload.avatarPath is 'custom' AND 
-                                                //   - styleState.avatarStatus IS 'ready' (but maybe wants to create a new one) OR
-                                                //   - clerkCustomAvatars.length > 0 (but they chose to create new via StyleProfile)
-                                                //   - styleState is null/undefined initially
-                                                console.log("Onboarding: StyleProfile - Submitting via styleProfileRef.");
-                                                withHaptick(() => styleProfileRef.current?.submitStep())();
-                                            } else {
-                                                // Fallback for styleProfile step if no other condition met.
-                                                console.log("Onboarding: StyleProfile - Fallback. Proceeding.");
-                                                withHaptick(() => handleNextParent())(); 
-                                            }
-                                        } else {
-                                            // Handle other steps
-                                            withHaptick(() => handleNextParent())();
-                                        }
-                                    }}
-                                    disabled={!isCurrentStepComplete || isSettingPreference}
+                              <Pressable
+                                style={[
+                                  authnStyles.ctaActionContainer,
+                                  styles.button,
+                                  !isCurrentStepComplete && styles.disabledButton
+                                ]}
+                                onPress={async () => {
+                                  if (!isCurrentStepComplete) return;
+                                  withHaptick(() => handleNextParent())();
+                                }}
+                                onPressIn={handleNextButtonPressIn}
+                                onPressOut={handleNextButtonPressOut}
+                                android_ripple={{ color: 'rgba(255,255,255,0.3)', borderless: false, radius: 36 }}
+                                disabled={!isCurrentStepComplete || isSettingPreference}
+                                {...buttonPressAnimation}
+                              >
+                                <ThemedText
+                                  style={[
+                                    authnStyles.ctaActionText,
+                                    !isCurrentStepComplete && styles.disabledButtonText,
+                                    { color: '#ffffff', fontWeight: 600, fontSize:18, lineHeight:28 }
+                                  ]}
                                 >
-                                    <ThemedText
-                                        style={[
-                                            authnStyles.ctaActionText,
-                                            !isCurrentStepComplete && styles.disabledButtonText,
-                                            { color: '#ffffff', fontWeight: '900' }
-                                        ]}
-                                    >
-                                        {isSettingPreference || payload.styleProfileState?.isProcessing
-                                            ? "Processing..." 
-                                            : (Steps[currentStep].name === "styleProfile" && 
-                                               (payload.styleProfileState?.avatarStatus && payload.styleProfileState?.avatarStatus !== 'ready' && payload.styleProfileState?.avatarStatus !== 'completed') &&
-                                               payload.avatarPath === 'custom' &&   payload.styleProfileState?.isProcessing
-                                              )
-                                            ? "Processing..." 
-                                            : "Next"}
-                                    </ThemedText>
-                                </Pressable>
+                                  Next
+                                </ThemedText>
+                              </Pressable>
                             </LinearGradient>
+                          </Animated.View>
+                        )}
+                        
+                        {showNextButton && !isAvatarStep && (
+                          <Animated.View 
+                            style={[
+                              styles.btnContainerWrapper,
+                              { transform: [{ scale: nextButtonScale }] }
+                            ]}
+                          >
+                            <LinearGradient
+                              colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={[styles.btnContainer, isAvatarStep && styles.avatarStepButton]}
+                            >
+                              <Pressable
+                                style={[
+                                  authnStyles.ctaActionContainer,
+                                  styles.button,
+                                  !isCurrentStepComplete && styles.disabledButton
+                                ]}
+                                onPress={async () => {
+                                  if (!isCurrentStepComplete) return;
+
+                                  const currentOnboardingStepName = Steps[currentStep].name;
+                                  const styleState = payload.styleProfileState;
+                                  const clerkCustomAvatars = user?.publicMetadata?.custom_avatar_urls as string[] || [];
+
+                                  if (currentOnboardingStepName === "styleProfile") {
+                                    if (
+                                      payload.avatarPath === 'custom' &&
+                                      user?.publicMetadata?.avatar_creation_status  && clerkCustomAvatars.length === 0 && !styleProfileRef.current
+                                    ) {
+                                        // User is on StyleProfile upload screen, custom path, avatar not ready, and NO avatars exist yet.
+                                        // Pressing Next should just go to the next screen without API calls.
+                                        console.log("Onboarding: StyleProfile - Custom path, avatar not ready, no custom avatars. Proceeding without API call.");
+                                        withHaptick(() => handleNextParent())();
+                                    } else if (payload.avatarPath === 'custom' && user?.publicMetadata?.avatar_creation_status !== 'ready' && !styleProfileRef.current) {
+                                        // Custom path, avatar is not ready, but either: 
+                                        // 1. customAvatars *do* exist (so user might be on DisplayCustomAvatars with a processing status from elsewhere)
+                                        // 2. Or, StyleProfile component itself has started processing (styleState.isProcessing might be true)
+                                        // In these cases, allow proceeding as the avatar generation is likely happening or expected to be handled by DisplayCustomAvatars/StyleProfile context updates.
+                                        console.log("Onboarding: StyleProfile - Custom path, avatar not ready (processing or has existing). Proceeding.");
+                                        withHaptick(() => handleNextParent())();
+                                    } else if (styleState?.usingExisting && styleState?.images?.[0] &&  user?.publicMetadata?.avatar_creation_status  === 'ready') {
+                                        // User selected an existing custom avatar from DisplayCustomAvatars.
+                                        console.log("Onboarding: StyleProfile - Using existing custom avatar. Setting preference.");
+                                        setIsSettingPreference(true);
+                                        const preferredAvatarUrl = styleState.images[0];
+                                        try {
+                                            await callProtectedEndpoint('setPreferredAvatarUrl', {
+                                                method: 'POST',
+                                                data: { pref_avatar_url: preferredAvatarUrl }
+                                            });
+                                            dispatch({
+                                                type: 'SET_PAYLOAD',
+                                                payload: { key: 'pref_avatar_url', value: preferredAvatarUrl }
+                                            });
+                                            dispatch({
+                                                type: 'SET_PAYLOAD',
+                                                payload: {
+                                                    key: 'styleProfileState',
+                                                    value: {
+                                                        ...styleState,
+                                                        images: [preferredAvatarUrl],
+                                                        avatarStatus: 'ready',
+                                                        isProcessing: false,
+                                                    }
+                                                }
+                                            });
+                                            Toast.show({ type: 'success', text1: 'We have processed your avatar!', visibilityTime: 2000 });
+                                            withHaptick(() => handleNextParent())();
+                                        } catch (err: any) {
+                                            console.error("Failed to set preferred avatar:", err);
+                                            Toast.show({ 
+                                                type: 'error', 
+                                                text1: 'Failed to set preference', 
+                                                text2: err.message || 'Please try again.' ,
+                                                visibilityTime: 2000
+                                            });
+                                        } finally {
+                                            setIsSettingPreference(false);
+                                        }
+                                    } else if (styleProfileRef.current) {
+                                        // Likely on StyleProfile (upload) screen and needs to submit images for new avatar creation.
+                                        // This case hits if: 
+                                        // - payload.avatarPath is 'custom' AND 
+                                        //   - styleState.avatarStatus IS 'ready' (but maybe wants to create a new one) OR
+                                        //   - clerkCustomAvatars.length > 0 (but they chose to create new via StyleProfile)
+                                        //   - styleState is null/undefined initially
+                                        console.log("Onboarding: StyleProfile - Submitting via styleProfileRef.");
+                                        withHaptick(() => styleProfileRef.current?.submitStep())();
+                                    } else {
+                                        // Fallback for styleProfile step if no other condition met.
+                                        console.log("Onboarding: StyleProfile - Fallback. Proceeding.");
+                                        withHaptick(() => handleNextParent())(); 
+                                    }
+                                  } else {
+                                    // Handle other steps
+                                    withHaptick(() => handleNextParent())();
+                                  }
+                                }}
+                                onPressIn={handleNextButtonPressIn}
+                                onPressOut={handleNextButtonPressOut}
+                                android_ripple={{ color: 'rgba(255,255,255,0.3)', borderless: false, radius: 36 }}
+                                disabled={!isCurrentStepComplete || isSettingPreference}
+                              >
+                                <ThemedText
+                                  style={[
+                                    authnStyles.ctaActionText,
+                                    !isCurrentStepComplete && styles.disabledButtonText,
+                                    { color: '#ffffff', fontWeight: 600, fontSize:18, lineHeight:28 }
+                                  ]}
+                                >
+                                  {isSettingPreference || payload.styleProfileState?.isProcessing
+                                    ? "Processing..." 
+                                    : (Steps[currentStep].name === "styleProfile" && 
+                                      (payload.styleProfileState?.avatarStatus && payload.styleProfileState?.avatarStatus !== 'ready' && payload.styleProfileState?.avatarStatus !== 'completed') &&
+                                      payload.avatarPath === 'custom' &&   payload.styleProfileState?.isProcessing
+                                      )
+                                    ? "Processing..." 
+                                    : "Next"}
+                                </ThemedText>
+                              </Pressable>
+                            </LinearGradient>
+                          </Animated.View>
                         )}
                     </>
                 }
             </SafeAreaView>
-        </LinearGradient>
+        </View>
     );
 };
 
@@ -613,7 +702,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         height: "100%",
-        flexDirection: "column"
+        flexDirection: "column",
+        backgroundColor: theme.colors.primary.white
     },
     safeArea: {
         flex: 1,
@@ -695,9 +785,9 @@ const styles = StyleSheet.create({
     button: {
         backgroundColor: "transparent",
         width: "100%",
-        height: 50,
+        // height: 50,
         fontSize: 16,
-        fontWeight: "bold",
+        fontWeight:600,
         fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
     },
     disabledButton: {
@@ -706,15 +796,24 @@ const styles = StyleSheet.create({
     disabledButtonText: {
         color: theme.colors.secondary.darkGray,
     },
-    btnContainer: {
-        borderRadius: "7%",
-        bottom: 60,
-        zIndex: 999, // Ensure button is above other elements
-        width: "90%",
+    btnContainerWrapper: {
         position: 'absolute',
-        left: 0,
-        right: 0,
-        transform: [{ translateX: 20 }],
+        bottom: 60,
+        width: '90%',
+        left: '5%',
+        zIndex: 999,
+        overflow: 'hidden',
+        borderRadius: 9999,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    btnContainer: {
+        borderRadius: 16,
+        width: '100%',
+        overflow: 'hidden',
     },
     avatarStepButton: {
         bottom: 50, // Move the button higher up on the avatar step
@@ -725,14 +824,14 @@ const styles = StyleSheet.create({
         color: theme.colors.primary.purple
     },
     subTitle: {
-        color: 'rgba(75 85 99  / 1)',
+        color: 'rgba(75,85,99,1)',
         fontSize: 16,
-        // fontWeight: '500',
+        fontWeight: '500',
         textAlign: 'center',
         paddingHorizontal: 16,
         paddingBottom: 16,
         fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
-        lineHeight: 20
+        lineHeight: 24
     },
     loaderViewStyle: {
         width: 20, // Or whatever size you use for Loader2

@@ -45,6 +45,7 @@ export const usePostReactionMutation = (reactedProducts: Record<string, boolean>
             Toast.show({
                 type: 'success',
                 text1: 'Thank you for your feedback!',
+                visibilityTime: 2000
             });
             queryClient.invalidateQueries({ queryKey: ['reactions'] });
             setReaction({ ...reactedProducts, [product_info.product_id]: like })

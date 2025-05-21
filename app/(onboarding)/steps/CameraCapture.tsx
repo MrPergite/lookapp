@@ -33,7 +33,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ visible, onCapturePhoto, 
 
   const handleTakePicture = async () => {
     if (!cameraRef.current || !isCameraReady) {
-      Toast.show({ type: 'error', text1: 'Camera not ready' });
+      Toast.show({ type: 'error', text1: 'Camera not ready', visibilityTime: 2000 });
       return;
     }
     try {
@@ -44,11 +44,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ visible, onCapturePhoto, 
         const fileName = photo.uri.split('/').pop() || `capture-${Date.now()}.jpg`;
         onCapturePhoto({ uri: photo.uri, type: 'image/jpeg', name: fileName });
       } else {
-        Toast.show({ type: 'error', text1: 'Failed to capture image' });
+        Toast.show({ type: 'error', text1: 'Failed to capture image', visibilityTime: 2000 });
       }
     } catch (error) {
       console.error('Error taking picture:', error);
-      Toast.show({ type: 'error', text1: 'Error taking picture' });
+      Toast.show({ type: 'error', text1: 'Error taking picture', visibilityTime: 2000 });
     }
   };
 

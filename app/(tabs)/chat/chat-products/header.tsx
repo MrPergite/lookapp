@@ -43,7 +43,7 @@ const Header = ({ darkMode=false }) => {
       <MaskedView
         maskElement={
           <Text style={[styles.text, styles.maskedText]}>
-            what's the look?
+            what's your look?
           </Text>
         }
       >
@@ -54,7 +54,7 @@ const Header = ({ darkMode=false }) => {
         >
           {/* Invisible text to size the gradient */}
           <Text style={[styles.text, { opacity: 0 }]}>
-            what's the look?
+            what's your look?
           </Text>
         </LinearGradient>
       </MaskedView>

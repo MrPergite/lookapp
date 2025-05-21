@@ -34,6 +34,7 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
                 Toast.show({
                     type: 'success',
                     text1: 'Item removed from shopping list',
+                    visibilityTime: 2000
                 });
             } else {
                 throw new Error(data.removeFromShoppingListData.error || 'Failed to remove item');
@@ -102,11 +103,13 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
                 Toast.show({
                     type: 'success',
                     text1: 'Item added to Shopping List',
+                    visibilityTime: 2000
                 });
             } else if (response.error === 'Product already exists in your Shopping List') {
                 Toast.show({
                     type: 'error',
                     text1: 'Product already exists in shopping list',
+                    visibilityTime: 2000
                 });
             } else {
                 throw new Error(response.error || 'Failed to add item');
@@ -115,6 +118,7 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
             Toast.show({
                 type: 'error',
                 text1: (err as Error).message || 'Error adding item to shopping list',
+                visibilityTime: 2000
             });
         }
     };
@@ -123,11 +127,11 @@ export const useShoppingList = (isSignedIn = false, refreshListTrigger = 0) => {
     const removeItem = async (id: string, link: string) => {
         try {
             mutate.removeFromShoppingListMutation({ product_id: id });
-
         } catch (err: unknown) {
             Toast.show({
                 type: 'error',
                 text1: (err as Error).message || 'Error removing item from shopping list',
+                visibilityTime: 2000
             });
         }
     };

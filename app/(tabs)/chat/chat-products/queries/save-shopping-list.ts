@@ -42,6 +42,7 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
                     type: 'success',
                     text1: 'Added to shopping list',
                     text2: payload.metadata.title,
+                    visibilityTime: 2000,
                 });
             }
         },
@@ -75,6 +76,7 @@ export const useSaveShoppingList = (openLoginModal: () => void) => {
             Toast.show({
                 type: 'error',
                 text1: 'Failed to add product',
+                visibilityTime: 2000
             });
         }
     });

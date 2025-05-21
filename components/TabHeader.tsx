@@ -29,18 +29,18 @@ export const TabHeader: React.FC<TabHeaderProps> = ({ onProfilePress }) => {
         <View style={styles.sideContainer} />
 
         {/* logo */}
-        <View style={styles.logoContainer}>
+        {/* <View style={styles.logoContainer}>
           <Image
             source={require('@/assets/images/image.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-        </View>
+        </View> */}
 
         {/* profile icon */}
         <View style={[styles.sideContainer, styles.profileIconContainer]}>
           <Pressable onPress={onProfilePress} hitSlop={10}>
-            <UserCircle size={24} color={theme.colors.primary.purple} />
+            <UserCircle size={24} color={'rgb(147, 51, 234)'} />
           </Pressable>
         </View>
       </View>
@@ -56,12 +56,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     // shadow-md
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4, // for Android
-    zIndex: 50,
+    // shadowColor: '#000',
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.1,
+    // shadowRadius: 4,
+    // elevation: 4, // for Android
+    // zIndex: 50,
   },
   headerContainer: {
     flexDirection: 'row',

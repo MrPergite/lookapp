@@ -15,6 +15,8 @@ import { useAuth } from "@clerk/clerk-expo";
 import { routes } from "@/client-api/routes";
 import Constants from "expo-constants";
 import { responsiveFontSize } from "@/utils";
+import MaskedView from '@react-native-masked-view/masked-view';
+
 const loadingMessages = [
     "Setting up your personalized profile...",
     "Customizing your shopping preferences...",
@@ -257,10 +259,27 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.dialogContent}>
-                        <Text className="tracking-tight text-2xl font-bold text-center">
-                            {error ? "Oops!" : "Setup Complete!"}
-                        </Text>
-                        <Text style={{ color: '#657285' }} className="text-sm text-center">
+                        <View style={{ position: 'relative', width: '100%', alignItems: 'center', marginBottom: 8 }}>
+                            
+            <MaskedView
+              style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }} 
+              maskElement={
+                <View style={{ alignItems: 'center', width: '100%' }}>
+                  <Text style={[styles.dialogTitle, { color: 'black' }]}>
+                    {error ? "Oops!" : "Setup Complete!"}
+                  </Text>
+                </View>
+              }
+            >
+              <LinearGradient
+                colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ height: 30, width: '100%' }}
+              />
+            </MaskedView>
+                        </View>
+                        <Text style={{ color: '#64748b',fontSize: 14,marginBottom: 8}} className="text-sm text-center">
                             {error ||
                                 "Your personalized shopping profile is ready. Get ready for an amazing shopping experience!"}
                         </Text>
@@ -275,7 +294,7 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
                             }}
                         >
                             <LinearGradient
-                                colors={['#ec4899', '#8b5cf6']} // from-pink-500 to-purple-500
+  colors={['#8B5CF6', '#EC4899', '#3B82F6']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.buttonContainer}
@@ -295,7 +314,7 @@ export default function FinalOnboardingLoad({ onComplete, onboardingData }: Fina
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F9F5FF", // Light purple background
+        backgroundColor: theme.colors.primary.white, // Light purple background
         justifyContent: "center",
         alignItems: "center",
         padding: 16,
@@ -357,7 +376,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "bold",
         textAlign: "center",
-        marginBottom: 12,
         color: "#1F2937", // Gray-800
     },
     dialogDescription: {

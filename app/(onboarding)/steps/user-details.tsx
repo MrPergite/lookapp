@@ -72,7 +72,7 @@ function UserDetails() {
     useEffect(() => {
         Animated.timing(animatedProgressWidth, {
             toValue: avatarGenerationProgress,
-            duration: 100, // Short duration for smooth updates
+            duration: 500, // Smooth animation
             useNativeDriver: false, // width animation not supported by native driver
         }).start();
     }, [avatarGenerationProgress]);
@@ -205,6 +205,23 @@ function UserDetails() {
         shoeSizeInputRef.current?.blur();
     };
 
+    // Add scale animation to pickers
+    const pickerScale = useRef(new Animated.Value(1)).current;
+
+    const handlePickerOpen = () => {
+        Animated.spring(pickerScale, {
+            toValue: 1.05,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handlePickerClose = () => {
+        Animated.spring(pickerScale, {
+            toValue: 1,
+            useNativeDriver: true,
+        }).start();
+    };
+
     const renderPicker = (
         value: string,
         onValueChange: (value: string) => void,
@@ -216,7 +233,10 @@ function UserDetails() {
         if (Platform.OS === 'android') {
             return (
                 <TouchableOpacity
-                    onPress={() => setVisible(true)}
+                    onPress={() => {
+                        handlePickerOpen();
+                        setVisible(true);
+                    }}
                     style={[styles.input, { paddingVertical: 0 }]}
                 >
                     <Picker
@@ -238,7 +258,10 @@ function UserDetails() {
         return (
             <>
                 <Pressable
-                    onPress={() => setVisible(true)}
+                    onPress={() => {
+                        handlePickerOpen();
+                        setVisible(true);
+                    }}
                     style={[styles.input, styles.pickerWrapper]}
                 >
                     <Text style={styles.pickerText}>
@@ -253,7 +276,10 @@ function UserDetails() {
                     animationType="slide"
                     transparent={true}
                     visible={isVisible}
-                    onRequestClose={() => setVisible(false)}
+                    onRequestClose={() => {
+                        handlePickerClose();
+                        setVisible(false);
+                    }}
                 >
                     <View style={styles.modalContainer}>
                         <View style={styles.modalContent}>

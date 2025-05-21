@@ -76,7 +76,7 @@ export default function SignInScreen() {
       }
       if (result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        Toast.show({ type: 'success', text1: 'Signed In' });
+        Toast.show({ type: 'success', text1: 'Signed In', visibilityTime: 2000 });
       }
     } catch (error: any) {
       let message = "Sign-in failed";
@@ -115,7 +115,7 @@ export default function SignInScreen() {
       }
       if (attempt.status === 'complete' && attempt.createdSessionId) {
         await setActive({ session: attempt.createdSessionId });
-        Toast.show({ type: 'success', text1: 'Signed In' });
+        Toast.show({ type: 'success', text1: 'Signed In', visibilityTime: 2000 });
         setPendingVerification(false);
       } else {
         setVerifError('Verification failed. Please try again.');
@@ -147,7 +147,7 @@ export default function SignInScreen() {
       } else if (loginType === 'phone' && phoneNumberId) {
         await signIn.prepareFirstFactor({ strategy: 'phone_code', phoneNumberId });
       }
-      Toast.show({ type: 'success', text1: 'Code resent' });
+      Toast.show({ type: 'success', text1: 'Code resent', visibilityTime: 2000 });
     } catch (err: any) {
       setVerifError('Failed to resend code.');
     } finally {

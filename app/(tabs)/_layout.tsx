@@ -54,7 +54,8 @@ export default function RootLayout() {
                 await signOut();
                 Toast.show({
                     type: "success",
-                    text1: "See you soon :)"
+                    text1: "See you soon :)",
+                    visibilityTime: 2000
                 })
             }
             catch (e) {
@@ -131,7 +132,7 @@ export default function RootLayout() {
                     name="shopping-list"
                     component={ShoppingList}
                     options={{
-                        title: "Shopping List",
+                        title: "Wishlist",
                        
                     }}
                 />

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { MotiView } from 'moti';
-import { Camera, Clock, UserRound } from 'lucide-react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
+import { MotiView, AnimatePresence } from 'moti';
+import { Camera, Clock, UserRound, ArrowRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import theme from '@/styles/theme';
 import { useOnBoarding } from '../context';
@@ -17,15 +17,55 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
   // Initialize selectedPath to null to ensure no initial visual selection
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
+  // Animation values for icon pulse
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Start pulse animation when path is selected
+  useEffect(() => {
+    if (selectedPath) {
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ]).start();
+    }
+  }, [selectedPath]);
+
   const handlePathSelect = (path: 'custom' | 'premade') => {
     setSelectedPath(path); // For visual feedback
+    
+    // Animate selection
+    Animated.sequence([
+      Animated.timing(pulseAnim, {
+        toValue: 1.2,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      })
+    ]).start();
+    
     dispatch({
       type: 'SET_PAYLOAD',
       payload: { key: 'avatarPath', value: path },
     });
-    if (onNext) {
-      onNext(path);
-    }
+    
+    // Delay navigation to allow animation to complete
+    setTimeout(() => {
+      if (onNext) {
+        onNext(path);
+      }
+    }, 300);
   };
 
   const options = [
@@ -35,7 +75,7 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
       description: 'Upload 3-5 images of yourself',
       time: 'Takes about 2 minutes',
       icon: Camera,
-      gradientColors: ['#ec4899', '#a855f7'], // pink-500 to purple-500
+      gradientColors: ['#8B5CF6', '#EC4899', '#3B82F6'] as const,
     },
     {
       key: 'premade',
@@ -43,7 +83,7 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
       description: 'Choose from our selection of ready-to-use avatars',
       time: 'Quick setup',
       icon: UserRound,
-      gradientColors: ['#ec4899', '#a855f7'], // pink-500 to purple-500
+      gradientColors: ['#8B5CF6', '#EC4899', '#3B82F6'] as const,
     },
   ];
 
@@ -59,36 +99,70 @@ const AvatarPathChoice: React.FC<AvatarPathChoiceProps> = ({ onBack, onNext }) =
       }}
     >
       <View style={styles.contentContainer}>
-        {options.map((option) => {
+        {options.map((option, index) => {
           const IconComponent = option.icon;
           const isSelected = selectedPath === option.key;
+          
           return (
-            <TouchableOpacity
+            <MotiView
               key={option.key}
-              style={[
-                styles.optionButton,
-                isSelected && styles.selectedOptionButton
-              ]}
-              onPress={() => handlePathSelect(option.key as 'custom' | 'premade')}
-              activeOpacity={0.7}
+              from={{ opacity: 0, translateX: -20 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{
+                type: 'timing',
+                duration: 400,
+                delay: 150 + (index * 150), // Staggered entrance
+              }}
             >
-              <View style={styles.buttonContent}>
-                <LinearGradient
-                  colors={option.gradientColors as [string, string, ...string[]]}
-                  style={styles.iconContainer}
-                >
-                  <IconComponent color="white" size={28} />
-                </LinearGradient>
-                <View style={styles.textContainer}>
-                  <ThemedText style={styles.titleText}>{option.title}</ThemedText>
-                  <ThemedText style={styles.descriptionText}>{option.description}</ThemedText>
-                  <View style={styles.timeContainer}>
-                    <Clock color={theme.colors.secondary.darkGray} size={12} style={styles.timeIcon} />
-                    <ThemedText style={styles.timeText}>{option.time}</ThemedText>
+              <TouchableOpacity
+                style={[
+                  styles.optionButton,
+                  isSelected && styles.selectedOptionButton
+                ]}
+                onPress={() => handlePathSelect(option.key as 'custom' | 'premade')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.buttonContent}>
+                  <Animated.View 
+                    style={[
+                      { transform: [{ scale: isSelected ? pulseAnim : 1 }] }
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={option.gradientColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.iconContainer}
+                    >
+                      <IconComponent color="white" size={28} />
+                    </LinearGradient>
+                  </Animated.View>
+                  <View style={styles.textContainer}>
+                    <ThemedText style={styles.titleText}>{option.title}</ThemedText>
+                    <ThemedText style={styles.descriptionText}>{option.description}</ThemedText>
+                    <View style={styles.timeContainer}>
+                      <Clock color={theme.colors.secondary.darkGray} size={12} style={styles.timeIcon} />
+                      <ThemedText style={styles.timeText}>{option.time}</ThemedText>
+                    </View>
                   </View>
+                  
+                  {isSelected && (
+                    <MotiView
+                      from={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 300,
+                        damping: 20,
+                      }}
+                      style={styles.selectedIndicator}
+                    >
+                      <ArrowRight color="white" size={16} />
+                    </MotiView>
+                  )}
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </MotiView>
           );
         })}
       </View>
@@ -117,14 +191,16 @@ const styles = StyleSheet.create({
     borderColor: '#E9D5FF', // Tailwind purple-200
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     ...Platform.select({
       android: {
-        elevation: 1,
+        elevation: 2,
       },
     }),
+    position: 'relative',
+    overflow: 'hidden',
   },
   selectedOptionButton: {
     borderColor: theme.colors.primary.purple,
@@ -138,9 +214,14 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     padding: theme.spacing.sm,
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   textContainer: {
     flex: 1,
@@ -171,6 +252,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;',
     fontSize: 12,
     color: 'rgba(107 114 128 / 1)',
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    marginTop: -12,
+    backgroundColor: theme.colors.primary.purple,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

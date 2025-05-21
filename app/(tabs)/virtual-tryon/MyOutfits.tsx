@@ -33,6 +33,7 @@ const MyOutfits = () => {
         Toast.show({
           type: 'success',
           text1: data.message || 'Outfit deleted successfully',
+          visibilityTime: 2000
         });
       } else {
         throw new Error(data.error || 'Failed to delete outfit');
@@ -41,6 +42,7 @@ const MyOutfits = () => {
       Toast.show({
         type: 'error',
         text1: error instanceof Error ? error.message : 'Error deleting outfit',
+        visibilityTime: 2000
       });
       throw error; // Re-throw to be handled by the component
     }

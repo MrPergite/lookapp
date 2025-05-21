@@ -27,6 +27,8 @@ import { GenderSelector } from './GenderSelect';
 import { useImageContext } from '../../../../../common/providers/image-search';
 import { useAuth } from '@clerk/clerk-react';
 import theme from '@/styles/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -181,8 +183,8 @@ export default function SearchInput({
           />
 
           <View style={styles.controlsRow}>
-            
-                <Instagram onPress={handleInstagramClick} size={24} color={theme.colors.primary.purple} />
+          {/* <Instagram onPress={handleInstagramClick} size={24} color={theme.colors.primary.purple} /> */}
+
 
             <View style={styles.centerControl}>
               {!isSignedIn && (
@@ -296,10 +298,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   iconButton: {
-    padding: 8,
+    padding: 0, // Adjusted if gradient has padding
+    // borderRadius: 100, // May not be needed directly on TouchableOpacity if gradient provides shape
+    // fontSize: 16, marginBottom:0 // Not applicable here
   },
   centerControl: {
     flex: 1,
+    alignItems: 'center',
+  },
+  instagramIconGradient: {
+    padding: 8, // Padding for the gradient background around the icon
+    borderRadius: 100, // Circular background
+    justifyContent: 'center',
     alignItems: 'center',
   },
   suggestionsWrapper: {

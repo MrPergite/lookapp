@@ -120,7 +120,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   const openNativeCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      Toast.show({ type: 'error', text1: 'Camera permission denied' });
+      Toast.show({ type: 'error', text1: 'Camera permission denied', visibilityTime: 2000 });
       return;
     }
     
@@ -146,14 +146,15 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
         };
         uploadImage(fileToUpload, fileUri);
       } else {
-        Toast.show({ type: 'info', text1: 'Image capture cancelled or failed.' });
+        Toast.show({ type: 'info', text1: 'Image capture cancelled or failed.', visibilityTime: 2000 });
       }
     } catch (error) {
       console.error('Error opening camera:', error);
       Toast.show({ 
         type: 'error', 
         text1: 'Failed to open camera', 
-        text2: 'Please check your app permissions in settings.'
+        text2: 'Please check your app permissions in settings.',
+        visibilityTime: 2000
       });
     }
     
@@ -191,7 +192,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   const uploadImage = async (file: { uri: string, name: string, type: string }, localDisplayUri: string) => {
   
     if (images.length >= 5) {
-      Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.' });
+      Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.', visibilityTime: 2000 });
       return false;
     }
 
@@ -246,7 +247,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
       return true;
     } catch (error: any) {
       console.error("Error caught in uploadImage function:", error);
-      Toast.show({ type: 'error', text1: 'Upload Error', text2: error.message || 'Failed to upload image' });
+      Toast.show({ type: 'error', text1: 'Upload Error', text2: error.message || 'Failed to upload image', visibilityTime: 2000 });
       setImages(prev => prev.filter((_, idx) => idx !== newImageIndex));
       return false;
     } finally {
@@ -283,12 +284,12 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   const handleFileSelectionFromLibrary = async () => {
     console.log('handleFileSelectionFromLibrary');
     if (images.length >= 5) {
-      Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.' });
+      Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.', visibilityTime: 2000 });
       return;
     }
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Toast.show({ type: 'error', text1: 'Media Library permission denied' });
+      Toast.show({ type: 'error', text1: 'Media Library permission denied', visibilityTime: 2000 });
       return;
     }
 
@@ -301,7 +302,7 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
 console.log(result);
     if (!result.canceled && result.assets) {
       if (result.assets.length > 1) {
-        Toast.show({ type: 'info', text1: `Processing ${result.assets.length} images... `});
+        Toast.show({ type: 'info', text1: `Processing ${result.assets.length} images... `, visibilityTime: 2000});
       }
       console.log(result.assets);
       const uploadPromises = result.assets.map(asset => {
@@ -316,8 +317,8 @@ console.log(result);
       const results = await Promise.all(uploadPromises);
       console.log('results',results);
       const successCount = results.filter(res => res).length;
-      if (successCount > 0) Toast.show({ type: 'success', text1: `Successfully uploaded ${successCount} images.` });
-      if (results.length - successCount > 0) Toast.show({ type: 'error', text1: `${results.length - successCount} uploads failed.` });
+      if (successCount > 0) Toast.show({ type: 'success', text1: `Successfully uploaded ${successCount} images.`, visibilityTime: 2000 });
+      if (results.length - successCount > 0) Toast.show({ type: 'error', text1: `${results.length - successCount} uploads failed.`, visibilityTime: 2000 });
     }
   };
 
@@ -336,7 +337,7 @@ console.log(result);
   // This is the function we want to expose via ref
   const handleNext = async () => {
     if (!validateForm()) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: errors.images || 'Please check the form.' });
+      Toast.show({ type: 'error', text1: 'Validation Error', text2: errors.images || 'Please check the form.', visibilityTime: 2000 });
       return;
     }
     
@@ -345,7 +346,7 @@ console.log(result);
     );
     
     if (approvedUrlImages.length < 3) {
-      Toast.show({type: 'error', text1: 'Image Upload Issue', text2: `Ensure at least 3 images are fully uploaded and processed (found ${approvedUrlImages.length}).`});
+      Toast.show({type: 'error', text1: 'Image Upload Issue', text2: `Ensure at least 3 images are fully uploaded and processed (found ${approvedUrlImages.length}).`, visibilityTime: 2000});
       return;
     }
 
@@ -422,7 +423,8 @@ console.log(result);
               text1: hasRejectedImages ? 'Some images were rejected' : 'Image validation complete', 
               text2: hasRejectedImages 
                 ? 'Please review flagged images and replace them before trying again.' 
-                : 'Your images have been validated. You can proceed.'
+                : 'Your images have been validated. You can proceed.',
+                visibilityTime: 2000
             });
           }, 100);
           
@@ -431,7 +433,7 @@ console.log(result);
       }
       
       // Success case: API returned a success response
-      Toast.show({ type: 'success', text1: response.message || 'Personalized avatar creation started' });
+      Toast.show({ type: 'success', text1: response.message || 'Personalized avatar creation started', visibilityTime: 2000 });
       const newStyleProfileDataToSave = {
         images: [],
         processingStatus,
@@ -462,7 +464,8 @@ console.log(result);
       Toast.show({ 
         type: 'error', 
         text1: 'Avatar Creation Error', 
-        text2: error.message || 'An unexpected error occurred' 
+        text2: error.message || 'An unexpected error occurred' ,
+        visibilityTime: 2000
       });
     } finally {
       dispatch({

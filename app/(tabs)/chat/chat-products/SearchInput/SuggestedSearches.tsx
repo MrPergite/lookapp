@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  Animated,
   View,
   ScrollView,
   TouchableOpacity,
@@ -9,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 interface SuggestedSearchesProps {
   isVisible: boolean; // True when the parent wants it to be shown and animating in
@@ -28,57 +28,15 @@ export const SuggestedSearches: React.FC<SuggestedSearchesProps> = ({
   suggestions,
   hasFetchedUrl,
 }) => {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(-5)).current; // Initial off-screen/hidden position
-
   useEffect(() => {
-    if (startCloseAnimation) {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: -5,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        onCloseAnimationComplete();
-      });
-    } else if (isVisible) {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // Not visible and not starting close: set to initial hidden state immediately
-      opacity.setValue(0);
-      translateY.setValue(-5);
+    if (startCloseAnimation || !isVisible) {
+      onCloseAnimationComplete();
     }
-  }, [isVisible, startCloseAnimation, opacity, translateY, onCloseAnimationComplete]);
-
-  // The component is rendered by the parent; this component just controls its animated appearance/disappearance.
-  // No more `if (!isVisible) return null;` here.
+  }, [isVisible, startCloseAnimation, onCloseAnimationComplete]);
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity,
-          transform: [{ translateY }],
-        },
-      ]}
+    <View
+      style={styles.container}
     >
       {/* White background overlay */}
       <View style={styles.backgroundOverlay} />
@@ -108,24 +66,29 @@ export const SuggestedSearches: React.FC<SuggestedSearchesProps> = ({
           </View>
         ) : (
           suggestions.map((suggestion, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.suggestionButton}
-              activeOpacity={0.7}
-              onPress={() => onSelect(suggestion)}
+            <Animated.View
+              key={suggestion}
+              entering={FadeInRight.delay(index * 50).duration(200)}
+              exiting={FadeOutLeft.duration(150)}
             >
-              <Feather
-                name="search"
-                size={16}
-                color="#9CA3AF"
-                style={styles.icon}
-              />
-              <Text style={styles.suggestionText}>{suggestion}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.suggestionButton}
+                activeOpacity={0.7}
+                onPress={() => onSelect(suggestion)}
+              >
+                <Feather
+                  name="search"
+                  size={16}
+                  color="#9CA3AF"
+                  style={styles.icon}
+                />
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </TouchableOpacity>
+            </Animated.View>
           ))
         )}
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 };
 

@@ -162,15 +162,14 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
       };
 
     case 'ADD_PRODUCTS':
-      // Group products by search query, maintaining the order
-      const initialProducts = action.payload.products.slice(0, 4);
       return {
         ...state,
         conversationGroups: state.conversationGroups.map(group =>
           group.id === state.activeConversationGroup
             ? {
-              ...group, products: [...group.products, ...action.payload.products],
-              uiProductsList: [...group.uiProductsList, ...initialProducts],
+              ...group, 
+              products: [...group.products, ...action.payload.products],
+              uiProductsList: [...group.products, ...action.payload.products],
               pagination: {
                 page: 1,
                 limit: group.pagination.limit
@@ -184,13 +183,13 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
     case "GET_MORE_PRODUCTS":
       const activeGroup = state.conversationGroups.find(group => group.id === action.payload.conversationId);
       if (!activeGroup) return state;
-      const newProducts = activeGroup.products.slice(activeGroup.uiProductsList.length, activeGroup.uiProductsList.length + activeGroup.pagination.limit);
       return {
         ...state,
         conversationGroups: state.conversationGroups.map(group =>
           group.id === action.payload.conversationId
             ? {
-              ...group, uiProductsList: [...group.uiProductsList, ...newProducts],
+              ...group, 
+              uiProductsList: [...activeGroup.products],
               pagination: {
                 page: activeGroup.pagination.page + 1,
                 limit: activeGroup.pagination.limit
@@ -198,7 +197,7 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
             }
             : group
         )
-      }
+      };
 
     case 'SET_PRODUCTS_BY_CATEGORY':
       const allProducts = action.payload.productsByCategory.flatMap(product => product.products);
@@ -239,15 +238,14 @@ const chatProductsReducer = (state: ChatProductsState, action: ActionType): Chat
       const currentGroup = state.conversationGroups.find(group => group.id === action.payload.conversationId);
       if (!currentGroup || !currentGroup.productsByCategory) return state;
       const productFromCategory = currentGroup?.productsByCategory?.[action.payload.category] as Product[];
-      const initialProductsByCategory = productFromCategory?.slice(0, 4);
       return {
         ...state,
         conversationGroups: state.conversationGroups.map(group =>
           group.id === action.payload.conversationId
-            ? { ...group, uiProductsList: initialProductsByCategory, products: productFromCategory }
+            ? { ...group, uiProductsList: productFromCategory, products: productFromCategory }
             : group
         )
-      }
+      };
     case 'SET_LOADING':
       return {
         ...state,

@@ -61,19 +61,23 @@ export // Styles don't include colors - they're applied dynamically based on the
             justifyContent: 'flex-end',
             alignItems: 'flex-start',
             width: '100%',
+            marginTop: 32,
         },
         aiMessageContainer: {
             marginBottom: 16,
             flexDirection: 'row',
             alignItems: 'flex-start',
-            width: '100%',
+            width: '90%',
+            borderRadius: 32,
+
         },
         avatarContainer: {
             marginRight: 12,
             height: 56,
             width: 40,
             // backgroundColor: theme.colors.primary.white,
-            borderRadius: 18,
+            borderRadius: 32,
+            borderColor: 'red',
         },
         avatarGradient: {
             width: 36,
@@ -133,16 +137,18 @@ export // Styles don't include colors - they're applied dynamically based on the
             elevation: 1,
         },
         aiMessage: {
-            borderRadius: 20,
+            borderRadius: 16,
             padding: 16,
             backgroundColor: theme.colors.primary.white,
-            maxWidth: '65%',
-            flex: 1,
+            maxWidth: 200,
+            width: 200,
             shadowColor: theme.colors.secondary.black,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.03,
             shadowRadius: 3,
             elevation: 1,
+            borderColor: '#F3E8FF',
+            borderWidth: 1,
         },
         messageText: {
             fontSize: responsiveFontSize(14),
@@ -204,7 +210,8 @@ export // Styles don't include colors - they're applied dynamically based on the
         imageWrapper: {
             position: 'relative',
             width: "100%",
-            height: 270
+            height: 270,
+            
         },
         productImage: {
             width: '100%',
@@ -343,6 +350,8 @@ export // Styles don't include colors - they're applied dynamically based on the
             height: "100%",
             position: 'relative',
             overflow: 'hidden',
+            borderColor: '#F3E8FF',
+            borderWidth: 1,
         },
         followUpActions: {
             position: 'absolute',

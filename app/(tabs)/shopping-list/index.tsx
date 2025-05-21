@@ -1,154 +1,329 @@
-import React, { useState } from 'react';
-import { useShoppingList } from '@/app/(tabs)/virtual-tryon/hooks/useShoppingList';
-import { useAuth } from '@clerk/clerk-react';
-import { MessageCircle, ShoppingCart, ChevronUp, ChevronDown, Trash2, Bell, BarChart2, Tag, MessageSquare, User, Trash } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { TouchableOpacity, View, Image, ScrollView, ActivityIndicator, Pressable, SafeAreaView } from 'react-native';
-import { Text } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet } from 'react-native';
-import { responsiveFontSize } from '@/utils';
-import { MotiPressable } from 'moti/interactions';
-import SimpleHeader from '../virtual-tryon/SimpleHeader';
-import ImageSlider from './components/ImageSlider';
 import ListItem from './components/ListItem';
-import { GradientHeading } from '@/components/auth';
-import GradientText from '@/components/GradientText';
+import { useShoppingList } from '../../(tabs)/virtual-tryon/hooks/useShoppingList';
 
-// Product interface
-interface Product {
-  id: string;
-  title: string;
-  image: string;
-  expanded?: boolean;
-}
-
-// Sample products based on the image
-const sampleProducts: Product[] = [
-  {
-    id: '1',
-    title: 'Calvin Klein Cotton Crew Neck T-Shirt Pack',
-    image: 'https://i.imgur.com/aR7DK9Z.jpg',
-    expanded: false
-  }
-];
+import {Skeleton} from './components/Skeleton';
+import ShoppingListFilterBar from './components/ShoppingListFilterBar';
+import { ShoppingCart } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useApi } from '@/client-api';
+import SimpleHeader from '../virtual-tryon/SimpleHeader';
 
 export default function ShoppingList() {
-  const { isSignedIn } = useAuth();
-  const { items, removeItem, isLoading, error, isLoadingShoppingList } = useShoppingList(isSignedIn);
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('shopping-list');
-  const [isGoToChatPressed, setIsGoToChatPressed] = useState(false);
+  const { isAuthenticated } = useApi();
+  const { items, removeItem, isLoading, error } = useShoppingList(isAuthenticated);
+  const navigation = useNavigation();
+  const [deletingItemId, setDeletingItemId] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [dataFetched, setDataFetched] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
+  const windowWidth = useWindowDimensions().width;
+  const horizontalPadding = windowWidth >= 768 ? 32 : windowWidth >= 640 ? 24 : 16;
+  const gap = windowWidth >= 768 ? 24 : 16;
+  const numColumns = 2;
+  const itemWidth = (windowWidth - horizontalPadding * 2 - gap * (numColumns - 1)) / numColumns;
 
-  const LoadingState = () => (
-    <SafeAreaView className="px-4 pb-20">
-      {[1, 2, 3].map((i) => (
-        <View key={i} className="animate-pulse p-4 my-0">
-          <View className="h-56 bg-gray-200 rounded-lg"></View>
-        </View>
+  const filteredItems = useMemo(() => {
+    console.log("Filtering items:", items, "active filter:", activeFilter, "isLoading:", isLoading);
+    if (!items) return null;
+    if (activeFilter === 'all') return items;
+    return items.filter((item: any) =>
+      item.garment_type?.toLowerCase() === activeFilter.toLowerCase()
+    );
+  }, [items, activeFilter,isLoading]);
+
+  const handleRemoveItem = async (itemId: any, productLink: string) => {
+    // Set deleting state immediately
+    setDeletingItemId(itemId);
+    
+    try {
+      // Add a small delay before API call to ensure state update is reflected in UI
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Call the actual remove function
+      await removeItem(itemId, productLink);
+      
+      // Add a small delay after successful deletion to ensure loader is visible
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error("Error removing item:", error);
+      // Still add a small delay even on error
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } finally {
+      setDeletingItemId(null);
+    }
+  };
+
+  const handleFilterChange = (filter: string) => {
+    setFilterLoading(true);
+    setActiveFilter(filter);
+    // Add a short delay to simulate loading and show the shimmer effect
+    setTimeout(() => {
+      setFilterLoading(false);
+    }, 600);
+  };
+
+  const renderSkeleton = () => (
+    <View style={[styles.gridContainer, { paddingHorizontal: horizontalPadding }]}>  
+      {[...Array(8)].map((_, idx) => (
+        <Skeleton
+          key={idx}
+          style={{ 
+            width: itemWidth, 
+            aspectRatio: 4/5, 
+            borderRadius: 12, 
+            marginBottom: gap 
+          }}
+          shimmerColors={['#e5e7eb', '#f3f4f6', '#e5e7eb']}
+        />
       ))}
-    </SafeAreaView>
+    </View>
+  );
 
-  )
+  const renderEmptyState = (isFiltered: boolean) => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.iconWrapper}>
+        <ShoppingCart size={40} color="#9b87f5" />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {isFiltered ? 'No items match this filter' : 'Your wishlist is empty'}
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        {isFiltered
+          ? 'Try selecting a different category.'
+          : 'Start a chat to discover and save items to your wishlist'}
+      </Text>
+      {!isFiltered && (
+        <TouchableOpacity style={[styles.ctaButton, { marginTop: 16 }]} onPress={() => navigation.navigate('Home' as never)}>
+          <LinearGradient
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            colors={[ '#8b5cf6', '#ec4899', '#3b82f6' ]}
+            style={styles.ctaGradient}
+          >
+            <Text style={styles.ctaText}>Go to Home Search</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
-  if (error) {
+  useEffect(() => {
+    if (!isLoading && items) {
+      setDataFetched(true);
+    }
+  }, [isLoading, items]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (error && !isLoading) {
+    // Determine error message to display
+    const errorMessage = 
+      typeof error === 'string' ? error :
+      error && typeof error === 'object' ? (error as {message?: string}).message || 'Unknown error' :
+      'Please try again later.';
+      
     return (
-      <View className="flex-1 bg-white">
-        <Text className="text-center text-2xl font-bold py-4 text-purple-500">Shopping List</Text>
-        <View className="flex-1 justify-center items-center px-4">
-          <Text className="text-lg text-red-500">{error}</Text>
-        </View>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Error loading wishlist:</Text>
+        <Text style={styles.errorSubtitle}>{errorMessage}</Text>
       </View>
     );
   }
 
-  const EmptyState = () => (
-    <View className="flex-1 items-center justify-center px-4 py-12">
-      <View className="items-center p-12">
-        <View className="bg-purple-50 rounded-full p-6 w-20 h-20 items-center justify-center mb-6">
-          <ShoppingCart size={32} color="#9b87f5" />
-        </View>
-        <GradientText className="text-2xl font-semibold text-center mb-2" gradientColors={['#9b87f5', '#7e69ab']}>
-          Your shopping list is empty
-        </GradientText>
-        <Text className="text-gray-500 text-center mb-6">
-          Start a chat to discover and save items to your shopping list
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)/chat')}
-          className="w-full"
-          onLongPress={() => setIsGoToChatPressed(true)}
-          onPressOut={() => setIsGoToChatPressed(false)}
-        >
-          <LinearGradient
-            colors={
-              isGoToChatPressed
-                ? ['#ec4899', '#9333ea'] // hover:from-pink-600 to-purple-600
-                : ['#9333ea', '#ec4899', '#3b82f6'] // from-purple-600 via-pink-500 to-blue-500
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradient}
-          >
-            <Text style={styles.text}>{"Go to Home Search"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerWrapper}>
+        {/* <SimpleHeader title="wishlist" /> */}
+      </View>
+      <View style={{ flex: 1 }}>
+        {isAuthenticated && (
+          <ShoppingListFilterBar
+            activeFilter={activeFilter}
+            setActiveFilter={handleFilterChange}
+          />
+        )}
+        
+      
+        {isLoading || filterLoading || filteredItems === null ? (
+          renderSkeleton()
+        ) : filteredItems.length === 0 ? (
+          renderEmptyState(activeFilter !== 'all')
+        ) : (
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item: any) => item.id || item.product_link}
+            numColumns={numColumns}
+            columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: gap }}
+            contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingTop: 24, paddingBottom: 80 }}
+            renderItem={({ item, index }) => (
+              <View style={{ width: itemWidth }}>
+                <ListItem
+                  item={item}
+                  onRemove={handleRemoveItem}
+                  isDeleting={deletingItemId === (item as any).id}
+                  index={index}
+                />
+              </View>
+            )}
+          />
+        )}
       </View>
     </View>
   );
-
-  const renderContent = (items: any[]) => {
-    if (isLoadingShoppingList.shoppingListLoading) {
-      return <LoadingState />
-    }
-    return (
-      <View className="flex-col gap-4 mt-4">
-        {items.map((product) => (
-          <ListItem key={product.id} item={product} onRemove={removeItem} isDeleting={isLoadingShoppingList.removeShoppingListLoading} />
-        ))}
-      </View>
-    )
-  }
-
-  return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header */}
-      <SimpleHeader title="Shopping List" />
-
-      {/* Content based on active tab */}
-      {activeTab === 'shopping-list' ? (
-        items.length === 0 && !isLoadingShoppingList.shoppingListLoading ? <EmptyState /> :
-          <ScrollView className="flex-1 px-5">
-            {renderContent(items)}
-          </ScrollView>
-
-      ) : (
-        // Digital Wardrobe Tab (Empty state for now)
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="text-lg text-gray-500">Digital Wardrobe Coming Soon</Text>
-        </View>
-      )}
-    </SafeAreaView>
-  );
-
 }
 
-
 const styles = StyleSheet.create({
-
-  gradient: {
-    paddingVertical: 12, // h-11 = 44px, minus padding
-    paddingHorizontal: 32, // px-8
-    borderRadius: 9999,
+  container: { flex:1, backgroundColor:'#FFFFFF', paddingTop: 12 },
+  filterBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 50,
+  },
+  chipTouchable: {
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 8,
+    paddingRight: 8,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minWidth: 80,
+    backgroundColor: '#fff',
+    padding: 16,
+
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },   // similar to md's y‐offset
+    shadowOpacity: 0.1,                       // light opacity
+    shadowRadius: 4,                          // blur radius
+
+    // Android shadow
+    elevation: 3,                             // roughly equivalent "depth"
+
   },
-  text: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+  filterChipInactive: {
+    // paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom:6,
+    paddingLeft: 8,
+    paddingRight: 8,
+    width: 80,
+    borderRadius: 999,
+    color:'rgb(255,255,255,1)',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterChipActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    width: 80,
+    borderRadius: 999,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 6,
+    paddingRight: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    // Android
+    elevation: 4,
+
+  },
+  filterText: { fontSize: 12, color: '#374151' },
+  filterTextActive: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  gridItem: {
+    width: '48%',
+  },
+  headerWrapper: {
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  wishlistText: {
+    fontSize: 30,
+    fontWeight: 'bold',
     textAlign: 'center',
-  }
-})
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingTop: 24,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '60%',
+    paddingHorizontal: 16,
+  },
+  iconWrapper: {
+    backgroundColor: '#f3e8ff',
+    borderRadius: 100,
+    padding: 24,
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+    color: '#9b87f5',
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#6b7280',
+    marginBottom: 16,
+  },
+  ctaButton: {
+    borderRadius: 100,
+    overflow: 'hidden',
+      padding: 16,
+  },
+  ctaGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    borderRadius: 100,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    textAlign: 'center',
+
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  errorTitle: {
+    fontSize: 18,
+    color: '#dc2626',
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+  },
+});

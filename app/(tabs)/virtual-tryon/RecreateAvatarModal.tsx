@@ -70,7 +70,7 @@ const RecreateAvatarModal: React.FC<RecreateAvatarModalProps> = ({
         // OR if the promise returned by submitStep is rejected without StyleProfile handling it internally.
         // StyleProfile's internal try/catch for the API call should handle API errors and show Toasts.
         console.error("[RecreateModal] Error during styleProfileRef.current.submitStep() invocation OR unhandled rejection from submitStep:", error);
-        Toast.show({type: 'error', text1: 'Submission Error', text2: 'Could not initiate avatar recreation.'});
+        Toast.show({type: 'error', text1: 'Submission Error', text2: 'Could not initiate avatar recreation.', visibilityTime: 2000});
       } finally {
         setIsSubmitting(false);
       }

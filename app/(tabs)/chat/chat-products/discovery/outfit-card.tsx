@@ -122,6 +122,7 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
                 source={{ uri: resultImage }}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
+                resizeMode="cover"
                 onLoad={() => setMediaLoaded(true)}
                 onError={handleError}
               />
@@ -172,7 +173,7 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
               ]}
             >
               <LinearGradient
-                colors={['#9333EA', '#E879F9', '#60A5FA']}
+                colors={['#8B5CF6', '#EC4899', '#3B82F6']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   },
   mediaContainer: {
     width: '100%',
-    aspectRatio: 3 / 5,
+    aspectRatio: 3 / 4,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',

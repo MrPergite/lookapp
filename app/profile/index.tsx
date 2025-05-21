@@ -8,6 +8,7 @@ import axios from 'axios'
 import Constants from 'expo-constants'
 import { LinearGradient } from 'expo-linear-gradient'
 import { SafeAreaView } from 'react-native'
+import theme from '@/styles/theme'
 
 function Profile() {
     const { isSignedIn, getToken } = useAuth()
@@ -38,22 +39,9 @@ function Profile() {
     })
 
     return (
-        <LinearGradient
-            style={{ flex: 1 }}
-            colors={
-                [
-                    'rgba(250, 245, 255, 0.5)', // purple-50/50
-                    'rgba(243, 232, 255, 0.3)', // purple-100/30
-                    'rgba(255, 241, 246, 0.5)', // pink-50/50
-                ]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-        >
-            <SafeAreaView style={{ flex: 1 }}>
-                {isAuthenticated ? <PostLoginScreen userName={user?.name} /> : <PreLoginScreen />}
-            </SafeAreaView>
-        </LinearGradient>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.primary.white }}>
+        {isAuthenticated ? <PostLoginScreen userName={user?.name} /> : <PreLoginScreen />}
+    </SafeAreaView>
     )
 }
 

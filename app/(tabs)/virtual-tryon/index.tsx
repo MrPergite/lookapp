@@ -136,6 +136,7 @@ function VirtualTryOn({ route }: { route: any }) {
                 Toast.show({
                     type: 'error',
                     text1: error.message,
+                    visibilityTime: 2000
                 });
             } finally {
                 hasFetchedCredits.current = false;
@@ -164,6 +165,7 @@ function VirtualTryOn({ route }: { route: any }) {
             Toast.show({
                 type: 'error',
                 text1: error.message,
+                visibilityTime: 2000
             });
         } finally {
             hasFetchedOutfits.current = false;
@@ -232,6 +234,7 @@ function VirtualTryOn({ route }: { route: any }) {
             Toast.show({
                 type: 'success',
                 text1: 'Avatar has been reset',
+                visibilityTime: 2000
             });
         }
     }, [originalAvatar]);
@@ -266,6 +269,7 @@ function VirtualTryOn({ route }: { route: any }) {
                 Toast.show({
                     type: 'success',
                     text1: response?.message,
+                    visibilityTime: 2000
                 });
                 fetchOutfits();
                 setShowSaveOutfitDialog(false);
@@ -275,6 +279,7 @@ function VirtualTryOn({ route }: { route: any }) {
             Toast.show({
                 type: 'error',
                 text1: error.message,
+                visibilityTime: 2000
             });
         }
     };
@@ -288,6 +293,7 @@ function VirtualTryOn({ route }: { route: any }) {
             Toast.show({
                 type: 'info',
                 text1: "This item is currently not supported for virtual try-on",
+                visibilityTime: 2000
             });
 
             return;
@@ -328,12 +334,14 @@ function VirtualTryOn({ route }: { route: any }) {
                     Toast.show({
                         type: 'error',
                         text1: response?.data?.error?.message,
+                        visibilityTime: 2000
                     });
                 }
             } catch (error) {
                 Toast.show({
                     type: 'error',
                     text1: error?.message,
+                    visibilityTime: 2000
                 });
             } finally {
                 setIsAvatarLoading(false);
@@ -402,6 +410,7 @@ function VirtualTryOn({ route }: { route: any }) {
                     Toast.show({
                         type: 'success',
                         text1: response.message,
+                        visibilityTime: 2000
                     });
                     fetchOutfits();
                 }
@@ -410,6 +419,7 @@ function VirtualTryOn({ route }: { route: any }) {
                 Toast.show({
                     type: 'error',
                     text1: error.message,
+                    visibilityTime: 2000
                 });
             } finally {
                 setOutfitToDelete(null);
@@ -457,13 +467,13 @@ function VirtualTryOn({ route }: { route: any }) {
         if (customAvatars.length > 0) {
             setShowCustomAvatarModal(true);
         } else {
-            Toast.show({ type: 'info', text1: 'No Custom Avatars', text2: 'You can create new ones during onboarding or from settings.' });
+            Toast.show({ type: 'info', text1: 'No Custom Avatars', text2: 'You can create new ones during onboarding or from settings.', visibilityTime: 2000 });
         }
     };
 
     const handleSetPreferredAvatarFromModal = async (avatarUrl: string) => {
         if (!isSignedIn) {
-            Toast.show({ type: 'error', text1: 'Please sign in to set a preferred avatar.' });
+            Toast.show({ type: 'error', text1: 'Please sign in to set a preferred avatar.', visibilityTime: 2000 });
             return;
         }
         setIsSettingPrefAvatarFromModal(true);
@@ -486,7 +496,7 @@ function VirtualTryOn({ route }: { route: any }) {
             setShowCustomAvatarModal(false); 
         } catch (error: any) {
             console.error('Failed to set preferred avatar from modal:', error);
-            Toast.show({ type: 'error', text1: 'Operation Failed', text2: error.message || 'Could not set preferred avatar.' });
+            Toast.show({ type: 'error', text1: 'Operation Failed', text2: error.message || 'Could not set preferred avatar.' , visibilityTime: 2000});
         } finally {
             setIsSettingPrefAvatarFromModal(false);
         }
@@ -505,7 +515,7 @@ function VirtualTryOn({ route }: { route: any }) {
         // For now, we'll just log and close. The AvatarStatusPill should eventually update
         // once user.publicMetadata.avatar_creation_status changes to 'pending' or 'processing'.
         user?.reload(); // Attempt to reload user data to get new avatar_creation_status
-        Toast.show({type: 'info', text1: 'Avatar recreation started!', text2: 'It might take a few minutes.'});
+        Toast.show({type: 'info', text1: 'Avatar recreation started!', text2: 'It might take a few minutes.', visibilityTime: 2000});
     };
 
     return (

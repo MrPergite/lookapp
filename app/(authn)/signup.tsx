@@ -245,7 +245,7 @@ const SignUpScreen = () => {
         }, 500);
       } else {
         console.log("Verification not complete:", signUpAttempt);
-        Toast.show({ type: "error", text1: "Error in code verification!" })
+        Toast.show({ type: "error", text1: "Error in code verification!", visibilityTime: 2000 })
       }
     } catch (err) {
       console.error("Verification error:", err);
@@ -278,10 +278,10 @@ const SignUpScreen = () => {
         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       }
       setPendingVerification(true);
-      Toast.show({ type: "success", text1: "Code sent successfully" });
+      Toast.show({ type: "success", text1: "Code sent successfully", visibilityTime: 2000 });
     } catch (err) {
       console.error("Error resending code:", err);
-      Toast.show({ type: "error", text1: "Error sending code" });
+      Toast.show({ type: "error", text1: "Error sending code", visibilityTime: 2000 });
     }
   };
 

@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Dimensions,
+  InteractionManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import theme from "@/styles/theme";
@@ -42,6 +43,7 @@ import Header from "./header";
 import SearchInput from "./SearchInput";
 import { getDiscoveryOutfits } from "./queries/getDiscoveryOutfits";
 import DiscoverySection from "./discovery/discovery-section";
+import { useAuth } from "@clerk/clerk-expo";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -103,6 +105,8 @@ const ChatScreenContent = () => {
   const [promptChips, setPromptChips] = useState<string[]>([]);
   const hasFetchedUrl = useRef(false);
   const isFetchingRef = useRef(false);
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+
   const [isDiscoveryOutfitsLoading, setIsDiscoveryOutfitsLoading] = useState(false);
   const [discoveryOutfits, setDiscoveryOutfits] = useState<any[]>([]);
   const [pageNumber, setPageNumber] = useState(0);
@@ -111,6 +115,8 @@ const ChatScreenContent = () => {
   const [hasMore, setHasMore] = useState(true);
   const [promptValue, setPromptValue] = useState<string>("");
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const currentScrollY = useRef(0);
+
   // Main API functions that handle both authenticated and public requests
   const searchPartQuery = useCallback(async (data: any, retries = 1) => {
     try {
@@ -217,7 +223,7 @@ const ChatScreenContent = () => {
       try {
         // Make the API call using existing helper functions
         // Assuming POST request as in the original context, with no body for prompt chips
-        const response = await (isAuthenticated
+        const response = await (isSignedIn
           ? callProtectedEndpoint(endpoint, { method: 'POST', data: {} })
           : callPublicEndpoint(endpoint, { method: 'POST', data: {} }));
 
@@ -244,7 +250,7 @@ const ChatScreenContent = () => {
     };
 
     fetchPromptChips();
-  }, []);
+  }, [isSignedIn]);
   useEffect(() => {
     const fetchDiscoveryOutfits = async () => {
       if (isFetchingRef.current) return;
@@ -274,6 +280,7 @@ const ChatScreenContent = () => {
             type: "error",
             text1: "Search Error",
             text2: 'Failed to load your discovery outfits',
+            visibilityTime: 2000  
           });
           setDiscoveryOutfits([]);
           setTotalItems(0);
@@ -373,16 +380,14 @@ const ChatScreenContent = () => {
     onMutate: (searchInput) => {
       // Set loading state
       dispatch(chatActions.setLoading(true));
-
-      // Scroll to bottom
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      
+      // No need for scrolling here - the product-search-results component will handle it
     },
     onSuccess: (data) => {
       // Stop loading
       dispatch(chatActions.setLoading(false));
       setImageUris([]);
+      
       // Add products if they exist
       if (data.productResults && data.productResults.shopping_results && data.productResults.shopping_results.length > 0) {
         const transformedProducts = transformProducts(data.productResults.shopping_results);
@@ -390,6 +395,8 @@ const ChatScreenContent = () => {
         if (transformedProducts.length > 0) {
           // Always use addProducts to append new products rather than replacing
           dispatch(chatActions.addProducts(transformedProducts, data.productResults.sessionId, data.aiResponse));
+          
+          // No need to handle scrolling here - let the product-search-results component handle it
         } else {
           console.warn("No products were transformed successfully");
         }
@@ -399,11 +406,6 @@ const ChatScreenContent = () => {
 
       // Clear search text
       setSearchText("");
-
-      // Scroll to bottom
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
     },
     onError: (error: any) => {
       console.error("Search mutation error:", error);
@@ -427,6 +429,7 @@ const ChatScreenContent = () => {
         type: "error",
         text1: "Search Error",
         text2: error.message || "Failed to search products",
+        visibilityTime: 2000
       });
 
       // Clear search text
@@ -444,8 +447,7 @@ const ChatScreenContent = () => {
     setSearchText(""); // Clear input
 
     // Check if there's an active image upload in progress
-    // This could be extended to handle actual image uploads
-    const imageData = imageUris.length > 0 ? imageUris[0] : null; // Replace with actual image data if implementing image upload
+    const imageData = imageUris.length > 0 ? imageUris[0] : null;
 
     // Determine the input type based on whether an image is included
     const currentInputType = imageData ? "img+txt" : "text";
@@ -455,6 +457,13 @@ const ChatScreenContent = () => {
       dispatch(chatActions.setInputType(currentInputType));
     }
 
+    // Track the current conversation position for scroll restoration
+    const currentPosition = scrollViewRef.current ? 
+      { y: currentScrollY.current } : 
+      { y: 0 };
+    
+    console.log("Current scroll position before adding message:", currentPosition);
+    
     // Add user message to chat history (with image if available)
     if (imageData) {
       dispatch(chatActions.addUserMessage(userMessage, imageData));
@@ -462,8 +471,23 @@ const ChatScreenContent = () => {
       dispatch(chatActions.addUserMessage(userMessage));
     }
 
+    // Make sure we scroll to the bottom immediately after adding the user message
+    InteractionManager.runAfterInteractions(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: false });
+        
+        // Then scroll again with animation after a short delay
+        setTimeout(() => {
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollToEnd({ animated: true });
+          }
+        }, 100);
+      }
+    });
+
     // Execute the search mutation with both text and any image
     searchMutation.mutate({ text: userMessage, image: imageData });
+    
     Keyboard.dismiss();
   };
 
@@ -580,6 +604,7 @@ const ChatScreenContent = () => {
         Toast.show({
           type: 'error',
           text1: 'Failed to extract social media links',
+          visibilityTime: 2000
         });
       }
     } catch (error) {
@@ -611,12 +636,17 @@ const ChatScreenContent = () => {
         type: "error",
         text1: "Search Error",
         text2: 'Failed to load more discovery outfits',
+        visibilityTime: 2000
       });
     } finally {
       setIsLoadingMore(false);
       isFetchingRef.current = false;
     }
   }, [isLoadingMore, hasMore, pageNumber, pageSize, discoveryOutfits.length, totalItems]);
+
+  const handleScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+  currentScrollY.current = event.nativeEvent.contentOffset.y;
+};
 
   return (
     <KeyboardAvoidingView
@@ -629,7 +659,6 @@ const ChatScreenContent = () => {
         end={{ x: 0.5, y: 1 }}
         style={[styles.container]}
       >
-
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.chatContainer}>
@@ -638,6 +667,8 @@ const ChatScreenContent = () => {
                   contentContainerStyle={{ alignItems: 'stretch' }}
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
                 >
                   <Header darkMode={true} />
                   <View style={[styles.container, { zIndex: 100}]}>
@@ -655,14 +686,14 @@ const ChatScreenContent = () => {
                       handleInstagramClick={() => setShowImageUploadDialog(true)}
                     />
                   </View>
+                  
                   {/* Wrapper for DiscoverySection with new styling and conditional rendering */}
                     <DiscoverySection discoveryOutfits={discoveryOutfits} hasMore={hasMore} loadMoreItems={loadMoreItems} isLoadingMore={isLoadingMore} />
                 </ScrollView>
               }
 
-              <View style={[styles.fullscreenContainer]}>
-                {conversationGroups.length ? (
-                  <>
+              {conversationGroups.length ? (
+                <View style={styles.chatContentContainer}>
                   <ProductSearchResultsMemo
                     inputType={inputType as any}
                     latestAiMessage={latestAiMessage}
@@ -692,23 +723,26 @@ const ChatScreenContent = () => {
                     imageSelectionUrls={socialImages}
                     onImageSelected={handleImageSelected}
                   />
-                  <MessageInput
-                    onSend={handleSendMessage}
-                    onImageSelect={handleImageUpload}
-                    placeholder="Type a message..."
-                    disabled={isLoading}
-                    renderImagePreview={() => (
-                      <ImagePreview imageUris={imageUris} onRemoveImage={handleRemoveImage} />
-                    )}
-                    showImagePreview={imageUris.length > 0}
-                    setSearchText={setSearchText}
-                    searchText={searchText}
-                  />
-                 </>
-                ) : (
-                  <></>
-                )}
-              </View>
+                  
+                  <View style={[styles.inputWrapper, { backgroundColor: 'transparent' }]}>
+                    <MessageInput
+                      onSend={handleSendMessage}
+                      onImageSelect={handleImageUpload}
+                      placeholder="Type a message..."
+                      disabled={isLoading}
+                      renderImagePreview={() => (
+                        <ImagePreview imageUris={imageUris} onRemoveImage={handleRemoveImage} />
+                      )}
+                      showImagePreview={imageUris.length > 0}
+                      setSearchText={setSearchText}
+                      searchText={searchText}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <></>
+              )}
+
               {fetchProduct &&
                 <ProductDetails
                   fetchProduct={fetchProduct}
@@ -747,17 +781,9 @@ const ChatScreenContent = () => {
                   }}
                 />
               )}
-
-
             </View>
-            {/* Input box at the bottom */}
-
-
-
           </SafeAreaView>
-
         </TouchableWithoutFeedback>
-
       </LinearGradient>
 
       <ImageUploadDialog
@@ -791,6 +817,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.md,
+  },
+  chatContentContainer: {
+    flex: 1,
+    width: '100%',
+    position: 'relative',
   },
   card: {
     backgroundColor: theme.colors.primary.white,
@@ -934,6 +965,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderRadius: theme.spacing.xl - 8,
     position: "relative",
+    zIndex: 100,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -1032,6 +1064,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 8,
     backgroundColor: "transparent"
+  },
+  inputWrapper: {
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    paddingHorizontal: 4,
+    backgroundColor: 'transparent',
+    marginBottom: 10,
+    boxShadow: '0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1)'
   },
 });
 

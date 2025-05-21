@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { UserDetailsProvider } from '@/common/providers/user-details';
 import { Button } from 'react-native';
 import BackButton from '../(authn)/components/BackButton';
-
+import { LinearGradient } from 'expo-linear-gradient';
 export default function ProfileRoutesLayout() {
 
     return (
@@ -15,10 +15,16 @@ export default function ProfileRoutesLayout() {
                 options={{
                     headerTransparent: true,
                     headerBackVisible: false, // hide default back button
-                    headerTitle: '', 
+                    headerTitle: '',
                     headerShown: true,
                     gestureEnabled: true,
-                    headerLeft: () => <BackButton customStyle={{ top: 0, left: 0 }} />
+                    headerLeft: () => {
+                        return (
+                             <BackButton customStyle={{ top: 0, left: 0}} />
+                       
+
+                        )
+                    }
                 }}
             />
         </Stack>
