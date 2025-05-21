@@ -206,9 +206,9 @@ function TabSection({ activeTab, setActiveTab,
         />
       )}
       <MotiView
-        className={`fixed top-4 bottom-0 left-0 right-0 bg-gray-50/95 rounded-t-3xl relative ${isMyOutfitsExpanded ? "z-50" : "z-10"}`}
+        className={`fixed top-16 bottom-0 left-0 right-0 bg-gray-50/95 rounded-t-3xl relative ${isMyOutfitsExpanded ? "z-50" : "z-10"}`}
         animate={{
-          transform: [{ translateY: isMyOutfitsExpanded ? -80 : 0 }],
+          transform: [{ translateY: isMyOutfitsExpanded ? -100 : 0 }],
           height: isMyOutfitsExpanded ? screenHeight * 1 : screenHeight * 0.38,
         }}
         transition={{
@@ -370,12 +370,12 @@ function TabSection({ activeTab, setActiveTab,
 
 
                 {activeTab === "my-outfits" && <View
-                  className="mt-2 focus-visible:outline-none px-4 h-[calc(100vh-210px)] overflow-y-auto pb-12"
+                  className="mt-6 focus-visible:outline-none px-4 h-[calc(100vh-210px)] overflow-y-auto pb-12"
                 >
                   {savedOutfits.length === 0 ? (
                     <EmptyOutfits />
                   ) : (
-                    <View className="flex flex-row items-center justify-center flex-wrap gap-3 p-2">
+                    <View className="flex flex-row items-center justify-center flex-wrap gap-4 p-2">
                       {savedOutfits.map((outfit) => (
                         <Pressable
                           key={outfit.id}
@@ -385,11 +385,23 @@ function TabSection({ activeTab, setActiveTab,
                           }}>
                           <MotiView
                             key={outfit.id}
-                            className="flex flex-col w-[145px]"
+                            className="flex flex-col w-[160px]"
                             whileHover={{ scale: 1.02 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <View className="relative rounded-2xl overflow-hidden shadow-sm cursor-pointer bg-white dark:bg-gray-800">
+                            <View 
+                              style={{
+                                borderRadius: 16,
+                                overflow: 'hidden',
+                                backgroundColor: 'white',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 8,
+                                elevation: 4,
+                                position: 'relative',
+                              }}
+                            >
                               <Image
                                 source={{ uri: outfit.vton_img_url }}
                                 alt={outfit.outfit_name}
@@ -399,20 +411,53 @@ function TabSection({ activeTab, setActiveTab,
                                 transition={100}
                                 style={{
                                   width: "100%",
-                                  height: 220,
+                                  height: 240,
                                 }}
                               />
+                              {/* Gradient overlay for text legibility */}
+                              <LinearGradient
+                                colors={['transparent', 'rgba(0,0,0,0.7)']}
+                                start={{ x: 0, y: 0.7 }}
+                                end={{ x: 0, y: 1 }}
+                                style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 60,
+                                  paddingHorizontal: 8,
+                                  paddingBottom: 8,
+                                  justifyContent: 'flex-end',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: 'white', 
+                                    fontSize: 13,
+                                    fontWeight: '600',
+                                    textAlign: 'center'
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {outfit.outfit_name}
+                                </Text>
+                              </LinearGradient>
                               <TouchableOpacity
                                 onPress={() => handleDeleteClick(outfit)}
-                                className="absolute top-2 right-2 p-1 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                                style={{
+                                  position: 'absolute',
+                                  top: 8,
+                                  right: 8,
+                                  backgroundColor: 'rgba(0,0,0,0.3)',
+                                  borderRadius: 20,
+                                  width: 24,
+                                  height: 24,
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
                               >
-                                <X color='white' size={responsiveFontSize(16)} className="w-4 h-4" />
+                                <X color='white' size={16} />
                               </TouchableOpacity>
-                            </View>
-                            <View className="mt-1 px-1">
-                              <Text className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate text-center">
-                                {outfit.outfit_name}
-                              </Text>
                             </View>
                           </MotiView>
                         </Pressable>
@@ -508,7 +553,7 @@ const styles = StyleSheet.create({
     position: 'fixed',
     width: '100%',
     paddingBottom: 0,
-    marginTop: 6,
+    marginTop: 12,
   },
   categoryHeaderContainer: {
     borderBottomWidth: 1,
