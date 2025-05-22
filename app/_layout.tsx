@@ -1,22 +1,27 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Slot, SplashScreen as ExpoRouter, Tabs, Stack } from "expo-router";
+import { useColorScheme } from 'react-native';
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { tokenCache } from '@clerk/clerk-expo/token-cache'
-import { Slot, SplashScreen, Tabs, Stack } from "expo-router";
-import Toast, { BaseToast, ErrorToast, ToastConfig } from "react-native-toast-message";
-import { OnBoardingContext, OnBoardingProvider } from "./(onboarding)/context";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { X } from "lucide-react-native";
-import theme from "@/styles/theme";
-import React from "react";
-import Constants from 'expo-constants';
-import { ImageProvider } from "@/common/providers/image-search";
+import { useFonts } from 'expo-font';
+import CustomSplashScreen from './splash-screen';
 import { ScreenHistoryProvider } from "@/common/providers/screen-history";
 import { UserDetailsProvider } from "@/common/providers/user-details";
+import { ImageProvider } from "@/common/providers/image-search";
+import { OnBoardingProvider } from "./(onboarding)/context";
+import Constants from 'expo-constants';
+import theme from "@/styles/theme";
+import { X } from "lucide-react-native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { tokenCache } from '@clerk/clerk-expo/token-cache'
+import Toast, { BaseToast, ErrorToast, ToastConfig } from "react-native-toast-message";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-console.log({ publishableKey })
 
 // Create a client
 const queryClient = new QueryClient({
@@ -103,20 +108,62 @@ const toastConfig: ToastConfig = {
   ),
 };
 
-
 export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [appIsReady, setAppIsReady] = useState(false);
+  const colorScheme = useColorScheme();
+
+  const [loaded] = useFonts({
+    // Add your fonts here
+  });
+
+  // Prepare app resources and hide the native splash screen
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Pre-load fonts, make API calls, etc.
+        await new Promise(resolve => setTimeout(resolve, 500)); // Artificial delay for testing
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        // Tell the application to render
+        setAppIsReady(true);
+        
+        // Hide the native splash screen
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
+  }, []);
+
+  // Function to handle splash screen animation completion
+  const handleSplashAnimationComplete = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
+  if (!appIsReady || !loaded) {
+    return null;
+  }
+
+  // Render the splash screen or main app
+  if (showSplash) {
+    return <CustomSplashScreen onAnimationComplete={handleSplashAnimationComplete} />;
+  }
 
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={DefaultTheme}>
-            <ImageProvider>
+          <ImageProvider>
+            <UserDetailsProvider>
               <ScreenHistoryProvider>
                 <OnBoardingProvider>
                   <Slot />
                 </OnBoardingProvider>
               </ScreenHistoryProvider>
-            </ImageProvider>
+            </UserDetailsProvider>
+          </ImageProvider>
           <Toast
             position='bottom'
             bottomOffset={65}

@@ -1,6 +1,6 @@
 // TabHeader.tsx
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,9 +9,11 @@ import {
   StyleSheet,
   Platform,
   useColorScheme,
+  Animated,
 } from 'react-native';
 import { UserCircle } from 'lucide-react-native';
 import theme from '@/styles/theme';
+import * as Haptics from 'expo-haptics';
 
 interface TabHeaderProps {
   onProfilePress: () => void;
@@ -19,6 +21,60 @@ interface TabHeaderProps {
 
 export const TabHeader: React.FC<TabHeaderProps> = ({ onProfilePress }) => {
   const isDark = useColorScheme() === 'dark';
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  // Shadow opacity animation
+  const shadowOpacity = opacityAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.5]
+  });
+
+  const handleProfilePress = () => {
+    // Trigger haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Animate scale with a bounce effect
+    Animated.sequence([
+      // Scale down quickly
+      Animated.timing(scaleAnim, {
+        toValue: 0.85,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      // Scale up with slight overshoot
+      Animated.spring(scaleAnim, {
+        toValue: 1.15,
+        friction: 3,  // Lower friction for more bounce
+        tension: 40,  // Adjust tension for bounce strength
+        useNativeDriver: true,
+      }),
+      // Scale back to normal
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Animate shadow/glow effect
+    Animated.sequence([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: false,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: false,
+      }),
+    ]).start();
+    
+    // Call the original callback
+    onProfilePress();
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, {
@@ -39,8 +95,21 @@ export const TabHeader: React.FC<TabHeaderProps> = ({ onProfilePress }) => {
 
         {/* profile icon */}
         <View style={[styles.sideContainer, styles.profileIconContainer]}>
-          <Pressable onPress={onProfilePress} hitSlop={10}>
-            <UserCircle size={24} color={'rgb(147, 51, 234)'} />
+          <Pressable onPress={handleProfilePress} hitSlop={15}>
+            <View style={styles.iconWrapper}>
+              <Animated.View style={[
+                styles.glowEffect,
+                {
+                  opacity: opacityAnim,
+                }
+              ]} />
+              <Animated.View style={{
+                transform: [{ scale: scaleAnim }],
+                zIndex: 2,
+              }}>
+                <UserCircle size={26} color={'rgb(147, 51, 234)'} />
+              </Animated.View>
+            </View>
           </Pressable>
         </View>
       </View>
@@ -55,13 +124,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    // shadow-md
-    // shadowColor: '#000',
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.1,
-    // shadowRadius: 4,
-    // elevation: 4, // for Android
-    // zIndex: 50,
+    zIndex: 10,
   },
   headerContainer: {
     flexDirection: 'row',
@@ -85,6 +148,21 @@ const styles = StyleSheet.create({
   profileIconContainer: {
     alignItems: 'flex-end',
     justifyContent: 'center',
+  },
+  iconWrapper: {
+    position: 'relative',
+    width: 40, 
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowEffect: {
+    position: 'absolute',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgb(147, 51, 234)',
+    zIndex: 1,
   },
 });
 

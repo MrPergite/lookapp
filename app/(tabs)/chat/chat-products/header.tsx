@@ -35,20 +35,21 @@ const Header = ({ darkMode=false }) => {
       style={[
         styles.container,
         {
-          opacity,
+          opacity: 1,
           transform: [{ translateY }],
         },
       ]}
     >
       <MaskedView
         maskElement={
-          <Text style={[styles.text, styles.maskedText]}>
+          <Text style={[styles.text, styles.maskedText]} >
             what's your look?
           </Text>
         }
       >
         <LinearGradient
-          colors={colors}
+           colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
         >
@@ -72,13 +73,14 @@ const styles = StyleSheet.create({
   text: {
     // roughly matches web's text-2xl / sm:text-3xl
     fontSize: SCREEN_WIDTH > 360 ? 24 : 20,
-    fontWeight: '700',
+    fontWeight:700,
     textAlign: 'center',
     lineHeight: 32,
   },
   maskedText: {
     // for MaskedView masks, text must have a color
     color: '#000',
+    fontWeight:700,
   },
 });
 

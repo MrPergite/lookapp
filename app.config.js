@@ -43,6 +43,7 @@ const appConfig = {
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
+          autoHideEnabled: false
         },
       ],
       [

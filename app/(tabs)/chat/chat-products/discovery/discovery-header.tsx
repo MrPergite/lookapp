@@ -49,9 +49,9 @@ export const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = ({ darkMode, disc
 
   // Helper for gradient text
   const GradientText: React.FC<{ text: string; textStyle: any; opacityAnim?: Animated.Value }> = ({ text, textStyle, opacityAnim }) => (
-    <Animated.View style={opacityAnim ? { opacity: opacityAnim } : undefined}>
+
       <MaskedView
-        maskElement={<Text style={[textStyle, { color: '#000' }]}>{text}</Text>}
+        maskElement={<Text style={[textStyle, { color: '#000'}]}>{text}</Text>}
       >
         <LinearGradient
           colors={gradientColors as [string, string, ...string[]]}
@@ -61,7 +61,7 @@ export const DiscoveryHeader: React.FC<DiscoveryHeaderProps> = ({ darkMode, disc
           <Text style={[textStyle, { opacity: 0 }]}>{text}</Text>
         </LinearGradient>
       </MaskedView>
-    </Animated.View>
+   
   );
 
   return (discoveryOutfit && discoveryOutfit.length > 0)
@@ -122,13 +122,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 16,
-    width: '100%',
+    // width: '100%',
   },
   heading: {
     fontSize: SCREEN_WIDTH > 360 ? 24 : 20,
-    fontWeight: '700',
     textAlign: 'center',
     marginBottom: 12,
+    fontWeight: 700 
   },
   subTextContainer: {
     flexDirection: 'row',
@@ -143,16 +143,16 @@ const styles = StyleSheet.create({
     fontSize: SCREEN_WIDTH > 360 ? 14 : 12,
     textAlign: 'center',
     marginBottom: 0,
-    fontWeight: '500',
+    fontWeight: 500,
   },
   divider: {
-    width: 128,
+    width: 160,
     height: 2,
     borderRadius: 1,
     marginTop: 0,
   },
   cardWrapper: {
-    width: '48%',
+    // width: '48%',
     marginBottom: 16,
   },
 });

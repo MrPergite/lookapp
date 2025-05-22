@@ -44,6 +44,7 @@ import SearchInput from "./SearchInput";
 import { getDiscoveryOutfits } from "./queries/getDiscoveryOutfits";
 import DiscoverySection from "./discovery/discovery-section";
 import { useAuth } from "@clerk/clerk-expo";
+import * as Haptics from 'expo-haptics';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -443,6 +444,8 @@ const ChatScreenContent = () => {
 
     if (!searchText.trim() || searchMutation.isPending) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     const userMessage = searchText.trim();
     setSearchText(""); // Clear input
 
@@ -492,12 +495,14 @@ const ChatScreenContent = () => {
   };
 
   const handleProductPress = (product: Product) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFetchProduct(product);
     // Implement product navigation/details view
   };
   const ProductSearchResultsMemo = useCallback(ProductSearchResults, [products, chatHistory, isLoading, latestAiMessage, conversationGroups]);
 
   const handleImageUpload = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -508,21 +513,25 @@ const ChatScreenContent = () => {
       if (!result.canceled) {
         if (result.assets[0].base64) {
           setImageUris([result.assets[0].base64]);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
       }
     });
   };
 
   const handleRemoveImage = (uri: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setImageUris(imageUris.filter((imageUri) => imageUri !== uri));
   };
 
   const handleFollowUpPress = (product: Product) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setFollowUpProduct(product);
     // Implement follow up logic
   };
 
   const handleProdCardQuery = async (question: string, product: any) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsProductQueryLoading(true);
     dispatch(chatActions.addUserMessage(question, product?.image))
     dispatch(chatActions.addAiMessage("Your searched products"))
@@ -545,6 +554,7 @@ const ChatScreenContent = () => {
   };
 
   const handleImageSelected = async (index: number) => {
+    // Haptics.selectionAsync(); // Haptic feedback for selection
     try {
       const activeGrp = conversationGroups.find(c => c.id === activeConversationGroup);
       const imageUrl = activeGrp?.aiMessage[activeGrp.aiMessage.length - 1].social?.images[index].img_url;
@@ -587,6 +597,7 @@ const ChatScreenContent = () => {
 
   const handleSocialUrlSubmit = async (url: string) => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       dispatch(chatActions.addUserMessage(url));
       dispatch(chatActions.addAiMessage("Please select the image where you are looking for a fashion item", "social"));
       dispatch(chatActions.setSocialImages([], true));

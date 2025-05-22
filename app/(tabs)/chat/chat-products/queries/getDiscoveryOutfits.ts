@@ -1,6 +1,6 @@
 import Toast from "react-native-toast-message";
 
-export const getDiscoveryOutfits = async ( callPublicEndpoint: any, { pageNumber = 0, pageSize = 10, gender = "female" }) => {
+export const getDiscoveryOutfits = async ( callPublicEndpoint: any, { pageNumber ,pageSize, gender }: { pageNumber: number, pageSize: number, gender: string }) => {
     try {
         const payload = {
             pagination: {

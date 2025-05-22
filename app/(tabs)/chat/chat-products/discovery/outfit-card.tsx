@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,10 @@ import {
   Text,
   Pressable,
   Dimensions,
+  Animated,
+  Easing,
+  ViewStyle,
+  ImageStyle,
 } from 'react-native';
 import Video, { VideoRef } from 'react-native-video';
 import { Image } from 'expo-image';
@@ -14,6 +18,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { BlurView } from '@react-native-community/blur';
 import {OutfitDialog} from './outfit-dialog';
 import { useSaveShoppingList } from '../queries/save-shopping-list';
+import * as Haptics from 'expo-haptics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,7 +31,56 @@ interface OutfitCardProps {
   outfitItems?: any[];
   outfitName?: string;
   outfitPrice?: string;
+  entranceAnimationDelay?: number; // For staggered entrance
 }
+
+const OutfitCardMediaSkeleton: React.FC = () => {
+    const shimmerAnimation = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(shimmerAnimation, {
+                    toValue: 1,
+                    duration: 1200,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(shimmerAnimation, {
+                    toValue: 0,
+                    duration: 1200,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, [shimmerAnimation]);
+
+    const translateX = shimmerAnimation.interpolate({
+        inputRange: [0, 1],
+        // Make the shimmer move across the entire card width if mediaContainer is full width
+        outputRange: [-SCREEN_WIDTH, SCREEN_WIDTH], 
+    });
+
+    return (
+        <View style={[styles.mediaContainer, { backgroundColor: '#e0e0e0', overflow: 'hidden' }]}>
+            <Animated.View
+                style={{
+                    width: '300%', 
+                    height: '100%',
+                    position: 'absolute',
+                    transform: [{ translateX }],
+                    left: '-100%', 
+                }}
+            >
+                <LinearGradient
+                    colors={['#e0e0e0', '#f0f0f0', '#e0e0e0']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={{ flex: 1 }}
+                />
+            </Animated.View>
+        </View>
+    );
+};
 
 const OutfitCard: React.FC<OutfitCardProps> = ({
   darkMode,
@@ -37,8 +91,19 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
   outfitItems = [],
   outfitName = 'Casual Outfit',
   outfitPrice,
+  entranceAnimationDelay = 0, // Default to 0 if not provided
 }) => {
   const videoRef = useRef<VideoRef>(null);
+  const cardPressScaleAnim = useRef(new Animated.Value(1)).current; // For card press effect
+  const cardPressTranslateYAnim = useRef(new Animated.Value(0)).current; // For card press Y translation
+  const cardEntranceAnim = useRef(new Animated.Value(0)).current; // For entrance animation
+  const mediaOpacityAnim = useRef(new Animated.Value(0)).current; // For media crossfade
+  const seeOutfitButtonScaleAnim = useRef(new Animated.Value(1)).current; // For "See Full Outfit" button press
+  const badgeAnim = useRef(new Animated.Value(0)).current;
+  const footerAnim = useRef(new Animated.Value(0)).current;
+  const priceAnim = useRef(new Animated.Value(0)).current;
+  const comingSoonAnim = useRef(new Animated.Value(0)).current;
+  const imageDriftAnim = useRef(new Animated.Value(0)).current;
   const isVideo = !!videoUrl;
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -46,163 +111,367 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
   const [showLoginModal, setShowLoginModal] = useState(false);
   const { savedProducts, savingProducts, saveSuccess, saveError, saveShoppingItem, isPending } = useSaveShoppingList(() => setShowLoginModal(true))
 
+  useEffect(() => {
+    // Card entrance animation
+    Animated.timing(cardEntranceAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: entranceAnimationDelay, // Use the passed delay
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic), // Smoother easing
+    }).start();
+  }, [cardEntranceAnim, entranceAnimationDelay]);
+
+  useEffect(() => {
+    // Coming Soon overlay animation
+    if (comingSoon) {
+        Animated.timing(comingSoonAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: false, // BlurView might not support native animation for opacity
+        }).start();
+    } else {
+        // Optionally, animate out if comingSoon becomes false, though usually it's fixed per card
+        comingSoonAnim.setValue(0);
+    }
+  }, [comingSoon, comingSoonAnim]);
+
+  useEffect(() => {
+    // Media drift animation - start when media is loaded and available
+    if (mediaLoaded && !hasError && (resultImage || videoUrl)) {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(imageDriftAnim, {
+                    toValue: 1, 
+                    duration: 4000, // Faster: Was 8000
+                    useNativeDriver: true,
+                    easing: Easing.bezier(0.42, 0, 0.58, 1),
+                }),
+                Animated.timing(imageDriftAnim, {
+                    toValue: -1, 
+                    duration: 6000, // Faster: Was 8000
+                    useNativeDriver: true,
+                    easing: Easing.bezier(0.42, 0, 0.58, 1),
+                }),
+                Animated.timing(imageDriftAnim, {
+                    toValue: 0, 
+                    duration: 6000, // Faster: Was 8000
+                    useNativeDriver: true,
+                    easing: Easing.bezier(0.42, 0, 0.58, 1),
+                }),
+            ])
+        ).start();
+    }
+    return () => {
+        imageDriftAnim.stopAnimation();
+    };
+  }, [mediaLoaded, hasError, resultImage, videoUrl, imageDriftAnim]);
+
+  const handleCardPressIn = () => {
+    Animated.parallel([
+        Animated.spring(cardPressScaleAnim, {
+            toValue: isMobile ? 0.97 : 0.98, 
+            friction: 7,
+            tension: 100,
+            useNativeDriver: true,
+        }),
+        Animated.spring(cardPressTranslateYAnim, { // Animate Y position up slightly
+            toValue: -4, // Move up by 4 units
+            friction: 7,
+            tension: 100,
+            useNativeDriver: true,
+        })
+    ]).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleCardPressOut = () => {
+    Animated.parallel([
+        Animated.spring(cardPressScaleAnim, {
+            toValue: 1, 
+            friction: 7,
+            tension: 100,
+            useNativeDriver: true,
+        }),
+        Animated.spring(cardPressTranslateYAnim, { // Animate Y position back to 0
+            toValue: 0,
+            friction: 7,
+            tension: 100,
+            useNativeDriver: true,
+        })
+    ]).start();
+  };
+
   const handleError = () => {
     setHasError(true);
-    setMediaLoaded(true);
+    setMediaLoaded(true); 
+    mediaOpacityAnim.setValue(1); 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); // Haptic for error
+  };
+
+  const handleSeeOutfitPressIn = () => {
+    Animated.spring(seeOutfitButtonScaleAnim, {
+        toValue: 0.96,
+        friction: 7,
+        tension: 100,
+        useNativeDriver: true,
+    }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const handleSeeOutfitPressOut = () => {
+    Animated.spring(seeOutfitButtonScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 100,
+        useNativeDriver: true,
+    }).start();
+  };
+
+  // Style for the drifting media Animated.View
+  const driftingMediaWrapperStyle: Animated.AnimatedProps<ViewStyle> = {
+    width: '110%', 
+    height: '100%',
+    position: 'absolute', 
+    left: '-5%', 
+    opacity: mediaOpacityAnim, 
+    transform: [
+        {
+            translateX: imageDriftAnim.interpolate({
+                inputRange: [-1, 1],
+                outputRange: [-8, 8], 
+            }),
+        },
+    ],
+  };
+
+  // Style for the actual Image/Video component inside the drifting wrapper
+  const mediaFillStyle: ViewStyle = { // For Video
+    width: '100%',
+    height: '100%',
+  };
+  // Separate for expo-image due to stricter ImageStyle typing if needed, though above often works.
+  const imageMediaFillStyle: ImageStyle = { // For expo-image Image
+    width: '100%',
+    height: '100%',
   };
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        darkMode ? styles.darkBg : styles.lightBg,
-        isMobile ? styles.shadow : styles.shadowLg,
-        { transform: [{ scale: pressed ? (isMobile ? 1 : 1.02) : 1 }] },
-      ]}
-      onPress={() => {}}
+      onPress={() => { 
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // More significant haptic for opening dialog
+        setDialogOpen(true); 
+      }}
+      onPressIn={handleCardPressIn}
+      onPressOut={handleCardPressOut}
       android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
     >
-      {/* Media container */}
-      <View style={styles.mediaContainer}>
-        {isVideo ? (
-          <>
-            {/* Video badge */}
-            <View style={styles.badge}>
-              <Feather name="video" size={14} color="#FFF" />
-              <Text style={styles.badgeText}>Video</Text>
-            </View>
+      <Animated.View style={[
+        styles.card, 
+        darkMode ? styles.darkBg : styles.lightBg, 
+        isMobile ? styles.shadow : styles.shadowLg,
+        {
+          opacity: cardEntranceAnim, // Fade in
+          transform: [
+            { scale: cardPressScaleAnim }, // Existing press scale
+            { translateY: cardPressTranslateYAnim }, // Add Y translation for press
+            { 
+              translateY: cardEntranceAnim.interpolate({ // Slide up for entrance
+                inputRange: [0, 1],
+                outputRange: [50, 0] 
+              })
+            }
+          ]
+        }
+      ]}>
+        {/* Media container */}
+        <View style={styles.mediaContainer}>
+          {!mediaLoaded && !hasError && ( // Show skeleton if not loaded and no error
+            <OutfitCardMediaSkeleton />
+          )}
 
-            {/* Loading */}
-            {!mediaLoaded && !hasError && (
-              <View style={[styles.overlay, styles.loadingBg]}>
-                <ActivityIndicator size="large" color="#E5E7EB" />
-              </View>
-            )}
+          {isVideo ? (
+            <>
+              {/* Video badge - animates in */}
+              {mediaLoaded && (
+                <Animated.View style={[
+                  styles.badge,
+                  {
+                    opacity: badgeAnim,
+                    transform: [
+                      { scale: badgeAnim.interpolate({ inputRange: [0,1], outputRange: [0.5, 1] }) },
+                      { translateY: badgeAnim.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }
+                    ]
+                  }
+                ]}>
+                  <Feather name="video" size={14} color="#FFF" />
+                  <Text style={styles.badgeText}>Video</Text>
+                </Animated.View>
+              )}
 
-            {/* Error */}
-            {hasError && (
-              <View style={[styles.overlay, styles.errorBg]}>
-                <Text style={styles.errorText}>Media unavailable</Text>
-              </View>
-            )}
+              {/* Error State for Video - shown if hasError is true */} 
+              {hasError && (
+                <View style={[styles.overlay, styles.errorBg]}>
+                  <Text style={styles.errorText}>Media unavailable</Text>
+                </View>
+              )}
 
-            {/* Video player */}
-            {!hasError && (
-              <Video
-                ref={videoRef}
-                source={{ uri: videoUrl! }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-                muted
-                repeat
-                onLoad={() => setMediaLoaded(true)}
-                onError={handleError}
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {/* Loading */}
-            {!mediaLoaded && !hasError && (
-              <View style={[styles.overlay, styles.loadingBg]}>
-                <ActivityIndicator size="large" color="#E5E7EB" />
-              </View>
-            )}
+              {/* Video player - animates in */} 
+              {!hasError && videoUrl && (
+                <Animated.View style={driftingMediaWrapperStyle}>
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: videoUrl }}
+                    style={mediaFillStyle}
+                    resizeMode="cover"
+                    muted
+                    repeat
+                    onLoad={() => {
+                        setMediaLoaded(true);
+                        // Haptics.selectionAsync();
+                        Animated.timing(mediaOpacityAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(() => {
+                            if (isVideo) { 
+                                Animated.timing(badgeAnim, { toValue: 1, duration: 300, delay: 200, useNativeDriver: true }).start();
+                            }
+                        });
+                    }}
+                    onError={handleError} 
+                  />
+                </Animated.View>
+              )}
+            </>
+          ) : (
+            <> 
+              {/* Error State for Image - shown if hasError is true */} 
+              {hasError && !resultImage && (
+                  <View style={[styles.overlay, styles.errorBg]}>
+                      <Text style={styles.errorText}>Image unavailable</Text>
+                  </View>
+              )}
 
-            {/* Error */}
-            {hasError && (
-              <View style={[styles.overlay, styles.errorBg]}>
-                <Text style={styles.errorText}>Image unavailable</Text>
-              </View>
-            )}
+              {/* Image - animates in */} 
+              {!hasError && resultImage ? (
+                <Animated.View style={driftingMediaWrapperStyle}>
+                  <Image
+                    source={{ uri: resultImage }}
+                    style={imageMediaFillStyle}
+                    contentFit="cover"
+                    onLoad={() => {
+                        setMediaLoaded(true);
+                        // Haptics.selectionAsync();
+                        Animated.timing(mediaOpacityAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(() => {
+                            if (isVideo) { 
+                                Animated.timing(badgeAnim, { toValue: 1, duration: 300, delay: 200, useNativeDriver: true }).start();
+                            }
+                        });
+                    }}
+                    onError={handleError} 
+                  />
+                </Animated.View>
+              ) : null} 
+            </>
+          )}
 
-            {/* Image */}
-            {!hasError && resultImage ? (
-              <Image
-                source={{ uri: resultImage }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                resizeMode="cover"
-                onLoad={() => setMediaLoaded(true)}
-                onError={handleError}
-              />
-            ) : (
-              <View style={[styles.placeholder]} />
-            )}
-          </>
-        )}
-
-        {/* Gradient overlay */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.6)']}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Coming soon overlay */}
-        {/* {comingSoon && (
-          <BlurView
-            style={styles.overlay}
-            blurType={darkMode ? 'dark' : 'light'}
-            blurAmount={10}
-          >
-            <Text style={styles.comingSoonText}>Coming Soon</Text>
-          </BlurView>
-        )} */}
-
-        {/* Outfit name footer */}
-        {!comingSoon && mediaLoaded && outfitItems.length > 0 && (
-          <LinearGradient
-            colors={['rgba(0,0,0,0.7)', 'transparent']}
-            style={styles.footer}
-          >
-            <Text style={styles.outfitName}>{outfitName}</Text>
-            {outfitPrice && <Text style={styles.outfitPrice}>{outfitPrice}</Text>}
-          </LinearGradient>
-        )}
-      </View>
-
-      {/* Details & button */}
-      {!comingSoon && mediaLoaded && (
-        <View style={[styles.details, darkMode ? styles.darkBg : styles.lightBg]}>
-          {outfitItems.length > 0 && (
-            <Pressable
-              onPress={() => setDialogOpen(true)}
-              style={({ pressed }) => [
-                styles.fullBtn,
-                { transform: [{ scale: pressed ? 0.95 : 1 }] },
+          {/* Gradient overlay - ensure it renders above the media if media is loaded */} 
+          {mediaLoaded && !hasError && (
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.6)']}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          
+          {/* Coming soon overlay - animates in */} 
+          {comingSoon && (
+            <Animated.View 
+              style={[
+                styles.overlay, 
+                { 
+                  opacity: comingSoonAnim, 
+                  // backgroundColor: darkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' // Fallback if BlurView fails
+                }
               ]}
             >
-              <LinearGradient
-                colors={['#8B5CF6', '#EC4899', '#3B82F6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
+              <BlurView
+                style={StyleSheet.absoluteFill} // BlurView takes up the whole Animated.View
+                blurType={darkMode ? 'dark' : 'light'}
+                blurAmount={10}
               />
-              <View style={styles.fullContent}>
-                <Feather name="eye" size={16} color="#FFF" />
-                <Text style={styles.fullText}>See Full Outfit</Text>
+              <Text style={[styles.comingSoonText, darkMode ? styles.darkComingSoonText : styles.lightComingSoonText]}>
+                Coming Soon
+              </Text>
+            </Animated.View>
+          )}
+
+          {/* Outfit name footer - animates in */} 
+          {!comingSoon && mediaLoaded && !hasError && outfitItems.length > 0 && (
+            <View style={styles.footer}>
+              {/* This gradient is purely for the footer background color effect */}
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']} // Darker at bottom, fading up to transparent
+                style={StyleSheet.absoluteFillObject} // Fills the Animated.View (footer)
+              />
+              {/* Text content needs to be above the gradient background */}
+              <View style={{zIndex: 1}}> 
+                <Text style={styles.outfitName}>{outfitName}</Text>
+                {outfitPrice && 
+                  <Text style={styles.outfitPrice}>
+                    {outfitPrice}
+                  </Text>
+                }
               </View>
-            </Pressable>
+            </View>
           )}
         </View>
-      )}
 
-      {/* Dialog */}
-      <OutfitDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        outfitImage={resultImage}
-        outfitName={outfitName}
-        items={outfitItems}
-        saveShoppingItemConfig={{
-          savedProducts,
-          savingProducts,
-          saveSuccess,
-          saveError,
-          saveShoppingItem,
-          isPending
-        }}
-      />
+        {/* Details & button */}
+        {!comingSoon && mediaLoaded && !hasError && (
+          <View style={[styles.details, darkMode ? styles.darkBg : styles.lightBg]}>
+            {outfitItems.length > 0 && (
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Haptic on actual click action
+                  setDialogOpen(true);
+                }}
+                onPressIn={handleSeeOutfitPressIn}
+                onPressOut={handleSeeOutfitPressOut}
+              >
+                <Animated.View style={[
+                  styles.fullBtn, 
+                  { transform: [{ scale: seeOutfitButtonScaleAnim }] }
+                ]}>
+                  <LinearGradient
+                    colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[StyleSheet.absoluteFill, { borderRadius: 999 }]}
+                  />
+                  <View style={styles.fullContent}>
+                    <Feather name="eye" size={16} color="#FFF" />
+                    <Text style={styles.fullText}>See Full Outfit</Text>
+                  </View>
+                </Animated.View>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Dialog */}
+        <OutfitDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          outfitImage={resultImage}
+          outfitName={outfitName}
+          items={outfitItems}
+          saveShoppingItemConfig={{
+            savedProducts,
+            savingProducts,
+            saveSuccess,
+            saveError,
+            saveShoppingItem,
+            isPending
+          }}
+        />
+      </Animated.View>
     </Pressable>
   );
 };
@@ -296,6 +565,9 @@ const styles = StyleSheet.create({
     padding:12
   },
   fullText: { color: '#FFF', fontSize: 14, marginLeft: 8, fontWeight: '600' },
+  comingSoonText: { color: '#FFF', fontSize: 16, fontWeight: '500', textAlign: 'center' },
+  darkComingSoonText: { color: '#FFF', fontSize: 16, fontWeight: '500', textAlign: 'center' },
+  lightComingSoonText: { color: '#000', fontSize: 16, fontWeight: '500', textAlign: 'center' },
 });
 export default OutfitCard;
 
