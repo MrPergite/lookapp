@@ -353,9 +353,10 @@ const OutfitCard: React.FC<OutfitCardProps> = ({
               {!hasError && resultImage ? (
                 <Animated.View style={driftingMediaWrapperStyle}>
                   <Image
-                    source={{ uri: resultImage }}
+                    source={{ uri: resultImage, priority: 'high', }}
                     style={imageMediaFillStyle}
                     contentFit="cover"
+                    
                     onLoad={() => {
                         setMediaLoaded(true);
                         // Haptics.selectionAsync();

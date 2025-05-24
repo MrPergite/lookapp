@@ -1,76 +1,80 @@
-import { FlatList, ActivityIndicator, View, StyleSheet,Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import DiscoveryHeader from './discovery-header';
-import OutfitCard from './outfit-card';
 import React from 'react';
-export default function DiscoveryList({
-    discoveryOutfits,
-    hasMore,
-    isLoadingMore,
-    loadMoreItems,
-}: {
-    discoveryOutfits: any[];
-    hasMore: boolean;
-    isLoadingMore: boolean;
-    loadMoreItems: () => void;
-}) {
-    console.log("discoveryOutfits",discoveryOutfits)
-    return (
-        <View>
-            <DiscoveryHeader darkMode={false} discoveryOutfit={discoveryOutfits} />
+import ProductCarouselSection, { CategorySectionData, ProductItem } from '../../../../components/ProductCarouselSection';
+import theme from '@/styles/theme';
 
-        <FlatList
-            data={discoveryOutfits}
-            // keyExtractor={(item) => item.id}
-            // key="discovery-flatlist-2cols"
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            renderItem={({ item, index }) => (
-              <View style={styles.cardWrapper}>
-                <OutfitCard key={index}
-                    darkMode={false}
-                    comingSoon={false}
-                    resultImage={item.outfit_img_url}
-                    isMobile={false}
-                    outfitItems={item.shopping_results.map((item: any) => ({
-                        name: item.title,
-                        image: item.img_url,
-                        price: item.price,
-                        brand: item.brand,
-                        link: item.link,
-                        product_id: item.product_id
-                    }))}
-                    outfitName={item.outfit_title}
-                    outfitPrice={item.price} />
-              </View>
-            )}
-            contentContainerStyle={styles.list}
-            onEndReached={() => {
-                if (hasMore && !isLoadingMore) {
-                    loadMoreItems();
-                }
-            }}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={
-                hasMore ? <ActivityIndicator style={styles.loader} /> : null
-            }
+interface DiscoverySectionProps {
+  // Props for ProductCarouselSection
+  categories: CategorySectionData[];
+  onProductPress?: (product: ProductItem) => void;
+  onMoreCarouselPress?: (categoryId: string) => void; // Renamed to avoid confusion if section had its own "more"
+  darkMode?: boolean;
+  gradientBackgroundColors?: [string, string, ...string[]];
+
+  // Props that might still be relevant for DiscoveryHeader or overall section visibility
+  discoveryOutfitForHeader?: any[]; // If header still needs some outfit context, otherwise remove
+  // isParentLoading?: boolean; // If carousel has its own loading state, this might not be needed directly here
+}
+
+export default function DiscoverySection({
+  categories,
+  onProductPress,
+  onMoreCarouselPress,
+  darkMode = false, // Default to light mode to match the parent screen's gradient
+  gradientBackgroundColors,
+  discoveryOutfitForHeader,
+}: DiscoverySectionProps) {
+
+  // The DiscoveryHeader might still be used for a general title like "Discover More"
+  // or it might need to be adapted or removed depending on the new content.
+  // If discoveryOutfitForHeader is not needed, remove it from props and here.
+
+  return (
+    <View style={{flex: 1}}> 
+      {/* Ensure DiscoveryHeader is always rendered if this section is shown */}
+      {/* <DiscoveryHeader 
+        darkMode={darkMode} 
+        discoveryOutfit={[1,2,3,4,5,6,7,8,9,10]} // Pass relevant data if header needs it
+      /> */}
+      
+      {categories && categories.length > 0 ? (
+        <ProductCarouselSection 
+          categories={categories}
+          onProductPress={onProductPress}
+          onMorePress={onMoreCarouselPress} 
+          darkMode={darkMode}
+          // Pass gradient to carousel only if DiscoverySection itself doesn't have one, or if desired.
+          // If DiscoverySection has a gradient background, carousel might not need its own.
+          // For now, let's assume the carousel might want its own distinct background or inherit.
+          // If the parent ScrollView in index.tsx provides the overall page gradient,
+          // then both this DiscoverySection and the ProductCarouselSection might want transparent backgrounds
+          // with their content styled for that gradient.
+          // Let's assume the gradient is handled by the parent for now, and these are content blocks.
+          gradientBackgroundColors={gradientBackgroundColors} // This will make ProductCarouselSection render its own gradient if colors are passed
         />
-        {/* <Text>hello</Text> */}
+      ) : (
+        <View style={styles.centeredMessageContainer}>
+          <Text style={styles.centeredMessageText}>
+            Explore trending styles and items.
+          </Text>
         </View>
-    );
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    list: {
-        padding: 16,
-    },
-    row: {
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    cardWrapper: {
-        width: '48%',
-    },
-    loader: {
-        marginVertical: 20,
-    },
+  centeredMessageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    minHeight: 200, // Ensure it takes some space if no categories
+  },
+  centeredMessageText: {
+    fontSize: 16,
+    color: theme.colors.secondary.darkGray, // Adjust color as per your theme
+    textAlign: 'center',
+  }
 });

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Dimensions, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Shirt, Watch, Glasses, ShoppingBag, Footprints } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -9,7 +10,7 @@ interface SplashScreenProps {
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
-  // Animation values
+  // Animation values for Look text animation
   const lOpacity = useRef(new Animated.Value(0)).current;
   const lScale = useRef(new Animated.Value(0.5)).current;
   
@@ -31,6 +32,20 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   
   const dotOpacity = useRef(new Animated.Value(0)).current;
   const dotScale = useRef(new Animated.Value(0)).current;
+  
+  // Fashion items circle animation
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const fashionItemsOpacity = useRef(new Animated.Value(0)).current;
+  const fashionItemsScale = useRef(new Animated.Value(0.5)).current;
+  
+  // Individual fashion items animations for pulse effect
+  const itemsScaleAnims = [
+    useRef(new Animated.Value(1)).current,
+    useRef(new Animated.Value(1)).current,
+    useRef(new Animated.Value(1)).current,
+    useRef(new Animated.Value(1)).current,
+    useRef(new Animated.Value(1)).current,
+  ];
 
   useEffect(() => {
     // Step 1: L appears
@@ -166,12 +181,84 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
         { iterations: 2 }
       ).start();
     }, 1800);
+    
+    // Step 6: Show fashion items circle (after logo animation)
+    setTimeout(() => {
+      // Fade in and scale up the fashion items
+      Animated.parallel([
+        Animated.timing(fashionItemsOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fashionItemsScale, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.back(1.2)),
+        }),
+      ]).start();
+      
+      // Start rotating the circle of fashion items
+      Animated.loop(
+        Animated.timing(rotationAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+      
+      // Add pulsing effect to each fashion item
+      itemsScaleAnims.forEach((anim, index) => {
+        const pulseDelay = index * 300; // Stagger the pulse effect
+        
+        setTimeout(() => {
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(anim, {
+                toValue: 1.2,
+                duration: 400,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.sin),
+              }),
+              Animated.timing(anim, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true,
+                easing: Easing.in(Easing.sin),
+              }),
+              Animated.timing(anim, {
+                toValue: 1,
+                duration: 800, // Pause between pulses
+                useNativeDriver: true,
+              }),
+            ])
+          ).start();
+        }, pulseDelay);
+      });
+    }, 2100);
 
-    // Step 6: Notify parent component that animation is complete
+    // Step 7: Notify parent component that animation is complete
     setTimeout(() => {
       onAnimationComplete();
-    }, 3000);
+    }, 4000);
   }, []);
+
+  // Calculate positions for fashion items in a circle
+  const fashionItems = [
+    { icon: Shirt, color: '#9c5ef0', name: 'Shirt' },
+    { icon: Glasses, color: '#a15bef', name: 'Glasses' },
+    { icon: Watch, color: '#8462f2', name: 'Watch' },
+    { icon: Footprints, color: '#3b82f6', name: 'Shoes' },
+    { icon: ShoppingBag, color: '#38bdf8', name: 'Bag' },
+  ];
+  
+  const circleRadius = 120; // Radius for orbit around the logo
+  const rotation = rotationAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.container}>
@@ -179,6 +266,47 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
         colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
         style={StyleSheet.absoluteFillObject}
       />
+      
+      {/* Rotating fashion items positioned AROUND the logo */}
+      <Animated.View style={[
+        styles.fashionItemsContainer,
+        {
+          opacity: fashionItemsOpacity,
+          transform: [
+            { scale: fashionItemsScale },
+            { rotate: rotation }
+          ]
+        }
+      ]}>
+        {fashionItems.map((item, index) => {
+          // Calculate position in circle
+          const angle = (index / fashionItems.length) * 2 * Math.PI;
+          const x = Math.cos(angle) * circleRadius;
+          const y = Math.sin(angle) * circleRadius;
+          
+          const ItemIcon = item.icon;
+          
+          return (
+            <Animated.View
+              key={item.name}
+              style={[
+                styles.fashionItem,
+                {
+                  transform: [
+                    { translateX: x },
+                    { translateY: y },
+                    { scale: itemsScaleAnims[index] }
+                  ]
+                }
+              ]}
+            >
+              <ItemIcon size={32} color={item.color} />
+            </Animated.View>
+          );
+        })}
+      </Animated.View>
+      
+      {/* Main logo - positioned in the CENTER of the rotating items */}
       <View style={styles.logoContainer}>
         {/* Main logo letter positions are set up so that the "o"s can roll from the L's horizontal line */}
         
@@ -209,7 +337,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
                 { translateX: firstOPosition },
                 { rotateZ: firstORotateZ.interpolate({
                   inputRange: [0, 1080],
-                  outputRange: ['0deg', '360deg']
+                  outputRange: ['0deg', '1080deg']
                 }) }
               ]
             }
@@ -231,7 +359,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
                 { translateX: secondOPosition },
                 { rotateZ: secondORotateZ.interpolate({
                   inputRange: [0, 900],
-                  outputRange: ['0deg', '360deg']
+                  outputRange: ['0deg', '900deg']
                 }) }
               ]
             }
@@ -287,14 +415,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    zIndex: 10, // Make sure logo is above the rotating items
   },
   logoText: {
-    fontSize: 84,
+    fontSize: 72,
     fontWeight: 'bold',
     // Subtle shadow for text
-    textShadowColor: 'rgba(0, 0, 0, 0.05)',
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    textShadowRadius: 2,
   },
   logoL: {
     color: '#9c5ef0', // Purple
@@ -310,8 +439,29 @@ const styles = StyleSheet.create({
   },
   logoDot: {
     color: '#38bdf8', // Light blue
-    fontSize: 84,
+    fontSize: 72,
     fontWeight: 'bold',
+  },
+  fashionItemsContainer: {
+    position: 'absolute',
+    width: 260, // Increased to give more space for items
+    height: 260, // Increased to give more space for items
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fashionItem: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
 });
 

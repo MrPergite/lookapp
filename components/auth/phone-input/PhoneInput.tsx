@@ -27,18 +27,21 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
   return (
     <View style={[styles.container]}>
-      <TouchableOpacity style={styles.codeSelector} onPress={() => setModalVisible(true)}>
-        <Text style={styles.codeText}>{COUNTRY_CODES.find(c => c.code === countryCode)?.label || countryCode}</Text>
-      </TouchableOpacity>
-      <TextInput
-        style={[styles.input, style, error && styles.inputError, { padding: 14 }]}
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        keyboardType="phone-pad"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <Text style={styles.label}>Phone (optional)</Text>
+      <View style={styles.inputRow}>
+        <TouchableOpacity style={styles.codeSelector} onPress={() => setModalVisible(true)}>
+          <Text style={styles.codeText}>{COUNTRY_CODES.find(c => c.code === countryCode)?.label || countryCode}</Text>
+        </TouchableOpacity>
+        <TextInput
+          style={[styles.input, style, error && styles.inputError]}
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          keyboardType="phone-pad"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
       <Modal
         visible={modalVisible}
         transparent
@@ -71,34 +74,57 @@ const PhoneInput: React.FC<PhoneInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    marginBottom: 18,
+    backgroundColor: 'transparent',
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 15,
-    backgroundColor: 'transparent',
+  },
+  label: {
+    color: '#8B5CF6',
+    fontFamily: 'default-semibold',
+    fontSize: 15,
+    marginBottom: 6,
   },
   codeSelector: {
+    height: 60,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     marginRight: 8,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
   codeText: {
     fontSize: 16,
     fontFamily: 'default-medium',
+    color: '#4B5563',
   },
   input: {
     flex: 1,
+    height: 60,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    padding: 12,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'default-medium',
+    color: '#4B5563',
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
   inputError: {
     borderColor: 'red',

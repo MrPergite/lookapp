@@ -118,7 +118,7 @@ useEffect(() => {
   return (
     <View style={styles.processingCardContainer}>
       <LinearGradient
-       colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+       colors={['#ffffff', '#ffffff', '#ffffff']}
 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

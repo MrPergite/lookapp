@@ -40,8 +40,8 @@ function Profile() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.primary.white }}>
-        {isAuthenticated ? <PostLoginScreen userName={user?.name} /> : <PreLoginScreen />}
-    </SafeAreaView>
+            {isAuthenticated ? <PostLoginScreen userName={user?.name || ''} /> : <PreLoginScreen />}
+        </SafeAreaView>
     )
 }
 

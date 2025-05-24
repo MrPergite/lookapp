@@ -1,5 +1,5 @@
 import { isClerkAPIResponseError, useAuth, useSession, useSignUp } from "@clerk/clerk-expo";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Keyboard,
   Linking,
 } from "react-native";
-import { useSharedValue, withTiming } from "react-native-reanimated";
+import { useSharedValue, withTiming, withSpring, withRepeat, withDelay } from "react-native-reanimated";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import TextBox from "@/components/text-box";
 import theme from "@/styles/theme";
@@ -25,11 +25,14 @@ import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
 import BackButton from "./components/BackButton";
 import * as SecureStore from 'expo-secure-store';
-import { CircleCheck, CircleX } from "lucide-react-native";
+import { CircleCheck, CircleX, Mail, Lock, User } from "lucide-react-native";
 import CodeVerification from "@/components/auth/CodeVerification";
 import PhoneInput from '@/components/auth/phone-input/PhoneInput';
 import { useUserCountry } from "../(onboarding)/queries";
 import { useUserDetails } from "@/common/providers/user-details";
+import GradientText from "@/components/GradientText";
+
+const { width, height } = Dimensions.get('window');
 
 const initialValues = {
   email: "",
@@ -58,6 +61,15 @@ const SignUpScreen = () => {
   const [code, setCode] = useState("");
   const { userCountry } = useUserDetails();
   const [countryCode, setCountryCode] = useState('+1');
+  
+  // Animation values
+  const logoAnimation = useSharedValue(1);
+  const buttonScale = useSharedValue(1);
+  const decorationOpacity1 = useSharedValue(0);
+  const decorationOpacity2 = useSharedValue(0);
+  const decorationOpacity3 = useSharedValue(0);
+  const decorationRotate1 = useSharedValue(0);
+  const decorationRotate2 = useSharedValue(0);
 
   const router = useRouter();
 
@@ -65,6 +77,32 @@ const SignUpScreen = () => {
     if (userCountry.calling_code) {
       setCountryCode(`+${userCountry.calling_code}`);
     }
+    
+    // Animate elements on component mount
+    setTimeout(() => {
+      logoAnimation.value = withSpring(1.1, { damping: 12 });
+      setTimeout(() => {
+        logoAnimation.value = withSpring(1, { damping: 12 });
+        
+        // Animate decorative elements
+        decorationOpacity1.value = withDelay(300, withTiming(0.7, { duration: 600 }));
+        decorationOpacity2.value = withDelay(500, withTiming(0.5, { duration: 600 }));
+        decorationOpacity3.value = withDelay(700, withTiming(0.6, { duration: 600 }));
+        
+        // Start rotating decorations
+        decorationRotate1.value = withRepeat(
+          withTiming(2 * Math.PI, { duration: 20000 }),
+          -1, // repeat infinitely
+          false // don't reverse
+        );
+        
+        decorationRotate2.value = withRepeat(
+          withTiming(2 * Math.PI, { duration: 25000 }),
+          -1,
+          false
+        );
+      }, 800);
+    }, 300);
   }, [userCountry]);
 
   // Check and handle existing session
@@ -97,6 +135,16 @@ const SignUpScreen = () => {
 
   const onSignUpPress = async () => {
     if (!isLoaded) return;
+    
+    // Visual feedback for button press
+    buttonScale.value = withTiming(0.95, { duration: 100 });
+    setTimeout(() => {
+      buttonScale.value = withSpring(1, { damping: 10, stiffness: 200 });
+    }, 100);
+    
+    // Trigger haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     setIsLoading(true);
 
     // Validate password
@@ -311,124 +359,196 @@ const SignUpScreen = () => {
       style={{ flex: 1 }}
     >
       <LinearGradient
-        colors={[theme.colors.primary.lavender, theme.colors.primary.white]}
+        colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.container}
       >
-        <BackButton routeName="/(authn)/signin" />
+        {/* Decorative elements */}
+        <Animated.View style={[styles.decoration1, {
+          opacity: decorationOpacity1,
+          transform: [{ rotate: `${decorationRotate1.value}rad` }]
+        }]}>
+          <LinearGradient
+            colors={['rgba(139, 92, 246, 0.15)', 'rgba(236, 72, 153, 0.1)']}
+            style={styles.decorationGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+        
+        <Animated.View style={[styles.decoration2, {
+          opacity: decorationOpacity2,
+          transform: [{ rotate: `${decorationRotate2.value}rad` }]
+        }]}>
+          <LinearGradient
+            colors={['rgba(59, 130, 246, 0.1)', 'rgba(139, 92, 246, 0.15)']}
+            style={styles.decorationGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+        
+        <Animated.View style={[styles.decoration3, {
+          opacity: decorationOpacity3
+        }]}>
+          <LinearGradient
+            colors={['rgba(236, 72, 153, 0.1)', 'rgba(59, 130, 246, 0.1)']}
+            style={styles.decorationGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
 
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { width: Dimensions.get('window').width - 48 }]}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
             <Image
-              source={require('@/assets/images/logo.png')}
-              style={styles.logo}
+              source={require('@/assets/images/image.png')}
+              style={styles.lookLogo}
               resizeMode="contain"
             />
-            <ThemedText
-              type="title"
-              style={styles.welcomeText}
+            <GradientText 
+                style={styles.welcomeText}
+                gradientColors={['#8B5CF6', '#EC4899', '#3B82F6']}
             >
-              Create your account
-            </ThemedText>
-            <Text style={styles.subText}>
+                Sign up to get started with Look AI
+            </GradientText>
+            {/* <Text style={styles.subText}>
               Sign up to get started with Look AI
-            </Text>
+            </Text> */}
           </View>
 
-          <Animated.View
-            style={[styles.formContainer, { transform: [{ translateX: shake }] }]}
+          <LinearGradient
+            colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+            style={styles.formCardGradient}
           >
-            <View style={styles.nameRow}>
-              <View style={styles.nameField}>
-                <TextBox
-                  label="First Name"
-                  placeholder="John"
-                  value={credentials.firstName}
-                  onChangeText={(val: string) => onTextChange("firstName", val)}
-                  error={errorMessage?.combine ? errorMessage.combine : null}
-                  style={styles.input}
-                />
-              </View>
-
-              <View style={styles.nameField}>
-                <TextBox
-                  label="Last Name"
-                  placeholder="Doe"
-                  value={credentials.lastName}
-                  onChangeText={(val: string) => onTextChange("lastName", val)}
-                  error={errorMessage?.combine ? errorMessage.combine : null}
-                  style={styles.input}
-                />
-              </View>
-            </View>
-
-            <TextBox
-              label="Email"
-              placeholder="Enter your email"
-              value={credentials.email}
-              onChangeText={(val: string) => onTextChange("email", val.toLowerCase())}
-              error={errorMessage?.combine ? errorMessage.combine : null}
-              style={styles.input}
-            />
-
-            <PhoneInput
-              value={credentials.phone}
-              onChange={val => onTextChange('phone', val)}
-              countryCode={countryCode}
-              onCountryCodeChange={setCountryCode}
-              placeholder="Enter your phone number (optional)"
-              error={errorMessage?.combine ? errorMessage.combine : null}
-              style={styles.input}
-            />
-
-            <TextBox
-              label="Password"
-              placeholder="Enter your password"
-              value={credentials.password}
-              onChangeText={(val: string) => onTextChange("password", val)}
-              secureTextEntry
-              error={errorMessage?.password || errorMessage?.combine}
-              style={styles.input}
-            />
-
-            <TextBox
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={credentials.confirmPassword}
-              onChangeText={(val: string) => onTextChange("confirmPassword", val)}
-              secureTextEntry
-              error={errorMessage?.confirmPassword || errorMessage?.combine}
-              style={styles.input}
-            />
-
-            {passwordMatch !== null && (
-              passwordMatch ?
-                <View style={styles.passwordMatchContainer} >
-                  <CircleCheck translateY={-1} size={20} color={theme.colors.primary.green} />
-                  <Text style={[
-                    styles.passwordMatchText,
-                    { transform: [{ translateY: 5 }] },
-                    { color: theme.colors.primary.green }
-                  ]}>Passwords match</Text>
-                </View> :
-                <View style={styles.passwordMatchContainer} >
-                  <CircleX translateY={-1} size={20} color={'red'} />
-                  <Text style={[
-                    styles.passwordMatchText,
-                    { transform: [{ translateY: 5 }] },
-                    { color: 'red' }
-                  ]}>Passwords do not match</Text>
+            <Animated.View
+              style={[styles.formContainer, { 
+                transform: [{ translateX: shake }],
+              }]}
+            >
+              <View style={styles.nameRow}>
+                <View style={styles.nameField}>
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputIconContainer}>
+                      <User size={20} color="#8B5CF6" strokeWidth={2} />
+                    </View>
+                    <TextBox
+                      label="First Name"
+                      placeholder="First Name"
+                      value={credentials.firstName}
+                      onChangeText={(val: string) => onTextChange("firstName", val)}
+                      error={errorMessage?.combine ? errorMessage.combine : null}
+                      style={styles.input}
+                      labelStyle={styles.inputLabel}
+                    />
+                  </View>
                 </View>
-            )}
-          </Animated.View>
+
+                <View style={styles.nameField}>
+                  <View style={styles.inputContainer}>
+                    <View style={styles.inputIconContainer}>
+                      <User size={20} color="#8B5CF6" strokeWidth={2} />
+                    </View>
+                    <TextBox
+                      label="Last Name"
+                      placeholder="Last Name"
+                      value={credentials.lastName}
+                      onChangeText={(val: string) => onTextChange("lastName", val)}
+                      error={errorMessage?.combine ? errorMessage.combine : null}
+                      style={styles.input}
+                      labelStyle={styles.inputLabel}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIconContainer}>
+                  <Mail size={20} color="#8B5CF6" strokeWidth={2} />
+                </View>
+                <TextBox
+                  label="Email"
+                  placeholder="Enter your email"
+                  value={credentials.email}
+                  onChangeText={(val: string) => onTextChange("email", val.toLowerCase())}
+                  error={errorMessage?.combine ? errorMessage.combine : null}
+                  style={styles.input}
+                  labelStyle={styles.inputLabel}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <PhoneInput
+                  value={credentials.phone}
+                  onChange={val => onTextChange('phone', val)}
+                  countryCode={countryCode}
+                  onCountryCodeChange={setCountryCode}
+                  placeholder="Enter your phone number (optional)"
+                  error={errorMessage?.combine ? errorMessage.combine : null}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIconContainer}>
+                  <Lock size={20} color="#8B5CF6" strokeWidth={2} />
+                </View>
+                <TextBox
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={credentials.password}
+                  onChangeText={(val: string) => onTextChange("password", val)}
+                  secureTextEntry
+                  error={errorMessage?.password || errorMessage?.combine}
+                  style={styles.input}
+                  labelStyle={styles.inputLabel}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIconContainer}>
+                  <Lock size={20} color="#8B5CF6" strokeWidth={2} />
+                </View>
+                <TextBox
+                  label="Confirm Password"
+                  placeholder="Confirm your password"
+                  value={credentials.confirmPassword}
+                  onChangeText={(val: string) => onTextChange("confirmPassword", val)}
+                  secureTextEntry
+                  error={errorMessage?.confirmPassword || errorMessage?.combine}
+                  style={styles.input}
+                  labelStyle={styles.inputLabel}
+                />
+              </View>
+
+              {passwordMatch !== null && (
+                passwordMatch ?
+                  <View style={styles.passwordMatchContainer} >
+                    <CircleCheck size={16} color={theme.colors.primary.green} />
+                    <Text style={[
+                      styles.passwordMatchText,
+                      { color: theme.colors.primary.green }
+                    ]}>Passwords match</Text>
+                  </View> :
+                  <View style={styles.passwordMatchContainer} >
+                    <CircleX size={16} color={'red'} />
+                    <Text style={[
+                      styles.passwordMatchText,
+                      { color: 'red' }
+                    ]}>Passwords do not match</Text>
+                  </View>
+              )}
+            </Animated.View>
+          </LinearGradient>
 
           {errorMessage.combine && (
             <Animated.Text
-              entering={FadeIn}
+              entering={FadeIn.duration(300)}
               exiting={FadeOut}
               style={styles.errorMessage}
             >
@@ -437,28 +557,27 @@ const SignUpScreen = () => {
           )}
 
           <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onSignUpPress();
-              }}
-              style={[
-                styles.signUpButton,
-                isLoading && styles.buttonDisabled
-              ]}
-              disabled={isLoading}
-            >
-              <LinearGradient
-                colors={[theme.colors.primary.purple, '#8C52FF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
+            <Animated.View style={{ width: '100%', transform: [{ scale: buttonScale }] }}>
+              <TouchableOpacity
+                onPress={onSignUpPress}
+                style={[
+                  styles.signUpButton,
+                  isLoading && styles.buttonDisabled
+                ]}
+                disabled={isLoading}
               >
-                <Text style={styles.buttonText}>
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buttonGradient}
+                >
+                  <Text style={styles.buttonText}>
+                    {isLoading ? "Creating Account..." : "Create Account"}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
 
             <TouchableOpacity
               onPress={() => router.navigate('/(authn)/signin')}
@@ -486,39 +605,93 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    position: 'relative',
+    overflow: 'hidden',
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
+    alignItems: "center",
     width: '100%',
-    paddingHorizontal: 24,
-    paddingTop: 100,
+    paddingTop: 40,
     paddingBottom: 40,
+  },
+  // Decorative elements
+  decoration1: {
+    position: 'absolute',
+    width: width * 0.8,
+    height: width * 0.8,
+    borderRadius: width * 0.4,
+    top: -width * 0.2,
+    right: -width * 0.2,
+    zIndex: 0,
+  },
+  decoration2: {
+    position: 'absolute',
+    width: width * 0.7,
+    height: width * 0.7,
+    borderRadius: width * 0.35,
+    bottom: -width * 0.3,
+    left: -width * 0.3,
+    zIndex: 0,
+  },
+  decoration3: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    top: height * 0.3,
+    right: -30,
+    zIndex: 0,
+  },
+  decorationGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
   },
   header: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 20,
+    zIndex: 1,
   },
-  logo: {
-    width: 80,
-    height: 80,
+  lookLogo: {
+    width: 180,
+    height: 70,
     marginBottom: 20,
   },
   welcomeText: {
-    fontSize: 32,
+    fontSize: 16,
     fontFamily: 'default-bold',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   subText: {
     fontSize: 16,
     color: theme.colors.secondary.darkGray,
     textAlign: 'center',
     fontFamily: 'default-regular',
+    letterSpacing: 0.2,
+  },
+  formCardGradient: {
+    width: '85%',
+    alignSelf: 'center',
+    borderRadius: 20,
+    marginTop:0,
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 5,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.25)',
   },
   formContainer: {
     width: "100%",
-    marginBottom: 20,
+    zIndex: 2,
   },
   nameRow: {
     flexDirection: 'row',
@@ -528,48 +701,90 @@ const styles = StyleSheet.create({
   nameField: {
     width: '48%',
   },
+  inputContainer: {
+    position: 'relative',
+    marginBottom: 0,
+  },
+  inputIconContainer: {
+    position: 'absolute',
+    left: 15,
+    top: 40,
+    zIndex: 2,
+    backgroundColor: 'rgba(245, 243, 255, 0.7)',
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.15)',
+  },
   input: {
     width: "100%",
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    paddingLeft: 45,
+    borderRadius: 16,
+    height: 60,
+    fontFamily: 'default-medium',
+    color: '#4B5563',
+  },
+  inputLabel: {
+    color: '#8B5CF6',
+    fontFamily: 'default-semibold',
+    fontSize: 15,
+    marginBottom: 6,
   },
   errorMessage: {
-    color: "red",
-    marginBottom: 16,
+    color: "#EF4444",
+    marginBottom: 10,
     fontFamily: "default-medium",
     textAlign: 'center',
+    padding: 12,
+    backgroundColor: 'rgba(254, 226, 226, 0.6)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   actionsContainer: {
-    width: '100%',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 16,
+    width: Dimensions.get('window').width - 60,
+    zIndex: 2,
   },
   signUpButton: {
     width: "100%",
-    height: 56,
-    borderRadius: 16,
+    height: 60,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 24,
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   buttonGradient: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   buttonText: {
     color: theme.colors.primary.white,
     fontSize: 18,
     fontFamily: 'default-semibold',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
   },
   switchAuthButton: {
     padding: 12,
@@ -585,7 +800,7 @@ const styles = StyleSheet.create({
     fontFamily: 'default-semibold',
   },
   termsContainer: {
-    marginTop: 20,
+    marginTop: 16,
     paddingHorizontal: 20,
   },
   termsText: {
@@ -595,81 +810,15 @@ const styles = StyleSheet.create({
     fontFamily: 'default-regular',
     lineHeight: 20,
   },
-  // Verification screen styles
-  verificationContainer: {
+  passwordMatchContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 24,
-  },
-  verificationImage: {
-    width: 150,
-    height: 150,
-    marginBottom: 24,
-  },
-  verificationTitle: {
-    fontSize: 24,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  verificationSubtext: {
-    fontSize: 16,
-    color: theme.colors.secondary.darkGray,
-    textAlign: 'center',
-    marginBottom: 32,
-    fontFamily: 'default-regular',
-  },
-  emailHighlight: {
-    fontFamily: 'default-semibold',
-    color: theme.colors.secondary.black,
-  },
-  codeContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  codeInput: {
-    textAlign: 'center',
-    fontSize: 18,
-    letterSpacing: 2,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  verifyButton: {
-    width: "100%",
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  cancelButton: {
-    padding: 16,
-  },
-  cancelButtonText: {
-    color: theme.colors.secondary.darkGray,
-    fontSize: 16,
-    fontFamily: 'default-medium',
+    gap: 6,
+    marginBottom: 10,
   },
   passwordMatchText: {
     fontSize: 14,
     fontFamily: 'default-medium',
-    marginTop: 4,
-    marginBottom: 16,
-    textAlign: 'left',
-    width: '100%',
-  },
-  passwordMatchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    textAlign: 'center',
-    width: '100%',
-    gap: 4,
   },
 });
 

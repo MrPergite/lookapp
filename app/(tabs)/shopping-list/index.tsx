@@ -873,7 +873,12 @@ export default function ShoppingList() {
   };
 
   return (
-    <View style={{flex: 1, backgroundColor: 'white', paddingTop: 50}}>
+    <LinearGradient
+      colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{flex: 1, paddingTop: 50}}
+    >
       {activeTab === 'shopping-list' ? (
         <View style={{ flex: 1 }}>          
           {/* Debug info */}
@@ -1010,7 +1015,7 @@ export default function ShoppingList() {
           <Text style={{fontSize: 16, color: '#666'}}>Other content coming soon</Text>
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 

@@ -4,9 +4,10 @@ import { useScreenHistoryContext } from '@/common/providers/screen-history';
 import { useEffect } from 'react';
 import { UserDetailsProvider } from '@/common/providers/user-details';
 import { Button } from 'react-native';
-import BackButton from '../(authn)/components/BackButton';
 import { LinearGradient } from 'expo-linear-gradient';
+
 export default function ProfileRoutesLayout() {
+    const { isSignedIn } = useAuth();
 
     return (
         <Stack>
@@ -18,13 +19,7 @@ export default function ProfileRoutesLayout() {
                     headerTitle: '',
                     headerShown: true,
                     gestureEnabled: true,
-                    headerLeft: () => {
-                        return (
-                             <BackButton customStyle={{ top: 0, left: 0}} />
-                       
-
-                        )
-                    }
+                    headerLeft: () => null // Remove the back button from the header
                 }}
             />
         </Stack>

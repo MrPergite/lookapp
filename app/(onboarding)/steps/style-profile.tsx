@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, Pressable, ActivityIndicator, Dimensions, Modal, Image } from 'react-native';
-import { MotiView } from 'moti';
+import { View, Text, StyleSheet, ScrollView, Platform, Pressable, ActivityIndicator, Dimensions, Modal, Image, Animated } from 'react-native';
+import { MotiView, MotiText, AnimatePresence } from 'moti';
 import { useUser, useAuth } from '@clerk/clerk-expo';
-import { Camera as CameraIcon, Check, Loader2 as Loader, X as XIcon } from 'lucide-react-native';
+import { Camera as CameraIcon, Check, Loader2 as Loader, X as XIcon, Image as ImageIcon, HelpCircle, Sparkles } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
@@ -10,6 +10,11 @@ import axios from 'axios';
 import CameraCapture from './CameraCapture';
 import ImageGrid from './ImageGrid';
 import PhotoRecommendations from './PhotoRecommendations';
+import * as Haptics from 'expo-haptics';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import LottieView from 'lottie-react-native';
 
 import { useOnBoarding } from '../context';
 import theme from '@/styles/theme';
@@ -57,6 +62,56 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   const [avatarGenerationStartTime, setAvatarGenerationStartTime] = useState<number | null>(contextPayload.styleProfileState?.avatarGenerationStartTime || null);
   const [progressValue, setProgressValue] = useState(contextPayload.styleProfileState?.progressValue || 0);
   
+  // Add states for tooltips and celebrations
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  
+  // Reference to Next button for animations
+  const nextButtonAnim = useRef(new Animated.Value(1)).current;
+  
+  // Track when all required photos are added
+  const hasRequiredPhotos = images.filter((_, index) => 
+    processingStatus[index] === 'approved').length >= 3;
+  
+  // Celebrate when user uploads required photos
+  useEffect(() => {
+    if (hasRequiredPhotos && images.length >= 3 && !showCelebration) {
+      // Show celebration animation and vibrate
+      setShowCelebration(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // Hide celebration after a delay
+      const timer = setTimeout(() => {
+        setShowCelebration(false);
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [hasRequiredPhotos, images.length]);
+  
+  // Animate Next button when ready
+  useEffect(() => {
+    if (hasRequiredPhotos) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(nextButtonAnim, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: true
+          }),
+          Animated.timing(nextButtonAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true
+          })
+        ])
+      ).start();
+    } else {
+      // Reset animation when not ready
+      nextButtonAnim.setValue(1);
+    }
+  }, [hasRequiredPhotos]);
+
   useEffect(() => {
     const publicMetadata = user?.publicMetadata as any;
     const currentAvatarStatus = publicMetadata?.avatar_creation_status || 'pending';
@@ -118,6 +173,9 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
   }, [avatarGenerationStartTime, avatarStatus]);
 
   const openNativeCamera = async () => {
+    // Add haptic feedback when opening camera
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
       Toast.show({ type: 'error', text1: 'Camera permission denied', visibilityTime: 2000 });
@@ -144,12 +202,20 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
             name: fileName,
             type: fileType,
         };
-        uploadImage(fileToUpload, fileUri);
+        
+        // Visual feedback before upload starts
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Toast.show({ type: 'info', text1: 'Processing your photo...', visibilityTime: 1500 });
+        
+        await addImage('camera', fileToUpload, fileUri);
       } else {
         Toast.show({ type: 'info', text1: 'Image capture cancelled or failed.', visibilityTime: 2000 });
       }
     } catch (error) {
       console.error('Error opening camera:', error);
+      // Add error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      
       Toast.show({ 
         type: 'error', 
         text1: 'Failed to open camera', 
@@ -157,9 +223,6 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
         visibilityTime: 2000
       });
     }
-    
-    // No longer need to set this to true since we're not using the modal
-    // setIsCameraModalVisible(true);
   };
 
   // This function is now commented out as we're no longer using the CameraCapture modal
@@ -189,8 +252,10 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
     }
   }; */
 
-  const uploadImage = async (file: { uri: string, name: string, type: string }, localDisplayUri: string) => {
-  
+  const addImage = async (method: 'camera' | 'library' = 'library', file: { uri: string, name: string, type: string }, localDisplayUri: string) => {
+    // Add light haptic feedback when starting image selection
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     if (images.length >= 5) {
       Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.', visibilityTime: 2000 });
       return false;
@@ -244,6 +309,10 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
       });
       setProcessingStatus(prev => ({ ...prev, [newImageIndex]: 'approved' }));
       console.log(`Image ${newImageIndex} approved and state updated.`);
+      
+      // Add success haptic feedback when image is added
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
       return true;
     } catch (error: any) {
       console.error("Error caught in uploadImage function:", error);
@@ -283,42 +352,74 @@ const StyleProfile = forwardRef<StyleProfileRefHandles, StyleProfileProps>(({ on
 
   const handleFileSelectionFromLibrary = async () => {
     console.log('handleFileSelectionFromLibrary');
+    // Add haptic feedback when opening gallery
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     if (images.length >= 5) {
+      // Add error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Toast.show({ type: 'error', text1: 'Maximum 5 images allowed.', visibilityTime: 2000 });
       return;
     }
+    
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
+      // Add error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Toast.show({ type: 'error', text1: 'Media Library permission denied', visibilityTime: 2000 });
       return;
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsMultipleSelection: true,
-      quality: 0.7,
-      selectionLimit: 5 - images.length,
-    });
-console.log(result);
-    if (!result.canceled && result.assets) {
-      if (result.assets.length > 1) {
-        Toast.show({ type: 'info', text1: `Processing ${result.assets.length} images... `, visibilityTime: 2000});
-      }
-      console.log(result.assets);
-      const uploadPromises = result.assets.map(asset => {
-        const fileToUpload = {
-            uri: asset.uri,
-            name: asset.fileName || asset.uri.split('/').pop() || 'library_image.jpg',
-            type: asset.type || 'image/jpeg',
-        };
-        return uploadImage(fileToUpload, asset.uri);
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsMultipleSelection: true,
+        quality: 0.7,
+        selectionLimit: 5 - images.length,
       });
-      
-      const results = await Promise.all(uploadPromises);
-      console.log('results',results);
-      const successCount = results.filter(res => res).length;
-      if (successCount > 0) Toast.show({ type: 'success', text1: `Successfully uploaded ${successCount} images.`, visibilityTime: 2000 });
-      if (results.length - successCount > 0) Toast.show({ type: 'error', text1: `${results.length - successCount} uploads failed.`, visibilityTime: 2000 });
+  
+      if (!result.canceled && result.assets) {
+        // Add success selection haptic feedback
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        
+        if (result.assets.length > 1) {
+          Toast.show({ type: 'info', text1: `Processing ${result.assets.length} images... `, visibilityTime: 2000});
+        }
+        
+        const uploadPromises = result.assets.map(asset => {
+          const fileToUpload = {
+              uri: asset.uri,
+              name: asset.fileName || asset.uri.split('/').pop() || 'library_image.jpg',
+              type: asset.type || 'image/jpeg',
+          };
+          return addImage('library', fileToUpload, asset.uri);
+        });
+        
+        const results = await Promise.all(uploadPromises);
+        
+        const successCount = results.filter(res => res).length;
+        if (successCount > 0) {
+          // Add strong success haptic feedback for multiple image uploads
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Toast.show({ type: 'success', text1: `Successfully uploaded ${successCount} images.`, visibilityTime: 2000 });
+        }
+        
+        if (results.length - successCount > 0) {
+          // Add error haptic feedback for failed uploads
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Toast.show({ type: 'error', text1: `${results.length - successCount} uploads failed.`, visibilityTime: 2000 });
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting from library:', error);
+      // Add error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Failed to access photo library', 
+        text2: String(error),
+        visibilityTime: 2000
+      });
     }
   };
 
@@ -336,6 +437,9 @@ console.log(result);
 
   // This is the function we want to expose via ref
   const handleNext = async () => {
+    // Add medium haptic feedback when starting submission
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     if (!validateForm()) {
       Toast.show({ type: 'error', text1: 'Validation Error', text2: errors.images || 'Please check the form.', visibilityTime: 2000 });
       return;
@@ -454,6 +558,9 @@ console.log(result);
         styleProfile: newStyleProfileDataToSave
       });
       
+      // Add success haptic feedback when submission completes
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
     } catch (error: any) {
       setIsLoading(false);
       setIsApiProcessing(false);
@@ -497,50 +604,151 @@ console.log(result);
             transition={{ duration: 300 }}
             style={styles.contentWrapper}
         >
-          <ThemedText style={styles.sectionTitle}>Upload 3-5 photos of yourself *</ThemedText>
+          {/* Enhanced Gradient Header with Shimmer */}
+          <View style={styles.headerContainer}>
+            <View style={{ position: 'relative' }}>
+              <MaskedView
+                style={{ width: '100%', alignItems: 'center', marginBottom: 10 }}
+                maskElement={
+                  <Text style={[styles.sectionTitle, { color: '#000' }]}>
+                    Upload 3-5 photos of yourself *
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ height: 24, width: '100%' }}
+                />
+              </MaskedView>
+              <ShimmerEffect />
+            </View>
+            
+            <View style={styles.iconTextContainer}>
+              <ImageIcon size={16} color="#8B5CF6" style={{ marginRight: 6 }} />
+              <ThemedText style={styles.subheaderText}>Select clear, well-lit photos of your face and body</ThemedText>
+              <Pressable 
+                style={styles.helpButton}
+                onPress={() => {
+                  setActiveTooltip('photoTips');
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                {/* <HelpCircle size={16} color="#8B5CF6" /> */}
+              </Pressable>
+              
+              {/* Help tooltip */}
+              {activeTooltip === 'photoTips' && (
+                <Tooltip 
+                  visible={true}
+                  text="Choose photos with good lighting that clearly show your face and body. This helps us create the most accurate avatar."
+                  position="bottom"
+                  onClose={() => setActiveTooltip(null)}
+                />
+              )}
+            </View>
+          </View>
           
-          <ImageGrid
-            key={`image-grid-${validationUpdateCount}`}
-            images={images}
-            processingImageIndices={processingImageIndices}
-            processingStatus={processingStatus}
-            rejectionReasons={rejectionReasons}
-            removeImage={removeImage}
-            startCamera={openNativeCamera}
-            handleFileUpload={handleFileSelectionFromLibrary}
-          />
+          {/* Progress Tracker with Animated Dots */}
+          <View style={styles.progressTracker}>
+            {[1, 2, 3, 4, 5].map(step => (
+              <View key={`step-${step}`} style={styles.progressStep}>
+                <PulsingDot 
+                  active={images.length >= step} 
+                  required={step <= 3} 
+                />
+                <ThemedText style={[
+                  styles.progressText,
+                  images.length >= step && styles.progressTextActive,
+                  step <= 3 && styles.progressTextRequired
+                ]}>
+                  {step <= 3 ? `${step}` : `${step} (optional)`}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+          
+          {/* Celebration animation when all required photos are added */}
+          <AnimatePresence>
+            {showCelebration && (
+              <MotiView
+                from={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                style={styles.celebrationContainer}
+              >
+                <LinearGradient
+                  colors={['rgba(139, 92, 246, 0.9)', 'rgba(236, 72, 153, 0.9)']}
+                  style={styles.celebrationGradient}
+                >
+                  <Sparkles size={24} color="white" />
+                  <ThemedText style={styles.celebrationText}>Looking good! Ready to create your avatar</ThemedText>
+                </LinearGradient>
+              </MotiView>
+            )}
+          </AnimatePresence>
+          
+          {/* Card Background for Image Grid */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.8)', 'rgba(245,243,255,0.6)']}
+            style={styles.cardBackground}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <ImageGrid
+              key={`image-grid-${validationUpdateCount}`}
+              images={images}
+              processingImageIndices={processingImageIndices}
+              processingStatus={processingStatus}
+              rejectionReasons={rejectionReasons}
+              removeImage={removeImage}
+              startCamera={openNativeCamera}
+              handleFileUpload={handleFileSelectionFromLibrary}
+            />
+          </LinearGradient>
           
           {errors.images && (<ThemedText style={styles.errorText}>{errors.images}</ThemedText>)}
             
           <PhotoRecommendations />
-
-          {/* {avatarStatus === 'pending' && avatarGenerationStartTime && (
-            <View style={styles.progressSection}>
-              <ThemedText style={styles.progressText}>Generating your avatar...</ThemedText>
-              <Text style={styles.progressPercentageText}>{Math.round(progressValue)}%</Text>
-            </View>
-          )}
-          {avatarStatus === 'completed' && (
-             <View style={[styles.statusChip, styles.statusChipApproved]}>
-                <Check size={16} color="green" />
-                <ThemedText style={styles.statusChipText}>Avatar Ready!</ThemedText>
-            </View>
-          )} */}
           
         </MotiView>
       </ScrollView>
 
-      {/* CameraCapture component is no longer needed since we're using ImagePicker directly
-      <CameraCapture
-        visible={isCameraModalVisible}
-        onCapturePhoto={() => {}}
-        onCancel={() => setIsCameraModalVisible(false)}
-      />
-      */}
+      {/* Confetti celebration animation */}
+      <ConfettiCelebration visible={showCelebration} />
+
       {isLoading && (
         <View style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)'}}>
             <ActivityIndicator size="large" color={theme.colors.primary.purple} />
         </View>
+      )}
+      
+      {/* Animated Next Button */}
+      {hasRequiredPhotos && (
+        <Animated.View 
+          style={[
+            styles.nextButtonContainer,
+            { transform: [{ scale: nextButtonAnim }] }
+          ]}
+        >
+          <Pressable 
+            style={styles.nextButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              handleNext();
+            }}
+          >
+            <LinearGradient
+              colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.nextButtonGradient}
+            >
+              <ThemedText style={styles.nextButtonText}>Continue</ThemedText>
+            </LinearGradient>
+          </Pressable>
+        </Animated.View>
       )}
     </>
   );
@@ -559,22 +767,29 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(55 65 81  / 1)',
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(55, 65, 81, 1)',
     marginBottom: 15,
     alignSelf: 'flex-start',
     paddingLeft: 5,
     width: '100%',
     lineHeight: 20,
-    opacity:1,
+    opacity: 1,
     marginTop: 20,
     marginLeft: 12,
   },
-  errorText: { fontSize: 13, color: '#ef4444', marginTop: 5, marginBottom: 10, marginLeft:0,textAlign: 'center' },
+  errorText: { 
+    fontSize: 13, 
+    color: '#ef4444', 
+    marginTop: 5, 
+    marginBottom: 10, 
+    marginLeft: 0,
+    textAlign: 'center' 
+  },
   
   progressSection: { marginVertical: 20, alignItems: 'center', width: '100%' },
-  progressText: { marginBottom: 10, fontSize: 15, color: theme.colors.text },
+  progressLoadingText: { marginBottom: 10, fontSize: 15, color: theme.colors.text },
   progressPercentageText: {position: 'absolute', alignSelf: 'center', fontSize: 12, fontWeight: 'bold', color: theme.colors.primary.white},
 
   statusChip: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, marginTop: 15, alignSelf: 'center' },
@@ -584,6 +799,362 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     color: theme.colors.secondary.darkGray,
   },
+ 
+  headerContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 15,
+  },
+  iconTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingLeft: 5,
+    position: 'relative',
+  },
+  subheaderText: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: 'rgba(75, 85, 99, 0.9)',
+  },
+
+  progressTracker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingHorizontal: 30,
+  },
+  progressStep: {
+    alignItems: 'center',
+  },
+  progressDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(209, 213, 219, 0.5)',
+    marginBottom: 5,
+  },
+  progressDotActive: {
+    backgroundColor: theme.colors.primary.purple,
+  },
+  progressDotRequired: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary.purple,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(75, 85, 99, 0.8)',
+  },
+  progressTextActive: {
+    color: theme.colors.primary.purple,
+  },
+  progressTextRequired: {
+    fontWeight: '600',
+  },
+
+  cardBackground: {
+    borderRadius: 10,
+    padding: 10,
+    marginHorizontal: 15,
+  },
+
+  helpButton: {
+    padding: 5,
+    marginLeft: 5,
+  },
+
+  // Tooltip styles
+  tooltipContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    width: 250,
+    zIndex: 10,
+    alignSelf: 'center',
+  },
+  tooltipBlur: {
+    borderRadius: 10,
+    padding: 12,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tooltipText: {
+    fontSize: 13,
+    color: 'white',
+    flex: 1,
+    marginRight: 8,
+  },
+  tooltipCloseButton: {
+    padding: 4,
+  },
+  tooltipArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(0, 0, 0, 0.7)',
+    alignSelf: 'center',
+  },
+
+  celebrationContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  celebrationGradient: {
+    position: 'absolute',
+    top: '30%',
+    left: 30,
+    right: 30,
+    paddingVertical: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  celebrationText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  
+  // Confetti styles
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    pointerEvents: 'none',
+  },
+  confettiSource: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+  },
+
+  nextButtonContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+  },
+  nextButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  nextButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
 });
+
+// Create a simple tooltip component for contextual help
+interface TooltipProps {
+  visible: boolean;
+  text: string;
+  position?: 'top' | 'bottom';
+  onClose: () => void;
+}
+
+const Tooltip: React.FC<TooltipProps> = ({ visible, text, position = 'bottom', onClose }) => {
+  if (!visible) return null;
+  
+  return (
+    <MotiView
+      from={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      style={[
+        styles.tooltipContainer,
+        position === 'top' && { bottom: '100%', marginBottom: 8 },
+        position === 'bottom' && { top: '100%', marginTop: 8 }
+      ]}
+    >
+      <BlurView intensity={90} style={styles.tooltipBlur}>
+        <ThemedText style={styles.tooltipText}>{text}</ThemedText>
+        <Pressable onPress={onClose} style={styles.tooltipCloseButton}>
+          <XIcon size={15} color={theme.colors.primary.white} />
+        </Pressable>
+      </BlurView>
+      <View 
+        style={[
+          styles.tooltipArrow,
+          position === 'top' && { top: '100%', transform: [{ rotate: '180deg' }] },
+          position === 'bottom' && { bottom: '100%' }
+        ]} 
+      />
+    </MotiView>
+  );
+};
+
+// Shimmer effect component for the header
+const ShimmerEffect = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    const shimmer = Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      })
+    );
+    shimmer.start();
+    
+    return () => shimmer.stop();
+  }, []);
+  
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.3,
+        transform: [{
+          translateX: shimmerAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [-300, 300]
+          })
+        }]
+      }}
+    >
+      <LinearGradient
+        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{ flex: 1 }}
+      />
+    </Animated.View>
+  );
+};
+
+// Pulsing Dot Component for active progress indicators
+interface PulsingDotProps {
+  active: boolean;
+  required: boolean;
+}
+
+const PulsingDot: React.FC<PulsingDotProps> = ({ active, required }) => {
+  if (!active) {
+    return (
+      <View style={[
+        styles.progressDot,
+        required && styles.progressDotRequired,
+      ]} />
+    );
+  }
+  
+  return (
+    <MotiView
+      style={[
+        styles.progressDot,
+        styles.progressDotActive,
+        required && styles.progressDotRequired
+      ]}
+      from={{ scale: 1 }}
+      animate={{ scale: [1, 1.1, 1] }}
+      transition={{
+        type: 'timing',
+        duration: 2000,
+        loop: true,
+      }}
+    />
+  );
+};
+
+// Confetti celebration component
+interface ConfettiCelebrationProps {
+  visible: boolean;
+}
+
+const ConfettiCelebration: React.FC<ConfettiCelebrationProps> = ({ visible = false }) => {
+  // Use a single ref for each animation to avoid ref recreation
+  const leftConfettiRef = useRef<LottieView>(null);
+  const rightConfettiRef = useRef<LottieView>(null);
+  
+  useEffect(() => {
+    if (visible) {
+      // Reset and play the animations when visibility changes
+      if (leftConfettiRef.current) {
+        // @ts-ignore - reset() and play() exist on LottieView but might not be recognized by TypeScript
+        leftConfettiRef.current?.reset();
+        // @ts-ignore
+        leftConfettiRef.current?.play();
+      }
+      
+      if (rightConfettiRef.current) {
+        // @ts-ignore
+        rightConfettiRef.current?.reset();
+        // @ts-ignore
+        rightConfettiRef.current?.play();
+      }
+    }
+  }, [visible]);
+  
+  if (!visible) return null;
+  
+  return (
+    <View style={styles.confettiContainer}>
+      <MotiView
+        from={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={StyleSheet.absoluteFillObject}
+      >
+        {/* Confetti from top left */}
+        <View style={[styles.confettiSource, { top: 0, left: 0 }]}>
+          <LottieView
+            ref={leftConfettiRef}
+            source={require('../../../assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={{ width: 300, height: 300 }}
+          />
+        </View>
+        
+        {/* Confetti from top right */}
+        <View style={[styles.confettiSource, { top: 0, right: 0 }]}>
+          <LottieView
+            ref={rightConfettiRef}
+            source={require('../../../assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            style={{ width: 300, height: 300 }}
+          />
+        </View>
+      </MotiView>
+    </View>
+  );
+};
 
 export default StyleProfile; 

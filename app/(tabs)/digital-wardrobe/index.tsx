@@ -695,78 +695,83 @@ const DigitalWardrobeScreen: React.FC = () => {
   };
 
   return (
-    <View style={{flex: 1, backgroundColor: 'white', paddingTop: 50}}>
-    <View style={styles.container}>
-      {isSignedIn && (
-          <View style={styles.categoryHeaderContainer}>
-            <ScrollView 
-              ref={scrollViewRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryContainer}
-            >
-          {FILTERS.map((f) => {
-            const isActive = activeFilter === f.key;
-            return (
-              <CategoryButton key={f.key} filter={f} isActive={isActive} />
-            );
-          })}
-            </ScrollView>
-        </View>
-      )}
+    <LinearGradient
+      colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{flex: 1}}
+    >
+      <View style={styles.container}>
+        {isSignedIn && (
+            <View style={styles.categoryHeaderContainer}>
+              <ScrollView 
+                ref={scrollViewRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryContainer}
+              >
+            {FILTERS.map((f) => {
+              const isActive = activeFilter === f.key;
+              return (
+                <CategoryButton key={f.key} filter={f} isActive={isActive} />
+              );
+            })}
+              </ScrollView>
+          </View>
+        )}
 
-      <View style={{ flex: 1 }}>
-        {isLoading && <ShimmerLoading />}
-        
-        {!isLoading && items.length === 0 ? (
-          isSignedIn ? (
-            <WardrobeEmptyState
-              onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
-              currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
-            />
-          ) : (
-            <SignedOutEmptyState />
-          )
-        ) : null}
-        
-        {!isLoading && items.length > 0 && (
-          <Animated.View 
-            style={{ flex: 1, opacity: 1 }}
-          >
-            <FlatList
-              data={items}
-              renderItem={renderItem}
-              keyExtractor={(item, index) => item?.id || `item-${index}`}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120, paddingTop: 16 }}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.4}
-              ListFooterComponent={ListFooter}
-            />
+        <View style={{ flex: 1 }}>
+          {isLoading && <ShimmerLoading />}
+          
+          {!isLoading && items.length === 0 ? (
+            isSignedIn ? (
+              <WardrobeEmptyState
+                onAddItem={() => Toast.show({ text1: 'Add item coming soon' })}
+                currentCategory={activeFilter === 'all' ? 'items' : activeFilter}
+              />
+            ) : (
+              <SignedOutEmptyState />
+            )
+          ) : null}
+          
+          {!isLoading && items.length > 0 && (
+            <Animated.View 
+              style={{ flex: 1, opacity: 1 }}
+            >
+              <FlatList
+                data={items}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => item?.id || `item-${index}`}
+                numColumns={2}
+                columnWrapperStyle={{ gap: 12, marginBottom: 12 }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120, paddingTop: 16 }}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.4}
+                ListFooterComponent={ListFooter}
+              />
+            </Animated.View>
+          )}
+        </View>
+
+        {isSignedIn && (
+          <Animated.View style={fabAnimatedStyle}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleFabPress}
+            >
+              <Plus size={28} color="#fff" />
+            </TouchableOpacity>
           </Animated.View>
         )}
       </View>
-
-      {isSignedIn && (
-        <Animated.View style={fabAnimatedStyle}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleFabPress}
-          >
-            <Plus size={28} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-    </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 export default DigitalWardrobeScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, marginTop: 50 },
   categoryHeaderContainer: {
     borderBottomWidth: 1,
     borderBottomColor: '#f1f1f1',

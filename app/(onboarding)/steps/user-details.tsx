@@ -10,18 +10,24 @@ import {
     ScrollView,
     TextInput,
     Pressable,
-    Animated
+    Animated,
+    Dimensions,
+    Easing
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import TextBox from '@/components/text-box';
 import theme from '@/styles/theme';
 import { useOnBoarding, OnboardingPayload } from '../context';
 import { useUserCountry } from '../queries';
-import { ChevronDown, Loader2 } from 'lucide-react-native';
+import { ChevronDown, Loader2, Shirt, Footprints, MapPin } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import AvatarCreationProgressCard from './AvatarCreationProgressCard';
 import { useUser } from '@clerk/clerk-expo';
+import * as Haptics from 'expo-haptics';
+import MaskedView from '@react-native-masked-view/masked-view';
+
+const { width, height } = Dimensions.get('window');
 
 function UserDetails() {
     const { payload, dispatch } = useOnBoarding();
@@ -40,11 +46,34 @@ function UserDetails() {
     const [avatarGenerationProgress, setAvatarGenerationProgress] = useState(0);
     const [animatedProgressWidth] = useState(new Animated.Value(0));
     const spinAnim = useRef(new Animated.Value(0)).current;
+    
+    // Animation values for entrance effects
+    const headerOpacity = useRef(new Animated.Value(0)).current;
+    const headerTranslateY = useRef(new Animated.Value(-20)).current;
+    const formOpacity = useRef(new Animated.Value(0)).current;
+    const formTranslateY = useRef(new Animated.Value(30)).current;
+    
+    // Individual form field animations
+    const fieldAnimations = {
+        clothing: useRef(new Animated.Value(0)).current,
+        shoe: useRef(new Animated.Value(0)).current,
+        unit: useRef(new Animated.Value(0)).current,
+        country: useRef(new Animated.Value(0)).current,
+    };
+
+    // Progress bar animation
+    const progressBarWidth = useRef(new Animated.Value(0)).current;
 
     // Determine if avatar is being created
     const _currentAvatarStatus = payload.styleProfileState?.avatarStatus || user?.publicMetadata?.avatar_creation_status;
     const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime
     const _isProcessingNewAvatar = payload.avatarPath === 'custom' && _currentAvatarStatus && _currentAvatarStatus !== 'ready'
+
+    // Add new state for focus tracking
+    const [focusedField, setFocusedField] = useState<string | null>(null);
+
+    // Add a confirmationAnim for selection feedback
+    const confirmationAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout | undefined = undefined;
@@ -90,6 +119,80 @@ function UserDetails() {
             spinAnim.setValue(0); // Reset animation
         }
     }, [_isProcessingNewAvatar, spinAnim]);
+
+    // Run entrance animations on component mount
+    useEffect(() => {
+        // Update progress bar animation
+        Animated.timing(progressBarWidth, {
+            toValue: 67, // 67% complete as shown in the UI
+            duration: 1000,
+            useNativeDriver: false,
+        }).start();
+        
+        // Sequence for staggered entrance animations
+        Animated.sequence([
+            // Header animation
+            Animated.parallel([
+                Animated.timing(headerOpacity, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(headerTranslateY, {
+                    toValue: 0,
+                    duration: 600,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+            
+            // Form container animation
+            Animated.parallel([
+                Animated.timing(formOpacity, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(formTranslateY, {
+                    toValue: 0,
+                    duration: 500,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start();
+        
+        // Staggered animation for form fields
+        Animated.stagger(
+            150,
+            [
+                Animated.spring(fieldAnimations.clothing, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(fieldAnimations.shoe, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(fieldAnimations.unit, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(fieldAnimations.country, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+            ]
+        ).start();
+    }, []);
 
     const spin = spinAnim.interpolate({
         inputRange: [0, 1],
@@ -173,7 +276,19 @@ function UserDetails() {
     const shoeSizeUnit = payload?.shoe_unit || shoeSizeUnitOptions[0].value;
 
     // Update context handlers
+    const animateConfirmation = () => {
+        confirmationAnim.setValue(0);
+        Animated.timing(confirmationAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.ease)
+        }).start();
+    };
+
     const handleClothingSizeChange = (value: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        animateConfirmation();
         dispatch({
             type: "SET_PAYLOAD",
             payload: { key: "clothing_size", value }
@@ -181,6 +296,8 @@ function UserDetails() {
     };
 
     const handleShoeSizeChange = (value: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        animateConfirmation();
         dispatch({
             type: "SET_PAYLOAD",
             payload: { key: "shoe_size", value }
@@ -188,6 +305,8 @@ function UserDetails() {
     };
 
     const handleShoeSizeUnitChange = (value: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        animateConfirmation();
         dispatch({
             type: "SET_PAYLOAD",
             payload: { key: "shoe_unit", value }
@@ -195,6 +314,8 @@ function UserDetails() {
     };
 
     const handleCountryChange = (value: string) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        animateConfirmation();
         dispatch({
             type: "SET_PAYLOAD",
             payload: { key: "country", value }
@@ -209,8 +330,11 @@ function UserDetails() {
     const pickerScale = useRef(new Animated.Value(1)).current;
 
     const handlePickerOpen = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         Animated.spring(pickerScale, {
             toValue: 1.05,
+            friction: 8,
+            tension: 40,
             useNativeDriver: true,
         }).start();
     };
@@ -218,9 +342,31 @@ function UserDetails() {
     const handlePickerClose = () => {
         Animated.spring(pickerScale, {
             toValue: 1,
+            friction: 8,
+            tension: 40,
             useNativeDriver: true,
         }).start();
     };
+    
+    // Background pattern elements
+    const renderPatternElements = () => (
+        <View style={styles.patternContainer}>
+            {[...Array(15)].map((_, i) => (
+                <View 
+                    key={i} 
+                    style={[
+                        styles.patternItem, 
+                        { 
+                            left: Math.random() * width, 
+                            top: Math.random() * height * 0.7,
+                            opacity: 0.03 + (Math.random() * 0.05), // Between 0.03 and 0.08
+                            transform: [{ rotate: `${Math.random() * 360}deg` }]
+                        }
+                    ]} 
+                />
+            ))}
+        </View>
+    );
 
     const renderPicker = (
         value: string,
@@ -228,50 +374,101 @@ function UserDetails() {
         items: Array<{ label: string; value: string }>,
         isVisible: boolean,
         setVisible: (visible: boolean) => void,
-        placeholder: string
+        placeholder: string,
+        animValue: Animated.Value,
+        fieldName: string
     ) => {
+        const isFocused = focusedField === fieldName;
+        
         if (Platform.OS === 'android') {
             return (
-                <TouchableOpacity
-                    onPress={() => {
-                        handlePickerOpen();
-                        setVisible(true);
-                    }}
-                    style={[styles.input, { paddingVertical: 0 }]}
-                >
-                    <Picker
-                        selectedValue={value}
-                        onValueChange={(itemValue) => {
-                            onValueChange(itemValue);
+                <Animated.View style={{
+                    transform: [{ scale: animValue }],
+                    opacity: animValue,
+                }}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            handlePickerOpen();
+                            setVisible(true);
+                            setFocusedField(fieldName);
                         }}
-                        style={styles.picker}
-                        dropdownIconColor={theme.colors.secondary.black}
+                        style={[
+                            styles.input,
+                            isFocused && styles.inputFocused
+                        ]}
+                        activeOpacity={0.8}
                     >
-                        {items.map((item) => (
-                            <Picker.Item key={item.value} label={item.label} value={item.value} />
-                        ))}
-                    </Picker>
-                </TouchableOpacity>
+                        <Picker
+                            selectedValue={value}
+                            onValueChange={(itemValue) => {
+                                onValueChange(itemValue);
+                            }}
+                            style={styles.picker}
+                            dropdownIconColor={theme.colors.secondary.black}
+                        >
+                            {items.map((item) => (
+                                <Picker.Item key={item.value} label={item.label} value={item.value} />
+                            ))}
+                        </Picker>
+                    </TouchableOpacity>
+                </Animated.View>
             );
         }
 
         return (
-            <>
-                <Pressable
-                    onPress={() => {
-                        handlePickerOpen();
-                        setVisible(true);
-                    }}
-                    style={[styles.input, styles.pickerWrapper]}
+            <Animated.View style={{
+                transform: [{ scale: animValue }],
+                opacity: animValue,
+                width: '100%',
+            }}>
+                <LinearGradient
+                    colors={isFocused ? 
+                        ['rgba(139, 92, 246, 0.25)', 'rgba(59, 130, 246, 0.15)', 'rgba(255, 255, 255, 0.1)'] : 
+                        ['rgba(139, 92, 246, 0.1)', 'rgba(59, 130, 246, 0.05)', 'rgba(255, 255, 255, 0.1)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.inputGradientBorder}
                 >
-                    <Text style={styles.pickerText}>
-                        {value
-                            ? items.find(item => item.value === value)?.label || value
-                            : placeholder
-                        }
-                    </Text>
-                    <ChevronDown size={20} color={theme.colors.secondary.black} />
-                </Pressable>
+                    <Pressable
+                        onPress={() => {
+                            handlePickerOpen();
+                            setVisible(true);
+                            setFocusedField(fieldName);
+                        }}
+                        style={[
+                            styles.pickerWrapper,
+                            isFocused && styles.pickerWrapperFocused
+                        ]}
+                    >
+                        <Animated.View
+                            style={{
+                                transform: [{ 
+                                    scale: confirmationAnim.interpolate({
+                                        inputRange: [0, 0.5, 1],
+                                        outputRange: [1, 1.05, 1]
+                                    })
+                                }]
+                            }}
+                        >
+                            <Text style={[
+                                styles.pickerText,
+                                value ? styles.pickerTextSelected : {}
+                            ]}>
+                                {value
+                                    ? items.find(item => item.value === value)?.label || value
+                                    : placeholder
+                                }
+                            </Text>
+                        </Animated.View>
+                        <MotiView
+                            animate={{ rotate: isVisible ? '180deg' : '0deg' }}
+                            transition={{ type: 'timing', duration: 300 }}
+                        >
+                            <ChevronDown size={20} color={isFocused ? '#8B5CF6' : theme.colors.secondary.black} />
+                        </MotiView>
+                    </Pressable>
+                </LinearGradient>
+
                 <Modal
                     animationType="slide"
                     transparent={true}
@@ -281,33 +478,53 @@ function UserDetails() {
                         setVisible(false);
                     }}
                 >
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <TouchableOpacity onPress={() => setVisible(false)}>
-                                    <Text style={styles.modalCancelText}>Cancel</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setVisible(false);
+                    <Pressable 
+                        style={styles.modalOverlay}
+                        onPress={() => {
+                            handlePickerClose();
+                            setVisible(false);
+                        }}
+                    >
+                        <View style={styles.modalContainer}>
+                            <Pressable style={styles.modalContent}>
+                                <View style={styles.modalHeader}>
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setVisible(false);
+                                        }}
+                                        style={styles.modalButton}
+                                    >
+                                        <Text style={styles.modalCancelText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            setVisible(false);
+                                        }}
+                                        style={styles.modalButton}
+                                    >
+                                        <Text style={styles.modalDoneText}>Done</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Picker
+                                    selectedValue={value}
+                                    onValueChange={(itemValue) => {
+                                        onValueChange(itemValue);
+                                        // Haptic feedback on selection
+                                        Haptics.selectionAsync();
                                     }}
+                                    style={styles.modalPicker}
                                 >
-                                    <Text style={styles.modalDoneText}>Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <Picker
-                                selectedValue={value}
-                                onValueChange={onValueChange}
-                                style={styles.modalPicker}
-                            >
-                                {items.map((item) => (
-                                    <Picker.Item key={item.value} label={item.label} value={item.value} />
-                                ))}
-                            </Picker>
+                                    {items.map((item) => (
+                                        <Picker.Item key={item.value} label={item.label} value={item.value} />
+                                    ))}
+                                </Picker>
+                            </Pressable>
                         </View>
-                    </View>
+                    </Pressable>
                 </Modal>
-            </>
+            </Animated.View>
         );
     };
 
@@ -317,71 +534,165 @@ function UserDetails() {
             style={styles.keyboardAvoidingView}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         >
+            {renderPatternElements()}
+            
             <ScrollView
                 style={styles.scrollView}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
             >
-                <View style={styles.container}>
-                    {!!_isProcessingNewAvatar && (
-                        <View style={styles.progressCardWrapper}>
-                            <AvatarCreationProgressCard
-                                isProcessing={!!_isProcessingNewAvatar}
-                                progressStartTime={_avatarGenerationStartTime || null}
-                            />
-                        </View>
-                    )}
-
-                    <View style={styles.inputContainer}>
-                        <Text style={[styles.label]}>Clothing Size</Text>
-                        {renderPicker(
-                            clothingSize,
-                            handleClothingSizeChange,
-                            clothingSizeOptions,
-                            isClothingSizePickerVisible,
-                            setClothingSizePickerVisible,
-                            'Select Size'
+                <LinearGradient
+                    colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+                    style={styles.gradientBackground}
+                >
+                    <View style={styles.container}>
+                        {/* Progress bar */}
+                        <Animated.View 
+                            style={[
+                                styles.progressBarContainer,
+                                {
+                                    opacity: headerOpacity,
+                                    transform: [{ translateY: headerTranslateY }]
+                                }
+                            ]}
+                        >
+                          
+                        </Animated.View>
+                        
+                        {/* Heading with gradient text */}
+                        <Animated.View 
+                            style={[
+                                styles.headerContainer,
+                                {
+                                    opacity: headerOpacity,
+                                    transform: [{ translateY: headerTranslateY }]
+                                }
+                            ]}
+                        >
+                            <MaskedView
+                                style={{ height: 45 }}
+                                maskElement={
+                                    <Text style={styles.title}>
+                                        Tell us your sizes and location
+                                    </Text>
+                                }
+                            >
+                                <LinearGradient
+                                    colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={{ height: 45 }}
+                                />
+                            </MaskedView>
+                            
+                           
+                        </Animated.View>
+                        
+                        {!!_isProcessingNewAvatar && (
+                            <MotiView
+                                from={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ type: 'spring', damping: 15 }}
+                                style={styles.progressCardWrapper}
+                            >
+                                <AvatarCreationProgressCard
+                                    isProcessing={!!_isProcessingNewAvatar}
+                                    progressStartTime={_avatarGenerationStartTime || null}
+                                />
+                            </MotiView>
                         )}
-                    </View>
 
-                    <View className='gap-4' style={styles.shoeSizeContainer}>
-                        <View style={[{ flex: 2 }, styles.inputContainer]}>
-                            <Text style={styles.label}>Shoe Size</Text>
-                            {renderPicker(
-                                shoeSize,
-                                handleShoeSizeChange,
-                                shoeSizeOptions,
-                                isShoeSizePickerVisible,
-                                setIsShoeSizePickerVisible,
-                                'Select Shoe Size'
-                            )}
-                        </View>
-                        <View style={[styles.inputContainer, { flex: 1 }]}>
-                            <Text style={styles.label}>Unit</Text>
-                            {renderPicker(
-                                shoeSizeUnit,
-                                handleShoeSizeUnitChange,
-                                shoeSizeUnitOptions,
-                                isShoeSizeUnitPickerVisible,
-                                setShoeSizeUnitPickerVisible,
-                                'Select Unit'
-                            )}
-                        </View>
+                        <Animated.View style={[
+                            styles.formContainer,
+                            {
+                                opacity: formOpacity,
+                                transform: [{ translateY: formTranslateY }]
+                            }
+                        ]}>
+                            <View style={styles.card}>
+                                <LinearGradient 
+                                    colors={['rgba(255,255,255,0.8)', 'rgba(255,255,255,0.6)']}
+                                    style={styles.cardInnerHighlight}
+                                />
+                                
+                                <View style={styles.inputGroupContainer}>
+                                    <View style={styles.inputContainer}>
+                                        <View style={styles.labelContainer}>
+                                            <Shirt size={16} color="#6366F1" style={styles.labelIcon} />
+                                            <Text style={styles.label}>Clothing Size</Text>
+                                            <View style={styles.requiredDot} />
+                                        </View>
+                                        {renderPicker(
+                                            clothingSize,
+                                            handleClothingSizeChange,
+                                            clothingSizeOptions,
+                                            isClothingSizePickerVisible,
+                                            setClothingSizePickerVisible,
+                                            'Select Size',
+                                            fieldAnimations.clothing,
+                                            'clothingSize'
+                                        )}
+                                    </View>
+                                </View>
+                                
+                                <View style={[styles.inputGroupContainer, { marginTop: 10 }]}>
+                                    <View style={styles.shoeSizeContainer}>
+                                        <View style={[styles.inputContainer, { flex: 2 }]}>
+                                            <View style={styles.labelContainer}>
+                                                <Footprints size={16} color="#EC4899" style={styles.labelIcon} />
+                                                <Text style={styles.label}>Shoe Size</Text>
+                                                <View style={styles.requiredDot} />
+                                            </View>
+                                            {renderPicker(
+                                                shoeSize,
+                                                handleShoeSizeChange,
+                                                shoeSizeOptions,
+                                                isShoeSizePickerVisible,
+                                                setIsShoeSizePickerVisible,
+                                                'Select Shoe Size',
+                                                fieldAnimations.shoe,
+                                                'shoeSize'
+                                            )}
+                                        </View>
+                                        <View style={[styles.inputContainer, { flex: 1, marginLeft: 10 }]}>
+                                            <Text style={[styles.label, { marginBottom: 16 }]}>Unit</Text>
+                                            {renderPicker(
+                                                shoeSizeUnit,
+                                                handleShoeSizeUnitChange,
+                                                shoeSizeUnitOptions,
+                                                isShoeSizeUnitPickerVisible,
+                                                setShoeSizeUnitPickerVisible,
+                                                'Select Unit',
+                                                fieldAnimations.unit,
+                                                'shoeSizeUnit'
+                                            )}
+                                        </View>
+                                    </View>
+                                </View>
+                                
+                                <View style={[styles.inputGroupContainer, { marginTop: 10 }]}>
+                                    <View style={styles.inputContainer}>
+                                        <View style={styles.labelContainer}>
+                                            <MapPin size={16} color="#8B5CF6" style={styles.labelIcon} />
+                                            <Text style={styles.label}>Country</Text>
+                                            <View style={styles.requiredDot} />
+                                        </View>
+                                        {renderPicker(
+                                            userCountry,
+                                            handleCountryChange,
+                                            countries,
+                                            isCountryPickerVisible,
+                                            setCountryPickerVisible,
+                                            'Select Country',
+                                            fieldAnimations.country,
+                                            'country'
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        </Animated.View>
                     </View>
-
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Country</Text>
-                        {renderPicker(
-                            userCountry,
-                            handleCountryChange,
-                            countries,
-                            isCountryPickerVisible,
-                            setCountryPickerVisible,
-                            'Select Country'
-                        )}
-                    </View>
-                </View>
+                </LinearGradient>
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -396,25 +707,150 @@ const styles = StyleSheet.create({
         flex: 1,
         width: '100%',
     },
+    gradientBackground: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
     container: {
         flex: 1,
         padding: theme.spacing.lg,
+        paddingTop: 0,
+        paddingBottom: 10,
+        width: '100%',
+        position: 'relative',
+    },
+    patternContainer: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+    },
+    patternItem: {
+        position: 'absolute',
+        width: 30,
+        height: 30,
+        borderRadius: 6,
+        backgroundColor: '#8B5CF6',
+    },
+    progressBarContainer: {
+        marginBottom: 5,
+        width: '100%',
+        position: 'relative',
+    },
+    progressTrack: {
+        height: 4,
+        backgroundColor: 'rgba(139, 92, 246, 0.15)',
+        borderRadius: 10,
+        overflow: 'hidden',
         width: '100%',
     },
+    progressFill: {
+        height: '100%',
+        borderRadius: 10,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 0,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: '700',
+        textAlign: 'center',
+        fontFamily: 'default-bold',
+        paddingTop: 0,
+        paddingBottom: 0,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        fontWeight: '500',
+        marginTop: 2,
+        lineHeight: 18,
+        maxWidth: '90%',
+    },
+    formContainer: {
+        width: '100%',
+        marginTop: 0,
+    },
+    card: {
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        borderRadius: 20,
+        padding: 16,
+        paddingTop: 14,
+        marginTop: 5,
+        shadowColor: "#8B5CF6",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(139, 92, 246, 0.08)',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    cardInnerHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 40,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    inputGroupContainer: {
+        marginBottom: 12,
+    },
     inputContainer: {
-        marginBottom: theme.spacing.lg,
+        marginBottom: 12,
+    },
+    labelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    label: {
+        fontSize: 15,
+        color: '#4B5563',
+        fontFamily: 'default-semibold',
+        fontWeight: '600',
+        marginBottom: 12,
+    },
+    requiredDot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#EC4899',
+        marginLeft: 6,
+        opacity: 0.6,
+    },
+    inputGradientBorder: {
+        borderRadius: 12,
+        padding: 1.5,
+        overflow: 'hidden',
     },
     input: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderRadius: 6,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#e5e7eb', // Tailwind's input border (gray-200)
+        borderColor: 'rgba(139, 92, 246, 0.2)',
         backgroundColor: 'white',
         width: '100%',
         padding: 13,
-
+        shadowColor: "#8B5CF6",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
     },
     shoeSizeContainer: {
         flexDirection: 'row',
@@ -422,24 +858,23 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     pickerWrapper: {
-        marginTop: 5,
-        padding: 13,
+        padding: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderRadius: 6,
-        borderColor: '#e5e7eb',
+        borderRadius: 12,
         backgroundColor: 'white',
         width: '100%',
+        minHeight: 46,
         ...Platform.select({
             android: {
                 elevation: 0,
             },
             ios: {
-                shadowColor: 'transparent',
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0,
-                shadowRadius: 0,
+                shadowColor: '#8B5CF6',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
             },
         }),
     },
@@ -451,97 +886,83 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: theme.colors.secondary.black,
     },
-    label: {
-        fontSize: 14,
-        color: '#374151',
-        fontFamily: 'default-semibold',
-        fontWeight: '500',
-
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
     modalContainer: {
         flex: 1,
         justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'transparent',
     },
     modalContent: {
         backgroundColor: 'white',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingBottom: 20,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingBottom: 30,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: -4,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 20,
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#EEEEEE',
+        borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+        paddingHorizontal: 20,
+    },
+    modalButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        minHeight: 44,
+        minWidth: 70,
     },
     modalCancelText: {
         color: theme.colors.secondary.darkGray,
         fontSize: 16,
+        fontWeight: '500',
     },
     modalDoneText: {
         color: theme.colors.primary.purple,
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
     modalPicker: {
-        width: '100%'
+        width: '100%',
     },
     progressCardWrapper: {
         marginBottom: theme.spacing.lg,
         width: '100%',
     },
-    progressOuterContainer: {
-        marginTop: theme.spacing.xl, // mt-8 approx
-        marginBottom: theme.spacing.md, // mb-4 approx
-        borderRadius: 12, // rounded-lg
-        overflow: 'hidden', // For gradient border radius
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
-        // Pulse animation can be added via MotiView directly if needed
+    inputFocused: {
+        borderColor: 'rgba(139, 92, 246, 0.4)',
+        shadowColor: "#8B5CF6",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    progressGradientBackground: {
-        padding: theme.spacing.md, // p-4
-        // backdrop-blur-sm is not directly translatable easily
+    pickerWrapperFocused: {
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
     },
-    progressHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8, // gap-2
-        marginBottom: theme.spacing.sm, // mb-2
+    pickerTextSelected: {
+        color: '#4B5563',
+        fontWeight: '600',
     },
-    progressIconWrapper: {
-        borderRadius: 999, // rounded-full
-        padding: theme.spacing.xs, // p-1
-        // shadow-sm can be added via elevation (Android) or shadow props (iOS)
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.18,
-        shadowRadius: 1.00,
+    labelIcon: {
+        marginRight: 8,
     },
-    progressHeaderText: {
-        fontSize: 14,
-        fontWeight: '500',
-        // For gradient text, would ideally use a GradientText component or specific handling
-        color: theme.colors.primary.purple, // Fallback color
-    },
-    progressBarTrack: {
-        height: 10, // h-2.5
-        backgroundColor: 'rgba(255, 255, 255, 0.5)', // bg-white/50
-        borderRadius: 999, // rounded-full
-        overflow: 'hidden',
-    },
-    progressBarFillWrapper: {
-        height: '100%',
-        // width is animated
-    },
-    progressBarFill: {
-        height: '100%',
-        width: '100%',
-        opacity: 0.9, // From original style example for the underline, adapting here
-    }
 });
 
 export default UserDetails;

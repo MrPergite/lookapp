@@ -131,8 +131,8 @@ const Onboarding = () => {
             tension: 50,
         }).start();
         
-        // Add haptic feedback when pressing the button
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Restore enhanced haptic feedback when pressing the button
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     };
 
     const handleNextButtonPressOut = () => {
@@ -239,6 +239,8 @@ const Onboarding = () => {
             const chosenPath = pathFromAvatarChoice || payload.avatarPath;
             if (!chosenPath) {
                 console.error("Avatar path not determined for navigation from avatarPathChoice.");
+                // Restore error haptic feedback
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Toast.show({ type: 'error', text1: 'Selection Error', text2: 'Please make a selection to continue.', visibilityTime: 2000 });
                 return;
             }
@@ -280,6 +282,9 @@ const Onboarding = () => {
         }
 
         if (nextStepIndex !== -1 && nextStepIndex < Steps.length) {
+            // Restore success haptic feedback for step transition
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            
             Animated.timing(translateX, {
                 toValue: -1000,
                 duration: 300,
@@ -288,6 +293,9 @@ const Onboarding = () => {
             }).start(() => {
                 setCurrentStep(nextStepIndex);
                 translateX.setValue(0);
+                
+                // Restore additional feedback when the transition completes
+                Haptics.selectionAsync();
             });
         } else if (nextStepIndex === -1 && currentStepConfig.name !== "select-avatar" && currentStepConfig.name !== "user-details") {
             console.warn("Could not determine next step from:", currentStepConfig.name, "with payload:", payload);
@@ -298,6 +306,9 @@ const Onboarding = () => {
     };
 
     const handleBack = () => {
+        // Restore haptic feedback for back button press
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
         const currentStepConfig = Steps[currentStep];
         let prevStepIndex = -1;
         if (currentStepConfig.name === "select-avatar") {
@@ -323,6 +334,8 @@ const Onboarding = () => {
             }).start(() => {
                 setCurrentStep(prevStepIndex);
                 translateX.setValue(0);
+                // Restore haptic feedback when the transition completes
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             });
         } else {
             router.back();
@@ -334,6 +347,8 @@ const Onboarding = () => {
             console.log('User not authenticated, skipping save');
             return;
         }
+        // Restore strong haptic feedback to signify completion
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSaveOnboardingData(true);
     };
 
@@ -444,10 +459,11 @@ const Onboarding = () => {
     }
 
     return (
-        <View
-            
+        <LinearGradient
+            colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
             style={styles.container}
-           
         >
             <SafeAreaView style={styles.safeArea}>
                 {saveOnboardingData ? 
@@ -475,12 +491,7 @@ const Onboarding = () => {
                             {...stepTransitionAnimation}
                         >
                             <View style={styles.header}>
-                                <TouchableOpacity
-                                    style={styles.backButton}
-                                    onPress={handleBack}
-                                >
-                                    <ArrowLeft size={24} color="white" />
-                                </TouchableOpacity>
+                        
                                 <View style={[styles.progressBarContainer, { width: `${progressPercentage - 20}%` }]}>
                                     <LinearGradient
                                         colors={['#ec4899', '#8b5cf6']}
@@ -694,7 +705,7 @@ const Onboarding = () => {
                     </>
                 }
             </SafeAreaView>
-        </View>
+        </LinearGradient>
     );
 };
 

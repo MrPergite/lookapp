@@ -7,18 +7,23 @@ import theme from '@/styles/theme';
 import { ThemedText } from '@/components/ThemedText';
 import { Check, Loader } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { MotiView } from 'moti';
 
 interface DisplayCustomAvatarsProps {
     onBack: () => void;
-    onNext: () => void; // onNext might not be strictly needed if parent handles it via context update
+    onNext: () => void;
 }
+
+const { width, height } = Dimensions.get('window');
 
 const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onNext }) => {
     const { user, isLoaded: isUserClerkLoaded } = useUser();
     const { dispatch, payload } = useOnBoarding();
 
     const customAvatars = user?.publicMetadata?.custom_avatar_urls as string[] || [];
-    const avatarStatus =user?.publicMetadata?.avatar_creation_status as string || 'pending';
+    const avatarStatus = user?.publicMetadata?.avatar_creation_status as string || 'pending';
 
     const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(() => {
         if (payload.styleProfileState?.usingExisting && payload.styleProfileState.images?.length > 0) {
@@ -27,13 +32,80 @@ const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onN
         return null;
     });
 
+    // Animation values
+    const titleOpacity = useRef(new Animated.Value(0)).current;
+    const titleTranslateY = useRef(new Animated.Value(-20)).current;
+    const contentOpacity = useRef(new Animated.Value(0)).current;
+    const contentTranslateY = useRef(new Animated.Value(30)).current;
+    const avatarScales = useRef(customAvatars.map(() => new Animated.Value(0.9))).current;
+    
     // For testing the animation if context value is initially null
     const [mockStartTime] = useState(() => Date.now()); 
     const _avatarGenerationStartTime = payload.styleProfileState?.avatarGenerationStartTime || mockStartTime; 
-    const _isProcessingNewAvatar = avatarStatus && avatarStatus !== 'ready' && payload.avatarPath === 'custom'
+    const _isProcessingNewAvatar = avatarStatus && avatarStatus !== 'ready' && payload.avatarPath === 'custom';
+    
     // State for progress bar
     const [avatarCreationProgress, setAvatarCreationProgress] = useState(0);
     const animatedProgressWidth = useRef(new Animated.Value(0)).current;
+
+    // Add loading state for images
+    const [loadingImages, setLoadingImages] = useState<Record<number, boolean>>({});
+
+    const handleImageLoadStart = (index: number) => {
+        setLoadingImages(prev => ({ ...prev, [index]: true }));
+    };
+
+    const handleImageLoadEnd = (index: number) => {
+        setLoadingImages(prev => ({ ...prev, [index]: false }));
+    };
+
+    // Run entrance animations
+    useEffect(() => {
+        Animated.sequence([
+            // Title animation
+            Animated.parallel([
+                Animated.timing(titleOpacity, {
+                    toValue: 1,
+                    duration: 600,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(titleTranslateY, {
+                    toValue: 0,
+                    duration: 600,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+            
+            // Content animation (slight delay)
+            Animated.parallel([
+                Animated.timing(contentOpacity, {
+                    toValue: 1,
+                    duration: 400,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(contentTranslateY, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+            ]),
+            
+            // Avatar cards animation (staggered)
+            Animated.stagger(
+                100,
+                avatarScales.map(scale => 
+                    Animated.spring(scale, {
+                        toValue: 1,
+                        friction: 8,
+                        tension: 40,
+                        useNativeDriver: true,
+                    })
+                )
+            )
+        ]).start();
+    }, []);
 
     useEffect(() => {
         let progressInterval: NodeJS.Timeout | undefined = undefined;
@@ -98,8 +170,27 @@ const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onN
         }
     }, [dispatch, customAvatars, selectedAvatarUrl, _isProcessingNewAvatar]);
 
-    const handleAvatarSelect = (avatarUrl: string) => {
+    const handleAvatarSelect = (avatarUrl: string, index: number) => {
         if (_isProcessingNewAvatar) return; // Don't allow selection if a new one is processing
+        
+        // Provide haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        
+        // Animate the selected avatar
+        Animated.sequence([
+            Animated.timing(avatarScales[index], {
+                toValue: 0.95,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.spring(avatarScales[index], {
+                toValue: 1,
+                friction: 3,
+                tension: 40,
+                useNativeDriver: true,
+            })
+        ]).start();
+        
         setSelectedAvatarUrl(avatarUrl);
     };
 
@@ -120,45 +211,73 @@ const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onN
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
     });
+    
     // Calculate item size for a 2-column grid
     const screenWidth = Dimensions.get('window').width;
-    const containerPadding = theme.spacing.lg || 20;
-    const itemMargin = theme.spacing.sm || 8; // For gap between items
+    const containerPadding = 16; // Reduced from theme.spacing.lg
+    const itemMargin = 8; // Reduced from theme.spacing.sm
     const numColumns = 2;
     // Total horizontal space taken by margins/gaps for numColumns
     const totalHorizontalSpacing = containerPadding * 2 + itemMargin * (numColumns - 1);
-    const imageWidth = (screenWidth - totalHorizontalSpacing) / numColumns;
+    const imageWidth = Math.floor((screenWidth - totalHorizontalSpacing) / numColumns);
     const imageHeight = imageWidth * (4 / 3); // Aspect ratio 3:4 (height is 4/3 of width)
+
+    // Background pattern elements
+    const renderPatternElements = () => (
+        <View style={styles.patternContainer}>
+            {[...Array(15)].map((_, i) => (
+                <View 
+                    key={i} 
+                    style={[
+                        styles.patternItem, 
+                        { 
+                            left: Math.random() * width, 
+                            top: Math.random() * height * 0.7,
+                            opacity: 0.03 + (Math.random() * 0.05), // Between 0.03 and 0.08
+                            transform: [{ rotate: `${Math.random() * 360}deg` }]
+                        }
+                    ]} 
+                />
+            ))}
+        </View>
+    );
 
     if (_isProcessingNewAvatar) {
         return (
-            <View style={styles.processingCardContainer}>
+            <View style={styles.pageContainer}>
+                {renderPatternElements()}
                 <LinearGradient
-                     colors={['#8B5CF6', '#EC4899', '#3B82F6']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.creatingCard}
+                    colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+                    style={styles.gradientBackground}
                 >
-                    <View style={styles.creatingRow}>
-                        <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                            <Loader size={24} color="#d946ef" />
-                        </Animated.View>
-                        <Text style={styles.creatingText}>Creating your avatar in the background</Text>
+                    <View style={styles.processingCardContainer}>
+                        <LinearGradient
+                            colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.creatingCard}
+                        >
+                            <View style={styles.creatingRow}>
+                                <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                                    <Loader size={24} color="#ffffff" />
+                                </Animated.View>
+                                <Text style={styles.creatingText}>Creating your avatar in the background</Text>
+                            </View>
+                            <View style={styles.creatingProgressBarTrack}>
+                                <Animated.View
+                                    style={[
+                                        styles.creatingProgressBarFill,
+                                        {
+                                            width: animatedProgressWidth.interpolate({
+                                                inputRange: [0, 100],
+                                                outputRange: ['0%', '100%']
+                                            })
+                                        }
+                                    ]}
+                                />
+                            </View>
+                        </LinearGradient>
                     </View>
-                    <View style={styles.creatingProgressBarTrack}>
-                        <Animated.View
-                            style={[
-                                styles.creatingProgressBarFill,
-                                {
-                                    width: animatedProgressWidth.interpolate({
-                                        inputRange: [0, 100],
-                                        outputRange: ['0%', '100%']
-                                    })
-                                }
-                            ]}
-                        />
-                    </View>
-             
                 </LinearGradient>
             </View>
         );
@@ -166,81 +285,204 @@ const DisplayCustomAvatars: React.FC<DisplayCustomAvatarsProps> = ({ onBack, onN
 
     if (!isUserClerkLoaded) {
         return (
-            <View style={styles.centeredContent}>
-                <ActivityIndicator size="large" color={theme.colors.primary.purple} />
-                <ThemedText>Loading your information...</ThemedText>
+            <View style={styles.pageContainer}>
+                {renderPatternElements()}
+                <LinearGradient
+                    colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+                    style={styles.gradientBackground}
+                >
+                    <View style={styles.centeredContent}>
+                        <ActivityIndicator size="large" color={theme.colors.primary.purple} />
+                        <ThemedText>Loading your information...</ThemedText>
+                    </View>
+                </LinearGradient>
             </View>
         );
     }
 
-    //   if (customAvatars.length === 0) {
-    //     return (
-    //       <View style={styles.centeredContent}>
-    //         <ThemedText style={styles.infoText}>No custom avatars found.</ThemedText>
-    //         <ThemedText style={styles.infoTextNote}>
-    //             It seems you chose to use a custom avatar, but none were found. 
-    //             Please go back to create one, or choose a pre-made avatar.
-    //         </ThemedText>
-    //         {/* Optionally add a button to trigger onBack here */}
-    //       </View>
-    //     );
-    //   }
-
     return (
-        <View style={{ flex: 1, width: '100%' }}>
-            <FlatList
-                ListHeaderComponent={<>
-                    {/* <ThemedText style={styles.headerText}>Your Existing Custom Avatars</ThemedText> */}
-                    <ThemedText style={styles.subHeaderText}>
-                        Select the avatar that best represents you
-                    </ThemedText>
-                </>}
-                data={customAvatars}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        style={[
-                            styles.avatarItemContainer,
-                            { width: imageWidth, height: imageHeight, marginHorizontal: itemMargin / 2 },
-                            selectedAvatarUrl === item && styles.selectedAvatarItem
-                        ]}
-                        onPress={() => handleAvatarSelect(item)}
-                        activeOpacity={0.8}
+        <View style={styles.pageContainer}>
+            {renderPatternElements()}
+            <LinearGradient
+                colors={['#ffffff', '#f5f3ff', '#f0f9ff']}
+                style={styles.gradientBackground}
+            >
+                <View style={styles.container}>
+                    {/* Title with gradient text */}
+                    <Animated.View
+                        style={{
+                            opacity: titleOpacity,
+                            transform: [{ translateY: titleTranslateY }],
+                            width: '100%',
+                            alignItems: 'center',
+                            marginBottom: 0, // Reduced from 5
+                        }}
                     >
-                        <Image
-                            source={{ uri: item }}
-                            style={styles.avatarImage}
-                            contentFit="cover"
-                            contentPosition={{ top: '0%', left: '50%' }} // Focus on top-center
+                        <MaskedView
+                            style={styles.titleContainer}
+                            maskElement={
+                                <Text style={styles.titleHeading}>
+                                    Create an avatar of you
+                                </Text>
+                            }
+                        >
+                            <LinearGradient
+                                colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={{ height: 45 }}
+                            />
+                        </MaskedView>
+                        
+                      
+                    </Animated.View>
+                    
+                    <Animated.View
+                        style={{
+                            opacity: contentOpacity,
+                            transform: [{ translateY: contentTranslateY }],
+                            width: '100%',
+                            alignItems: 'center',
+                            marginTop: 0, // Ensure no extra space
+                        }}
+                    >
+                        <MaskedView
+                            style={{ width: '100%', alignItems: 'center', marginTop: -15 }}
+                            maskElement={
+                                <Text style={styles.selectionText}>
+                                    Select the avatar that best represents you
+                                </Text>
+                            }
+                        >
+                            <LinearGradient
+                                colors={['#8B5CF6', '#EC4899', '#3B82F6']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={{ height: 30, width: '100%', marginBottom: 10 }}
+                            />
+                        </MaskedView>
+                        
+                        <FlatList
+                            data={customAvatars}
+                            renderItem={({ item, index }) => (
+                                <Animated.View
+                                    style={{
+                                        transform: [{ scale: avatarScales[index] }]
+                                    }}
+                                >
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.avatarItemContainer,
+                                            { width: imageWidth, height: imageHeight, margin: itemMargin / 2 },
+                                            selectedAvatarUrl === item && styles.selectedAvatarItem
+                                        ]}
+                                        onPress={() => handleAvatarSelect(item, index)}
+                                        activeOpacity={0.9}
+                                    >
+                                        <View style={styles.imageContainer}>
+                                            {loadingImages[index] && (
+                                                <View style={styles.imageLoadingContainer}>
+                                                    <ActivityIndicator size="small" color={theme.colors.primary.purple} />
+                                                </View>
+                                            )}
+                                            <Image
+                                                source={{ uri: item }}
+                                                style={styles.avatarImage}
+                                                contentFit="cover"
+                                                contentPosition={{ top: '0%', left: '50%' }}
+                                                transition={300}
+                                                onLoadStart={() => handleImageLoadStart(index)}
+                                                onLoad={() => handleImageLoadEnd(index)}
+                                            />
+                                        </View>
+                                        {selectedAvatarUrl === item && (
+                                            <MotiView
+                                                from={{ opacity: 0, scale: 0.5 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{
+                                                    type: "timing",
+                                                    duration: 300,
+                                                }}
+                                                style={styles.selectedCheckmarkContainer}
+                                            >
+                                                <Check size={18} color="white" strokeWidth={3} />
+                                            </MotiView>
+                                        )}
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            )}
+                            keyExtractor={(item, index) => `avatar-${index}-${item}`}
+                            numColumns={numColumns}
+                            columnWrapperStyle={{ justifyContent: 'center', marginBottom: itemMargin }}
+                            contentContainerStyle={styles.listContentContainer}
+                            showsVerticalScrollIndicator={false}
+                            style={{ width: '100%', marginBottom: 65 }}
                         />
-                        {selectedAvatarUrl === item && (
-                            <View style={styles.selectedCheckmarkContainer}>
-                                <Check size={18} color="white" />
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                )}
-                keyExtractor={(item, index) => `avatar-${index}-${item}`}
-                numColumns={numColumns}
-                columnWrapperStyle={{ justifyContent: 'flex-start', gap: itemMargin, marginBottom: itemMargin }}
-                // ListFooterComponent={<>
-                //   <ThemedText style={styles.footerText}>
-                //       Your avatars were created using AI based on your selfie and preferences
-                //   </ThemedText>
-                // </>}
-                contentContainerStyle={styles.listContentContainer}
-                showsVerticalScrollIndicator={false}
-                style={{ flex: 1 }}
-            />
+                    </Animated.View>
+                </View>
+            </LinearGradient>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
+    pageContainer: {
+        flex: 1,
+        position: 'relative',
+    },
+    gradientBackground: {
+        flex: 1,
+        width: '100%',
+    },
+    patternContainer: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+    },
+    patternItem: {
+        position: 'absolute',
+        width: 30,
+        height: 30,
+        borderRadius: 6,
+        backgroundColor: '#8B5CF6',
+    },
+    container: {
+        flex: 1,
+        paddingHorizontal: 16, // Reduced from theme.spacing.lg
+        paddingTop: 15,
+        alignItems: 'center',
+        width: '100%',
+    },
+    titleContainer: {
+        marginBottom: 0, // Reduced from 10
+        alignItems: 'center',
+    },
+    titleHeading: {
+        fontSize: 28,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        textAlign: 'center',
+        fontWeight: '500',
+        marginTop: 12,
+        lineHeight: 22,
+    },
+    selectionText: {
+        fontSize: 16,
+        color: '#4B5563',
+        fontWeight: '600',
+        textAlign: 'center',
+        marginTop: 5, // Reduced from 10
+        marginBottom: 10, // Reduced from 20
+    },
     listContentContainer: {
-        // paddingTop: theme.spacing.md, 
-        // paddingBottom: theme.spacing.lg, 
-        paddingLeft: theme.spacing.lg,
-        // Removed width: '100%' and paddingHorizontal here, will be on the new outer View or FlatList itself
+        paddingBottom: 80, // Increased to ensure space at bottom
+        alignItems: 'center',
+        width: '100%',
     },
     centeredContent: {
         flex: 1,
@@ -248,40 +490,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: theme.spacing.lg,
     },
-    headerText: { // Kept for potential future use
-        fontSize: 20,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: theme.spacing.xs,
-        color: theme.colors.text,
-    },
-    subHeaderText: {
-        fontSize: 14,
-        textAlign: 'center',
-        marginBottom: theme.spacing.lg, // Spacing after subtitle
-        color: theme.colors.secondary.darkGray,
-    },
     avatarItemContainer: {
-        // width and height are set dynamically
-        // marginHorizontal is set dynamically
-        borderRadius: 16, // rounded-xl
+        borderRadius: 24, // Increased from 20
         overflow: 'hidden',
         borderWidth: 2,
-        borderColor: theme.colors.secondary.lightGray, // border-gray-200
-        // Aspect ratio handled by dynamic height calculation
-        backgroundColor: theme.colors.secondary.lightGray, // Fallback if image load fails
-    },
-    selectedAvatarItem: {
-        borderColor: theme.colors.primary.purple, // border-purple-500
-        // shadow-md equivalent for React Native:
+        borderColor: 'rgba(233, 213, 255, 0.6)',
+        backgroundColor: 'rgba(250, 250, 252, 0.8)',
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
             height: 2,
         },
-        shadowOpacity: 0.23,
-        shadowRadius: 2.62,
-        elevation: 4,
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    selectedAvatarItem: {
+        borderColor: '#9333EA', // More vibrant purple
+        borderWidth: 3,
+        shadowColor: '#8B5CF6',
+        shadowOffset: {
+            width: 0,
+            height: 6,
+        },
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        elevation: 7,
+    },
+    imageContainer: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageLoadingContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(250, 250, 252, 0.7)',
+        zIndex: 1,
     },
     avatarImage: {
         width: '100%',
@@ -289,79 +541,63 @@ const styles = StyleSheet.create({
     },
     selectedCheckmarkContainer: {
         position: 'absolute',
-        top: 8, // top-2 approx
-        right: 8, // right-2 approx
-        width: 24, // h-6 w-6
-        height: 24,
-        borderRadius: 12, // rounded-full
-        backgroundColor: theme.colors.primary.purple, // bg-purple-500
+        top: 12,
+        right: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#7C3AED', // Deeper purple for the check
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    infoText: {
-        textAlign: 'center',
-        marginBottom: theme.spacing.xs,
-        fontSize: 16,
-    },
-    infoTextNote: {
-        textAlign: 'center',
-        marginBottom: theme.spacing.md,
-        fontSize: 13,
-        color: theme.colors.secondary.darkGray,
-        paddingHorizontal: theme.spacing.lg,
-    },
-    footerText: {
-        fontSize: 11,
-        textAlign: 'center',
-        color: theme.colors.secondary.darkGray, // Changed from .gray to .darkGray
-        fontStyle: 'italic',
-        marginTop: theme.spacing.md, // mt-2
-        marginBottom: theme.spacing.sm,
+        shadowColor: 'rgba(0, 0, 0, 0.4)',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.9)',
     },
     processingCardContainer: {
-        flex: 1, // Make it take space if it's the only thing on screen
-        justifyContent: 'center', // Center the card
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        padding: 16, // To give some margin around the card
+        padding: 24,
         width: '100%',
     },
     creatingCard: {
-        padding: 16,
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 4,
-        elevation: 2,
-        width: '100%', // Make card take full width within its padded container
-        maxWidth: 500, // Optional: max width for larger screens
+        padding: 24,
+        borderRadius: 20,
+        shadowColor: '#8B5CF6',
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 10,
+        elevation: 4,
+        width: '100%',
+        maxWidth: 500,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     creatingRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     creatingText: {
-        marginLeft: 8,
+        marginLeft: 12,
         fontSize: 16,
-        fontWeight: '500',
-        color: '#a855f7',
+        fontWeight: '600',
+        color: '#ffffff',
     },
     creatingProgressBarTrack: {
-        height: 8,
-        backgroundColor: '#f3e8ff',
-        borderRadius: 8,
+        height: 10,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        borderRadius: 10,
         overflow: 'hidden',
     },
     creatingProgressBarFill: {
         height: '100%',
-        backgroundColor: '#d946ef',
-        // width is animated
-    },
-    creatingIconView: {
-        // Style for the View wrapping Loader2 if needed for alignment/spacing
-        // marginRight: 8, // If you want space before the text, similar to creatingText.marginLeft
-        // Or adjust creatingRow to use justifyContent: 'center' if icon & text should be centered together
+        backgroundColor: '#ffffff',
+        borderRadius: 10,
     },
 });
 
