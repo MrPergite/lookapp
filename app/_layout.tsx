@@ -17,6 +17,7 @@ import Toast, { BaseToast, ErrorToast, ToastConfig } from "react-native-toast-me
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -152,26 +153,28 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider value={DefaultTheme}>
-          <ImageProvider>
-            <UserDetailsProvider>
-              <ScreenHistoryProvider>
-                <OnBoardingProvider>
-                  <Slot />
-                </OnBoardingProvider>
-              </ScreenHistoryProvider>
-            </UserDetailsProvider>
-          </ImageProvider>
-          <Toast
-            position='bottom'
-            bottomOffset={65}
-            config={toastConfig}
-          />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider value={DefaultTheme}>
+            <ImageProvider>
+              <UserDetailsProvider>
+                <ScreenHistoryProvider>
+                  <OnBoardingProvider>
+                    <Slot />
+                  </OnBoardingProvider>
+                </ScreenHistoryProvider>
+              </UserDetailsProvider>
+            </ImageProvider>
+            <Toast
+              position='bottom'
+              bottomOffset={65}
+              config={toastConfig}
+            />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </ClerkProvider>
+    </GestureHandlerRootView>
   );
 }
 

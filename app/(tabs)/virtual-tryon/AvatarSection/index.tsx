@@ -33,7 +33,6 @@ interface AvatarSectionProps {
   onSaveOutfit: () => void;
   setIsFullscreen: (value: boolean) => void;
   isExpanded: boolean;
-  credits: number;
   tryonImages: any;
   onResetAvatar: () => void;
   originalAvatar: any;
@@ -52,7 +51,6 @@ const AvatarSection = ({
   onSaveOutfit,
   setIsFullscreen,
   isExpanded,
-  credits,
   tryonImages,
   onResetAvatar,
   originalAvatar,
@@ -135,34 +133,19 @@ const AvatarSection = ({
   return (
     <MotiView
       animate={{
-        height: isExpanded ? 0 : screenHeight,
         opacity: isExpanded ? 0.3 : 1,
       }}
       transition={{ duration: 0.3 }}
-      id={
-        isSignedIn
-          ? "virtual-tryon-image-mobile"
-          : "virtual-tryon-image-mobile-loggedout"
-      }
-      style={styles.mainContainer}>
-      <View style={[styles.imageCard, isSignedIn && { width: "auto" }]}>
+      style={styles.mainContainer}
+    >
+      <View style={styles.imageCard}>
         <View style={styles.topControls}>
           <TouchableOpacity
             style={styles.fullscreenButton}
             onPress={() => setIsFullscreen(true)}
           >
-            <Maximize2 color="#000" size={18} />
+            <Maximize2 color="#000" size={20} />
           </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleModelChange}
-              style={styles.avatarButton}
-            >
-              <View style={styles.userIconContainer}>
-                <UserRound size={14} color="#333" />
-              </View>
-              <RefreshCw size={14} color="#555" />
-            </TouchableOpacity>
         </View>
 
         {isLoadingPrefAvatar && isSignedIn ? (
@@ -175,40 +158,21 @@ const AvatarSection = ({
         ) : (
           <>
             {tryonImages ? (
-              <View style={[styles.imageContainer]}>
+              <View style={styles.imageContainer}>
                 <Image
-                  style={[styles.avatarImage, isSignedIn && styles.signedInAvatar]}
+                  style={styles.avatarImage}
                   source={{ uri: tryonImages.output_images[0] }}
-                  id="virtual-tryon-content-mobile"
                   contentFit="contain"
-
-                  {
-                  ...(isSignedIn ? {
-                    contentPosition: 'bottom center'
-                  } : {
-                    contentPosition: "top"
-                  })
-                  }
+                  contentPosition="top center"
                 />
               </View>
             ) : (
-              <View style={[styles.imageContainer]}>
+              <View style={styles.imageContainer}>
                 <Image
-                  style={[styles.avatarImage,
-                  isSignedIn ? styles.signedInAvatar : {
-                    width: '100%',
-                    height: '100%',
-                  }]}
+                  style={styles.avatarImage}
                   source={{ uri: selectedAvatar.src }}
-                  id="virtual-avatar-content-mobile"
-                  contentFit="cover"
-                  {
-                  ...(isSignedIn ? {
-                    contentPosition: 'bottom center'
-                  } : {
-                    contentPosition: "top center",
-                  })
-                  }
+                  contentFit="contain"
+                  contentPosition="top center"
                 />
               </View>
             )}
@@ -225,9 +189,7 @@ const AvatarSection = ({
                 <Lock size={24} color="#fff" />
               </View>
               <Text style={styles.unlockTitle}>Unlock All Features</Text>
-              <Text
-                className="text-xs text-gray-200"
-                style={styles.unlockSubtitle}>
+              <Text style={styles.unlockSubtitle}>
                 Create an account to customize your avatar and try on your own outfits
               </Text>
               <TouchableOpacity
@@ -236,11 +198,12 @@ const AvatarSection = ({
               >
                 <Text style={styles.signUpButtonText}>Sign Up Free</Text>
               </TouchableOpacity>
-
               <Text
                 onPress={() => redirectToSignIn(addScreenToHistory)}
-                className="text-xs text-white hover:text-gray-200 underline underline-offset-4"
-                style={styles.signInText}>Already have an account? Sign in</Text>
+                style={styles.signInText}
+              >
+                Already have an account? Sign in
+              </Text>
             </View>
           </LinearGradient>
         )}
@@ -255,7 +218,6 @@ const AvatarSection = ({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5 }}
                 style={styles.loadingTitle}
-                className="text-white mt-3 text-center font-medium"
               >
                 {loadingMessages[loadingMessageIndex].title}
               </MotiText>
@@ -265,7 +227,6 @@ const AvatarSection = ({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
                 style={styles.loadingSubtitle}
-                className="text-center"
               >
                 {loadingMessages[loadingMessageIndex].subtitle}
               </MotiText>
@@ -273,36 +234,15 @@ const AvatarSection = ({
           </View>
         )}
 
-        {tryonImages && isSignedIn && !isAvatarLoading && (
-          <View style={styles.buttonContainer}>
-            {!isFromSavedOutfit && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={onSaveOutfit}
-              >
-                <BookmarkPlus size={16} color="#333" />
-                <Text style={styles.buttonText}>Save this outfit</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleResetAvatar}
-            >
-              <RotateCw size={16} color="#333" />
-              <Text style={styles.buttonText}>Reset</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {!tryonImages && isSignedIn && !isAvatarLoading && (
-            <View style={styles.statusPillPositionContainer}>
-                <AvatarStatusPill 
-                    avatarStatus={avatarStatus}
-                    avatarCreationProgress={avatarCreationProgress}
-                    onShowMyAvatars={onShowMyAvatars}
-                    onRecreateAvatar={onRecreateAvatar}
-                />
-            </View>
+          <View style={styles.statusPillPositionContainer}>
+            <AvatarStatusPill 
+              avatarStatus={avatarStatus}
+              avatarCreationProgress={avatarCreationProgress}
+              onShowMyAvatars={onShowMyAvatars}
+              onRecreateAvatar={onRecreateAvatar}
+            />
+          </View>
         )}
       </View>
 
@@ -368,67 +308,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    backgroundColor: '#fff',
   },
   imageCard: {
-    width: '80%',
-    height: '100%',
-    borderRadius: 24,
+    width: '90%',
+    height: '85%',
+    borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
     alignSelf: 'center',
+    backgroundColor: 'transparent',
   },
   topControls: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: 16,
+    paddingTop: 16,
     zIndex: 20,
     position: 'absolute',
-    top: 10,
-    left: 0,
+    top: 0,
     right: 0,
   },
   fullscreenButton: {
-    width: 45,
-    height: 45,
+    width: 40,
+    height: 40,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(243, 243, 243, 0.9)',
     borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  userIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   imageContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
     overflow: 'hidden',
-    borderRadius: responsiveFontSize(24),
   },
   avatarImage: {
     width: '100%',
-    resizeMode: 'cover',
-  },
-  signedInAvatar: {
-    width: 250,
-    height: "100%",
-    resizeMode: 'cover',
-    alignSelf: 'center',
+    height: '100%',
+    resizeMode: 'contain',
   },
   gradientOverlay: {
     position: 'absolute',
@@ -444,8 +366,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    bottom: 0,
+    bottom: 40,
     zIndex: 2,
+  },
+  lockIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  unlockTitle: {
+    fontSize: responsiveFontSize(20),
+    fontFamily: 'Inter-SemiBold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  unlockSubtitle: {
+    fontSize: responsiveFontSize(14),
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  signUpButton: {
+    backgroundColor: '#A855F7',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginBottom: 12,
+  },
+  signUpButtonText: {
+    color: '#fff',
+    fontSize: responsiveFontSize(16),
+    fontFamily: 'Inter-SemiBold',
+    textAlign: 'center',
+  },
+  signInText: {
+    fontSize: responsiveFontSize(14),
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   loadingContainer: {
     position: 'absolute',
@@ -453,10 +417,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(243, 244, 246, 0.9)',
+    backgroundColor: 'rgba(250, 250, 250, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
+    borderRadius: 20,
   },
   loadingContent: {
     alignItems: 'center',
@@ -468,12 +432,13 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: '#A855F7',
     borderTopColor: 'transparent',
   },
   loadingText: {
     fontSize: responsiveFontSize(14),
     color: '#6b7280',
+    marginTop: 12,
   },
   loadingOverlay: {
     position: 'absolute',
@@ -481,92 +446,48 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24
+    borderRadius: 20,
   },
   loadingTitle: {
     color: 'white',
-    fontSize: responsiveFontSize(16),
-    fontWeight: '500',
-    marginTop: 12,
+    fontSize: responsiveFontSize(18),
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
   },
   loadingSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(14),
+    marginTop: 8,
+    textAlign: 'center',
   },
-  buttonContainer: {
+  floatingSaveButton: {
     position: 'absolute',
-    bottom: 10,
-    flexDirection: 'row',
-    gap: 8,
-    zIndex: 10,
-    justifyContent: 'center',
-    width: '100%',
+    bottom: 20,
     alignSelf: 'center',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 50,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  buttonText: {
-    fontSize: responsiveFontSize(14),
-    color: '#333',
-    fontWeight: '500',
-  },
-  lockIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  unlockTitle: {
-    color: 'white',
-    fontSize: responsiveFontSize(18.72),
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  unlockSubtitle: {
-    color: 'white',
-    fontSize: responsiveFontSize(12),
-    textAlign: 'center',
-    lineHeight: responsiveFontSize(16),
-  },
-  signUpButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#A855F7',
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 50,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
-    height: 40,
-    marginTop: responsiveFontSize(16),
+    borderRadius: 25,
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  signUpButtonText: {
-    color: '#000',
+  saveButtonText: {
     fontSize: responsiveFontSize(14),
+    color: '#fff',
     fontWeight: '600',
+    textAlign: 'center',
   },
-  signInText: {
-    color: 'white',
-    fontSize: responsiveFontSize(12),
-    textDecorationLine: 'underline',
+  statusPillPositionContainer: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -641,19 +562,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
 
-  },
-  spinnerContainer: {
-    width: 40,
-    height: 40,
-    marginBottom: 16,
-  },
-  statusPillPositionContainer: {
-    position: 'absolute',
-    bottom: 20, 
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
   },
 });
 
